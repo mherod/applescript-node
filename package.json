@@ -41,7 +41,7 @@
       "prettier --write",
       "tsc --noEmit",
       "vitest related --run",
-      "tsup"
+      "pnpm run build"
     ],
     "*.{json,md}": [
       "prettier --write"
