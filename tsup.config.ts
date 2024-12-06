@@ -12,6 +12,8 @@ export default defineConfig({
   external: ['vitest'],
   bundle: true,
   platform: 'node',
+  target: 'node18',
+  shims: true,
   outExtension({ format }) {
     return {
       js: format === 'esm' ? '.mjs' : '.js',

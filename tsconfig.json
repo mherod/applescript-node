@@ -20,6 +20,11 @@
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "examples"],
+  "references": [
+    {
+      "path": "./tsconfig.test.json"
+    }
+  ],
   "ts-node": {
     "esm": true
   }
