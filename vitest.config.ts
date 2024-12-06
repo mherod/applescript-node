@@ -17,7 +17,8 @@ export default defineConfig({
         lines: 80,
       },
     },
-    watchExclude: ['**/node_modules/**', '**/dist/**'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
+    pool: 'threads',
     poolOptions: {
       threads: {
         singleThread: true,

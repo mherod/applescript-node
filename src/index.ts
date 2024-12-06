@@ -2,7 +2,16 @@ import type { OsaScriptOptions, ScriptBuilder, ScriptExecutionResult } from './t
 import { ScriptExecutor } from './executor.js';
 import { AppleScriptBuilder } from './builder.js';
 
-export * from './types.js';
+export type {
+  OsaScriptOptions,
+  ScriptBuilder,
+  ScriptExecutionResult,
+  WindowInfo,
+  ProcessInfo,
+  AppleScriptValue,
+  ApplicationTarget,
+  ScriptError,
+} from './types.js';
 export * from './executor.js';
 export * from './builder.js';
 export * from './languages.js';

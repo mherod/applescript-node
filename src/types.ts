@@ -1,21 +1,21 @@
 // Configuration options for script execution
-export type OsaScriptOptions = {
+export interface OsaScriptOptions {
   // The scripting language to use
   language?: 'AppleScript' | 'JavaScript';
   // Format output for human readability
   humanReadable?: boolean;
   // Direct errors to stdout instead of stderr
   errorToStdout?: boolean;
-};
+}
 
-export type ScriptExecutionResult<T = unknown> = {
+export interface ScriptExecutionResult<T = unknown> {
   success: boolean;
   output: T;
   error?: string;
   exitCode: number;
-};
+}
 
-export type WindowInfo = {
+export interface WindowInfo {
   name: string;
   index: number;
   bounds?: {
@@ -26,16 +26,35 @@ export type WindowInfo = {
   };
   minimized: boolean;
   zoomed: boolean;
-};
+}
 
-export type ProcessInfo = {
+export interface ProcessInfo {
   name: string;
   bundleId?: string;
   visible: boolean;
   frontmost: boolean;
-};
+}
 
-export type ScriptBuilder = {
+// AppleScript value types
+export type AppleScriptPrimitive = string | number | boolean | null;
+export type AppleScriptValue =
+  | AppleScriptPrimitive
+  | { [key: string]: AppleScriptValue }
+  | AppleScriptValue[];
+
+export interface ApplicationTarget {
+  name: string;
+  bundleId?: string;
+}
+
+export interface ScriptError {
+  message: string;
+  line?: number;
+  column?: number;
+  source?: string;
+}
+
+export interface ScriptBuilder {
   // Core language constructs
   tell: (target: string) => ScriptBuilder;
   end: () => ScriptBuilder;
@@ -159,24 +178,4 @@ export type ScriptBuilder = {
   // Raw script and building
   raw: (script: string) => ScriptBuilder;
   build: () => string;
-};
-
-export type AppleScriptValue =
-  | string
-  | number
-  | boolean
-  | null
-  | AppleScriptValue[]
-  | { [key: string]: AppleScriptValue };
-
-export type ApplicationTarget = {
-  name: string;
-  bundleId?: string;
-};
-
-export type ScriptError = {
-  message: string;
-  line?: number;
-  column?: number;
-  source?: string;
-};
+}

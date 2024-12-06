@@ -44,7 +44,7 @@ export class ScriptExecutor {
         success: false,
         output: null as T,
         error: err.message,
-        exitCode: err.code ?? 1,
+        exitCode: err.code || 1,
       };
     }
   }
@@ -70,7 +70,7 @@ export class ScriptExecutor {
         success: false,
         output: null as T,
         error: err.message,
-        exitCode: err.code ?? 1,
+        exitCode: err.code || 1,
       };
     }
   }

@@ -22,38 +22,48 @@ export class AppleScriptBuilder implements ScriptBuilder {
   private script: string[] = [];
   private indentLevel = 0;
   private readonly INDENT = '  ';
-  private blockStack: { type: BlockType; target?: string }[] = [];
+  private blockStack: Array<{ type: BlockType; target?: string }> = [];
 
   private getIndentation(): string {
     return this.INDENT.repeat(this.indentLevel);
   }
 
-  private pushBlock(type: BlockType, target?: string) {
-    this.blockStack.push({ type, target });
-    this.indentLevel++;
+  private formatValue(value: AppleScriptValue): string {
+    if (value === null) return 'missing value';
+    if (typeof value === 'string') return `"${value}"`;
+    if (typeof value === 'number') return value.toString();
+    if (typeof value === 'boolean') return value.toString();
+    if (Array.isArray(value)) {
+      return `{${value.map((v) => this.formatValue(v)).join(', ')}}`;
+    }
+    const entries = Object.entries(value as Record<string, AppleScriptValue>)
+      .map(([k, v]) => `${k}:${this.formatValue(v)}`)
+      .join(', ');
+    return `{${entries}}`;
   }
 
-  private popBlock(expectedType?: BlockType) {
-    if (this.blockStack.length === 0) {
-      throw new ScriptBuilderError('Cannot end block: no blocks are currently open');
-    }
-
-    const currentBlock = this.blockStack[this.blockStack.length - 1];
-    if (expectedType && currentBlock.type !== expectedType) {
-      throw new ScriptBuilderError(
-        `Block mismatch: trying to end "${expectedType}" but current block is "${currentBlock.type}"`,
-      );
-    }
-
-    this.blockStack.pop();
-    this.indentLevel--;
-  }
-
-  private validateBlockStack() {
+  private validateBlockStack(): void {
     if (this.blockStack.length > 0) {
       const unclosedBlocks = this.blockStack.map((b) => b.type).join(', ');
       throw new ScriptBuilderError(`Unclosed blocks remain: ${unclosedBlocks}`);
     }
+  }
+
+  private pushBlock(type: BlockType, target?: string): void {
+    this.blockStack.push({ type, target });
+    this.indentLevel++;
+  }
+
+  private popBlock(): void {
+    if (this.blockStack.length === 0) {
+      throw new ScriptBuilderError('Cannot end block: no blocks are currently open');
+    }
+    this.blockStack.pop();
+    this.indentLevel--;
+  }
+
+  private addLine(line: string): void {
+    this.script.push(`${this.getIndentation()}${line}`);
   }
 
   // Core language constructs
@@ -440,23 +450,6 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  private formatValue(value: AppleScriptValue): string {
-    if (value === null) return 'missing value';
-    if (typeof value === 'string') return `"${value}"`;
-    if (typeof value === 'boolean') return value ? 'true' : 'false';
-    if (typeof value === 'number') return value.toString();
-    if (Array.isArray(value)) {
-      return `{${value.map((v) => this.formatValue(v)).join(', ')}}`;
-    }
-    if (typeof value === 'object') {
-      const entries = Object.entries(value)
-        .map(([k, v]) => `${k}:${this.formatValue(v)}`)
-        .join(', ');
-      return `{${entries}}`;
-    }
-    return String(value);
-  }
-
   // Enhanced Application control
   getRunningApplications(): ScriptBuilder {
     this.tell('System Events')
@@ -610,5 +603,12 @@ export class AppleScriptBuilder implements ScriptBuilder {
   build(): string {
     this.validateBlockStack();
     return this.script.join('\n');
+  }
+
+  private handleError(error: unknown): never {
+    if (error instanceof Error) {
+      throw new ScriptBuilderError(error.message);
+    }
+    throw new ScriptBuilderError('An unknown error occurred');
   }
 }
