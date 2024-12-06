@@ -1,6 +1,19 @@
 # applescript-node
 
+[![Test](https://github.com/mherod/applescript-node/actions/workflows/test.yml/badge.svg)](https://github.com/mherod/applescript-node/actions/workflows/test.yml)
+[![npm version](https://badge.fury.io/js/applescript-node.svg)](https://badge.fury.io/js/applescript-node)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+![macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
+[![Node Version](https://img.shields.io/node/v/applescript-node)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue)](https://www.typescriptlang.org/)
+
 A robust, type-safe Node.js library for executing AppleScript and JavaScript through macOS's `osascript` command.
+
+## Requirements
+
+- macOS (10.10 or later)
+- Node.js (18.0.0 or later)
+- TypeScript 5.0+ (for development)
 
 ## Features
 
@@ -293,7 +306,7 @@ interface OsaLanguageInfo {
 
 Contributions are welcome! Please follow these steps:
 
-1. Fork the repository
+1. Fork the repository from [mherod/applescript-node](https://github.com/mherod/applescript-node)
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
 4. Run the test suite (`pnpm test`)
@@ -311,4 +324,4 @@ Contributions are welcome! Please follow these steps:
 
 ## License
 
-ISC
+MIT

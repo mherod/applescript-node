@@ -59,8 +59,8 @@
     "osascript",
     "typescript"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Matthew Herod",
+  "license": "MIT",
   "engines": {
     "node": ">=16"
   },
