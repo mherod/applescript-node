@@ -1,3 +1,4 @@
+// Configuration options for script execution
 export type OsaScriptOptions = {
   language?: 'AppleScript' | 'JavaScript';
   humanReadable?: boolean;
