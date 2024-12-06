@@ -34,7 +34,7 @@
     "example:list-apps": "tsx --tsconfig examples/tsconfig.json examples/list-applications.ts",
     "example:windows": "tsx --tsconfig examples/tsconfig.json examples/window-management.ts",
     "examples": "pnpm run example:basic && pnpm run example:languages && pnpm run example:compile && pnpm run example:builder && pnpm run example:decompile && pnpm run example:list-apps && pnpm run example:windows",
-    "prepare": "husky install",
+    "prepare": "husky",
     "lint-staged": "lint-staged",
     "typecheck": "tsc --noEmit --skipLibCheck"
   },
