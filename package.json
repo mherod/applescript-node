@@ -1,0 +1,75 @@
+{
+  "name": "applescript-node",
+  "version": "1.0.0",
+  "description": "Node.js library for AppleScript integration",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "imports": {
+    "applescript-node": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "tsc --noEmit && eslint .",
+    "format": "prettier --write \"**/*.{ts,js,json}\"",
+    "format:fix": "prettier --write \"**/*.{ts,js,json}\" && eslint . --fix",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm run build",
+    "pretest": "pnpm run lint",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "example:basic": "tsx --tsconfig examples/tsconfig.json examples/basic-script.ts",
+    "example:builder": "tsx --tsconfig examples/tsconfig.json examples/fluent-builder.ts",
+    "example:compile": "tsx --tsconfig examples/tsconfig.json examples/script-compilation.ts",
+    "example:languages": "tsx --tsconfig examples/tsconfig.json examples/language-info.ts",
+    "example:decompile": "tsx --tsconfig examples/tsconfig.json examples/script-decompilation.ts",
+    "example:list-apps": "tsx --tsconfig examples/tsconfig.json examples/list-applications.ts",
+    "example:windows": "tsx --tsconfig examples/tsconfig.json examples/window-management.ts",
+    "examples": "pnpm run example:basic && pnpm run example:languages && pnpm run example:compile && pnpm run example:builder && pnpm run example:decompile && pnpm run example:list-apps && pnpm run example:windows",
+    "prepare": "husky install",
+    "lint-staged": "lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,ts}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "keywords": [
+    "applescript",
+    "macos",
+    "automation",
+    "osascript",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=16"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "husky": "9.1.7",
+    "lint-staged": "15.2.10",
+    "prettier": "^3.4.2",
+    "tsup": "^8.3.5",
+    "tsx": "^4.7.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
