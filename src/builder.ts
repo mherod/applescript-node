@@ -1,4 +1,4 @@
-import type { AppleScriptValue, ScriptBuilder } from './types';
+import type { AppleScriptValue, ScriptBuilder } from './types.js';
 
 type BlockType =
   | 'tell'

@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
-import { decompileScript } from './decompiler';
 import { exec } from 'node:child_process';
+import { describe, expect, it, vi, type MockInstance } from 'vitest';
+import { decompileScript } from './decompiler.js';
+
+type ExecCallback = (error: Error | null, result: { stdout: string; stderr: string }) => void;
 
 vi.mock('node:child_process', () => ({
   exec: vi.fn(),
@@ -9,8 +11,8 @@ vi.mock('node:child_process', () => ({
 describe('Decompiler', () => {
   describe('decompileScript', () => {
     it('should decompile a script successfully', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) =>
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
         callback(null, {
           stdout: 'tell application "Finder" to get name\n',
           stderr: '',
@@ -23,8 +25,8 @@ describe('Decompiler', () => {
     });
 
     it('should handle decompilation errors', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) =>
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
         callback(new Error('decompilation error'), { stdout: '', stderr: 'error output' }),
       );
 
@@ -34,8 +36,8 @@ describe('Decompiler', () => {
     });
 
     it('should handle stderr output', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) =>
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
         callback(null, { stdout: '', stderr: 'warning message' }),
       );
 
@@ -45,8 +47,8 @@ describe('Decompiler', () => {
     });
 
     it('should handle file paths with spaces', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain('"test file.scpt"');
         callback(null, { stdout: 'script content\n', stderr: '' });
       });
@@ -55,8 +57,8 @@ describe('Decompiler', () => {
     });
 
     it('should handle execute-only scripts', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) =>
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
         callback(new Error('execute only'), { stdout: '', stderr: 'Script is execute-only' }),
       );
 

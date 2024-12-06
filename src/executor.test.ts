@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
-import { ScriptExecutor } from './executor';
 import { exec } from 'node:child_process';
+import { describe, expect, it, vi, type MockInstance } from 'vitest';
+import { ScriptExecutor } from './executor.js';
+
+type ExecCallback = (error: Error | null, result: { stdout: string; stderr: string }) => void;
 
 vi.mock('node:child_process', () => ({
   exec: vi.fn(),
@@ -9,8 +11,8 @@ vi.mock('node:child_process', () => ({
 describe('ScriptExecutor', () => {
   describe('execute', () => {
     it('should execute a script successfully', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) =>
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
         callback(null, { stdout: 'test output\n', stderr: '' }),
       );
 
@@ -21,8 +23,8 @@ describe('ScriptExecutor', () => {
     });
 
     it('should handle script execution errors', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) =>
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
         callback(new Error('execution error'), { stdout: '', stderr: 'error output' }),
       );
 
@@ -33,8 +35,8 @@ describe('ScriptExecutor', () => {
     });
 
     it('should handle language option', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain('-l JavaScript');
         callback(null, { stdout: 'test output\n', stderr: '' });
       });
@@ -43,8 +45,8 @@ describe('ScriptExecutor', () => {
     });
 
     it('should handle output flags', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain('-s ho');
         callback(null, { stdout: 'test output\n', stderr: '' });
       });
@@ -56,8 +58,8 @@ describe('ScriptExecutor', () => {
     });
 
     it('should properly escape single quotes in scripts', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain("'test'\"'\"'script'");
         callback(null, { stdout: 'test output\n', stderr: '' });
       });
@@ -68,8 +70,8 @@ describe('ScriptExecutor', () => {
 
   describe('executeFile', () => {
     it('should execute a script file successfully', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) =>
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
         callback(null, { stdout: 'test output\n', stderr: '' }),
       );
 
@@ -80,8 +82,8 @@ describe('ScriptExecutor', () => {
     });
 
     it('should handle script file execution errors', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) =>
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
         callback(new Error('file error'), { stdout: '', stderr: 'error output' }),
       );
 
@@ -92,8 +94,8 @@ describe('ScriptExecutor', () => {
     });
 
     it('should handle file paths with spaces', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain('"test file.scpt"');
         callback(null, { stdout: 'test output\n', stderr: '' });
       });

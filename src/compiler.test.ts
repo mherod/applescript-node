@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { compileScript, compileScriptFile } from './compiler';
 import { exec } from 'node:child_process';
-import { writeFile, mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { writeFile } from 'node:fs/promises';
+import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import { compileScript, compileScriptFile } from './compiler.js';
+
+type ExecCallback = (error: Error | null, result: { stdout: string; stderr: string }) => void;
 
 vi.mock('node:child_process', () => ({
   exec: vi.fn(),
@@ -20,8 +21,10 @@ describe('Compiler', () => {
 
   describe('compileScript', () => {
     it('should compile a script successfully', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) => callback(null, { stdout: '', stderr: '' }));
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
+        callback(null, { stdout: '', stderr: '' }),
+      );
 
       const result = await compileScript('tell application "Finder" to get name', {
         outputPath: 'test.scpt',
@@ -33,8 +36,8 @@ describe('Compiler', () => {
     });
 
     it('should handle compilation errors', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) =>
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
         callback(new Error('compilation error'), { stdout: '', stderr: 'error output' }),
       );
 
@@ -44,8 +47,8 @@ describe('Compiler', () => {
     });
 
     it('should handle language option', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain('-l JavaScript');
         callback(null, { stdout: '', stderr: '' });
       });
@@ -57,8 +60,8 @@ describe('Compiler', () => {
     });
 
     it('should handle execute-only option', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain('-x');
         callback(null, { stdout: '', stderr: '' });
       });
@@ -70,8 +73,8 @@ describe('Compiler', () => {
     });
 
     it('should handle stay-open option', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain('-s');
         callback(null, { stdout: '', stderr: '' });
       });
@@ -83,8 +86,8 @@ describe('Compiler', () => {
     });
 
     it('should handle startup screen option', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain('-u');
         callback(null, { stdout: '', stderr: '' });
       });
@@ -96,8 +99,8 @@ describe('Compiler', () => {
     });
 
     it('should handle bundle script option', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain('.scptd"');
         callback(null, { stdout: '', stderr: '' });
       });
@@ -111,8 +114,10 @@ describe('Compiler', () => {
 
   describe('compileScriptFile', () => {
     it('should compile a script file successfully', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) => callback(null, { stdout: '', stderr: '' }));
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
+        callback(null, { stdout: '', stderr: '' }),
+      );
 
       const result = await compileScriptFile('source.applescript', {
         outputPath: 'test.scpt',
@@ -123,8 +128,8 @@ describe('Compiler', () => {
     });
 
     it('should handle compilation errors', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((_, callback) =>
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((_command: string, callback: ExecCallback) =>
         callback(new Error('compilation error'), { stdout: '', stderr: 'error output' }),
       );
 
@@ -134,8 +139,8 @@ describe('Compiler', () => {
     });
 
     it('should handle file paths with spaces', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain('"source file.applescript"');
         callback(null, { stdout: '', stderr: '' });
       });
@@ -144,8 +149,8 @@ describe('Compiler', () => {
     });
 
     it('should use default output path when not specified', async () => {
-      const mockExec = exec as any;
-      mockExec.mockImplementation((command, callback) => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         expect(command).toContain('source.scpt');
         callback(null, { stdout: '', stderr: '' });
       });

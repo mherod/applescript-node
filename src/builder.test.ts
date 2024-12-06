@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AppleScriptBuilder } from './builder';
+import { AppleScriptBuilder } from './builder.js';
 
 describe('AppleScriptBuilder', () => {
   describe('Core language constructs', () => {
