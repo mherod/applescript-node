@@ -5,7 +5,7 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -19,13 +19,6 @@
     }
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "examples"],
-  "references": [
-    {
-      "path": "./tsconfig.test.json"
-    }
-  ],
-  "ts-node": {
-    "esm": true
-  }
+  "exclude": ["node_modules", "dist", "examples"],
+  "references": [{ "path": "./tsconfig.test.json" }]
 }
