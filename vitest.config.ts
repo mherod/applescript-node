@@ -1,3 +1,4 @@
+import type { VitestConfig } from 'vitest';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -10,7 +11,25 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.ts'],
       exclude: ['**/*.d.ts', '**/*.test.ts', '**/*.spec.ts'],
+      thresholds: {
+        statements: 80,
+        branches: 80,
+        functions: 80,
+        lines: 80,
+      },
     },
     watchExclude: ['**/node_modules/**', '**/dist/**'],
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
+    sequence: {
+      shuffle: true,
+    },
+    typecheck: {
+      enabled: true,
+      tsconfig: './tsconfig.json',
+    },
   },
-});
+} satisfies VitestConfig);
