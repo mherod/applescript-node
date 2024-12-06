@@ -5,9 +5,11 @@
     "moduleResolution": "NodeNext",
     "noEmit": true,
     "baseUrl": "..",
+    "rootDir": "..",
     "paths": {
       "applescript-node": ["./src/index.ts"]
     }
   },
-  "include": ["./**/*", "../src/**/*"]
+  "include": ["./**/*", "../src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
