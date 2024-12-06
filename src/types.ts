@@ -1,7 +1,10 @@
 // Configuration options for script execution
 export type OsaScriptOptions = {
-  language?: 'AppleScript' | 'JavaScript'; // The scripting language to use
+  // The scripting language to use
+  language?: 'AppleScript' | 'JavaScript';
+  // Format output for human readability
   humanReadable?: boolean;
+  // Direct errors to stdout instead of stderr
   errorToStdout?: boolean;
 };
 
