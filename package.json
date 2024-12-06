@@ -36,21 +36,23 @@
     "examples": "pnpm run example:basic && pnpm run example:languages && pnpm run example:compile && pnpm run example:builder && pnpm run example:decompile && pnpm run example:list-apps && pnpm run example:windows",
     "prepare": "husky",
     "lint-staged": "lint-staged",
-    "typecheck": "tsc --noEmit --skipLibCheck"
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "verify": "pnpm run lint && pnpm run test && pnpm run build"
   },
   "lint-staged": {
-    "src/!(*.test).{js,ts}": [
+    "src/**/*.{ts,tsx}": [
       "eslint --fix",
       "prettier --write",
-      "pnpm run typecheck"
+      "tsc --noEmit --skipLibCheck",
+      "vitest related --run",
+      "pnpm run build:types"
     ],
-    "src/*.test.{js,ts}": [
+    "examples/**/*.{ts,tsx}": [
       "eslint --fix",
       "prettier --write",
-      "pnpm run typecheck",
-      "vitest related --run"
+      "tsc --noEmit --skipLibCheck"
     ],
-    "*.{json,md}": [
+    "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
   },

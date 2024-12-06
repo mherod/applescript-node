@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🧪 Ensuring tests pass before rebase..."
+
+# Run tests to ensure we're not rebasing on a broken state
+pnpm run test

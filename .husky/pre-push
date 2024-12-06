@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🧪 Running comprehensive checks before push..."
+
+# Run verify script that includes lint, test, and build
+pnpm run verify

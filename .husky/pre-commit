@@ -1,2 +1,8 @@
 #!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Ensure we're using the latest dependencies
+pnpm install --frozen-lockfile
+
+# Run lint-staged with our comprehensive checks
 pnpm lint-staged
