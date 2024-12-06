@@ -1,5 +1,4 @@
-import type { VitestConfig } from 'vitest';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type UserConfigExport } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -32,4 +31,4 @@ export default defineConfig({
       tsconfig: './tsconfig.json',
     },
   },
-} satisfies VitestConfig);
+} satisfies UserConfigExport);
