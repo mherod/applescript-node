@@ -3,16 +3,15 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['cjs', 'esm'],
-  dts: {
-    entry: 'src/index.ts',
-    resolve: true,
-  },
+  dts: true,
   splitting: false,
   sourcemap: true,
   clean: true,
   outDir: 'dist',
   treeshake: true,
   external: ['vitest'],
+  bundle: true,
+  platform: 'node',
   outExtension({ format }) {
     return {
       js: format === 'esm' ? '.mjs' : '.js',

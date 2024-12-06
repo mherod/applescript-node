@@ -18,7 +18,7 @@
       "applescript-node": ["./src/index.ts"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "examples"],
   "ts-node": {
     "esm": true
