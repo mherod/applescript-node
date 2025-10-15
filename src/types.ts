@@ -187,6 +187,18 @@ export interface ScriptBuilder {
     list: string,
     block: (builder: ScriptBuilder) => void,
   ) => ScriptBuilder;
+  forEachWhile: (
+    variable: string,
+    list: string,
+    condition: string | ((expr: any) => string),
+    block: (builder: ScriptBuilder) => void,
+  ) => ScriptBuilder;
+  forEachUntil: (
+    variable: string,
+    list: string,
+    condition: string | ((expr: any) => string),
+    block: (builder: ScriptBuilder) => void,
+  ) => ScriptBuilder;
   repeatTimes: (times: number, block: (builder: ScriptBuilder) => void) => ScriptBuilder;
   repeatWhileBlock: (condition: string, block: (builder: ScriptBuilder) => void) => ScriptBuilder;
   repeatUntilBlock: (condition: string, block: (builder: ScriptBuilder) => void) => ScriptBuilder;

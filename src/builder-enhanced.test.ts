@@ -490,4 +490,60 @@ describe('Builder - Repeat Convenience Helpers', () => {
     const endRepeats = script.split('end repeat');
     expect(endRepeats.length).toBe(3); // 2 end repeats + 1 remainder
   });
+
+  it('should use forEachWhile for iteration with continue condition', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('counter', 0)
+      .forEachWhile(
+        'item',
+        'every note',
+        (e) => e.lte('counter', 50),
+        (b) => b.increment('counter').raw('process item'),
+      )
+      .build();
+
+    expect(script).toContain('repeat with item in every note');
+    expect(script).toContain('if not counter ≤ 50 then');
+    expect(script).toContain('exit repeat');
+    expect(script).toContain('set counter to counter + 1');
+    expect(script).toContain('process item');
+    expect(script).toContain('end repeat');
+  });
+
+  it('should use forEachUntil for iteration with break condition', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('counter', 0)
+      .forEachUntil(
+        'item',
+        'every note',
+        (e) => e.gt('counter', 50),
+        (b) => b.increment('counter').raw('process item'),
+      )
+      .build();
+
+    expect(script).toContain('repeat with item in every note');
+    expect(script).toContain('if counter > 50 then');
+    expect(script).toContain('exit repeat');
+    expect(script).toContain('set counter to counter + 1');
+    expect(script).toContain('process item');
+    expect(script).toContain('end repeat');
+  });
+
+  it('should use forEachUntil with string condition', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('found', false)
+      .forEachUntil('item', 'every note', 'found = true', (b) =>
+        b.raw('if item matches search then set found to true'),
+      )
+      .build();
+
+    expect(script).toContain('repeat with item in every note');
+    expect(script).toContain('if found = true then');
+    expect(script).toContain('exit repeat');
+    expect(script).toContain('end if');
+    expect(script).toContain('end repeat');
+  });
 });

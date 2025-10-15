@@ -975,6 +975,49 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   /**
+   * Iterate over items while a condition is true.
+   * Combines forEach with an early exit condition for cleaner syntax.
+   * @param variable Loop variable name
+   * @param list Expression for the list to iterate (e.g., 'every note')
+   * @param condition Condition to check before each iteration (continues while true)
+   * @param block Callback that builds the loop body
+   */
+  forEachWhile(
+    variable: string,
+    list: string,
+    condition: string | ((expr: ExprBuilder) => string),
+    block: (builder: ScriptBuilder) => void,
+  ): ScriptBuilder {
+    this.repeatWith(variable, list);
+    this.ifThen(
+      typeof condition === 'function' ? (e) => e.not(condition(e)) : (e) => e.not(condition),
+      (b) => b.exitRepeat(),
+    );
+    block(this);
+    return this.endrepeat();
+  }
+
+  /**
+   * Iterate over items until a condition becomes true.
+   * Combines forEach with an early exit condition for cleaner syntax.
+   * @param variable Loop variable name
+   * @param list Expression for the list to iterate (e.g., 'every note')
+   * @param condition Condition to check before each iteration (exits when true)
+   * @param block Callback that builds the loop body
+   */
+  forEachUntil(
+    variable: string,
+    list: string,
+    condition: string | ((expr: ExprBuilder) => string),
+    block: (builder: ScriptBuilder) => void,
+  ): ScriptBuilder {
+    this.repeatWith(variable, list);
+    this.ifThen(condition, (b) => b.exitRepeat());
+    block(this);
+    return this.endrepeat();
+  }
+
+  /**
    * Repeat a fixed number of times with automatic block closing.
    * @param times Number of times to repeat
    * @param block Callback that builds the loop body

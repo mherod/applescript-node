@@ -132,40 +132,42 @@ async function demonstrateNotesAutomation() {
       .tell('Notes')
       .set('notesList', [])
       .set('counter', 0)
-      // Use forEach for cleaner iteration with callback-based nesting
-      .forEach('aNote', 'every note', (b) =>
-        b
-          .increment('counter')
-          // Use ifThen with ExprBuilder for early exit
-          .ifThen(
-            (e) => e.gt('counter', notesToFetch),
-            (exitBlock) => exitBlock.exitRepeat(),
-          )
-          // Use tryCatch with fluent chaining in callback
-          .tryCatch(
-            (tryBlock) =>
-              tryBlock
-                .setExpression('notePlaintext', 'plaintext of aNote')
-                .comment('Truncate plaintext to first 100 characters')
-                // Use ifThenElse with ExprBuilder for type-safe conditions
-                .ifThenElse(
-                  (e) => e.gt(e.length('notePlaintext'), 100),
-                  (then_) =>
-                    then_.setExpression('notePreview', 'text 1 thru 100 of notePlaintext & "..."'),
-                  (else_) => else_.setExpression('notePreview', 'notePlaintext'),
-                )
-                // Use setEndRecord for clean record creation
-                .setEndRecord('notesList', {
-                  noteName: 'name of aNote',
-                  noteId: 'id of aNote',
-                  preview: 'notePreview',
-                  created: 'creation date of aNote as string',
-                  modified: 'modification date of aNote as string',
-                  isShared: 'shared of aNote',
-                  isProtected: 'password protected of aNote',
-                }),
-            (catchBlock) => catchBlock.comment('Skip notes with errors'),
-          ),
+      // Use forEachUntil for cleaner iteration with built-in break condition
+      .forEachUntil(
+        'aNote',
+        'every note',
+        (e) => e.gt('counter', notesToFetch),
+        (b) =>
+          b
+            .increment('counter')
+            // Use tryCatch with fluent chaining in callback
+            .tryCatch(
+              (tryBlock) =>
+                tryBlock
+                  .setExpression('notePlaintext', 'plaintext of aNote')
+                  .comment('Truncate plaintext to first 100 characters')
+                  // Use ifThenElse with ExprBuilder for type-safe conditions
+                  .ifThenElse(
+                    (e) => e.gt(e.length('notePlaintext'), 100),
+                    (then_) =>
+                      then_.setExpression(
+                        'notePreview',
+                        'text 1 thru 100 of notePlaintext & "..."',
+                      ),
+                    (else_) => else_.setExpression('notePreview', 'notePlaintext'),
+                  )
+                  // Use setEndRecord for clean record creation
+                  .setEndRecord('notesList', {
+                    noteName: 'name of aNote',
+                    noteId: 'id of aNote',
+                    preview: 'notePreview',
+                    created: 'creation date of aNote as string',
+                    modified: 'modification date of aNote as string',
+                    isShared: 'shared of aNote',
+                    isProtected: 'password protected of aNote',
+                  }),
+              (catchBlock) => catchBlock.comment('Skip notes with errors'),
+            ),
       )
       .returnRaw('notesList')
       .endtell();
