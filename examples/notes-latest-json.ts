@@ -40,13 +40,13 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
         ),
     )
     .returnAsJson('notesList', {
-      noteId: 'noteId',
-      noteName: 'noteName',
-      noteContent: 'noteContent',
-      noteCreated: 'noteCreated',
-      noteModified: 'noteModified',
-      noteShared: 'noteShared',
-      noteProtected: 'noteProtected',
+      id: 'noteId',
+      name: 'noteName',
+      content: 'noteContent',
+      created: 'noteCreated',
+      modified: 'noteModified',
+      shared: 'noteShared',
+      passwordProtected: 'noteProtected',
     })
     .endtell();
 
@@ -60,26 +60,7 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
   }
 
   // Parse JSON output directly (AppleScript generates JSON via returnAsJson())
-  const rawNotes = JSON.parse(String(result.output)) as Array<{
-    noteId: string;
-    noteName: string;
-    noteContent: string;
-    noteCreated: string;
-    noteModified: string;
-    noteShared: boolean;
-    noteProtected: boolean;
-  }>;
-
-  // Map to our Note interface
-  return rawNotes.map((note) => ({
-    id: note.noteId,
-    name: note.noteName,
-    content: note.noteContent,
-    created: note.noteCreated,
-    modified: note.noteModified,
-    shared: note.noteShared,
-    passwordProtected: note.noteProtected,
-  }));
+  return JSON.parse(String(result.output)) as Note[];
 }
 
 // Main execution
