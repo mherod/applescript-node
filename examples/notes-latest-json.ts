@@ -3,7 +3,7 @@ import { createScript, runScript } from '../src/index.js';
 interface Note {
   id: string;
   name: string;
-  preview: string;
+  content: string;
   created: string;
   modified: string;
   shared: boolean;
@@ -11,33 +11,25 @@ interface Note {
 }
 
 async function getLatestNotesAsJson(): Promise<Note[]> {
-  // Fetch latest 10 notes
+  // Fetch latest 100 notes with full content
   const notesScript = createScript()
     .tell('Notes')
     .set('notesList', [])
     .set('counter', 0)
-    // Use forEachUntil to stop after 10 notes
+    // Use forEachUntil to stop after 100 notes
     .forEachUntil(
       'aNote',
       'every note',
-      (e) => e.gte('counter', 10),
+      (e) => e.gte('counter', 100),
       (b) =>
         b.increment('counter').tryCatch(
           (tryBlock) =>
             tryBlock
-              // Get plaintext and create preview
-              .setExpression('notePlaintext', 'plaintext of aNote')
-              .ifThenElse(
-                (e) => e.gt(e.length('notePlaintext'), 100),
-                (then_) =>
-                  then_.setExpression('notePreview', 'text 1 thru 100 of notePlaintext & "..."'),
-                (else_) => else_.setExpression('notePreview', 'notePlaintext'),
-              )
               // Build record with full expressions
               .setEndRecord('notesList', {
                 noteId: 'id of aNote',
                 noteName: 'name of aNote',
-                notePreview: 'notePreview',
+                noteContent: 'plaintext of aNote',
                 noteCreated: 'creation date of aNote as string',
                 noteModified: 'modification date of aNote as string',
                 noteShared: 'shared of aNote',
@@ -66,7 +58,7 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
     // Extract fields using regex
     const idMatch = /^([^,]+)/.exec(record);
     const nameMatch = /noteName:([^,]+)/.exec(record);
-    const previewMatch = /notePreview:"?([^",}]+)"?/.exec(record);
+    const contentMatch = /noteContent:"?([^"]+)"?/.exec(record);
     const createdMatch = /noteCreated:"?([^",}]+)"?/.exec(record);
     const modifiedMatch = /noteModified:"?([^",}]+)"?/.exec(record);
     const sharedMatch = /noteShared:(true|false)/.exec(record);
@@ -76,9 +68,7 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
       notes.push({
         id: idMatch[1].trim(),
         name: nameMatch[1].trim().replace(/^"|"$/g, ''),
-        preview: previewMatch
-          ? previewMatch[1].trim().replace(/\\n/g, ' ').replace(/^"|"$/g, '')
-          : '',
+        content: contentMatch ? contentMatch[1].trim().replace(/^"|"$/g, '') : '',
         created: createdMatch ? createdMatch[1].trim().replace(/^"|"$/g, '') : '',
         modified: modifiedMatch ? modifiedMatch[1].trim().replace(/^"|"$/g, '') : '',
         shared: sharedMatch ? sharedMatch[1] === 'true' : false,
