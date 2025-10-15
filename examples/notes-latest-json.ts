@@ -38,7 +38,7 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
           (catchBlock) => catchBlock.comment('Skip notes with errors'),
         ),
     )
-    .returnRaw('notesList')
+    .returnAsJson('notesList')
     .endtell();
 
   const result = await runScript(notesScript);
@@ -47,37 +47,27 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
     throw new Error(`Failed to fetch notes: ${result.error}`);
   }
 
-  // Parse AppleScript record format to JSON
-  const output = String(result.output);
-  const notes: Note[] = [];
+  // Parse JSON output directly (AppleScript generates JSON via returnAsJson())
+  const rawNotes = JSON.parse(String(result.output)) as Array<{
+    noteId: string;
+    noteName: string;
+    noteContent: string;
+    noteCreated: string;
+    noteModified: string;
+    noteShared: boolean;
+    noteProtected: boolean;
+  }>;
 
-  // Split by record boundaries
-  const noteRecords = output.split('noteId:').slice(1);
-
-  for (const record of noteRecords) {
-    // Extract fields using regex
-    const idMatch = /^([^,]+)/.exec(record);
-    const nameMatch = /noteName:([^,]+)/.exec(record);
-    const contentMatch = /noteContent:"?([^"]+)"?/.exec(record);
-    const createdMatch = /noteCreated:"?([^",}]+)"?/.exec(record);
-    const modifiedMatch = /noteModified:"?([^",}]+)"?/.exec(record);
-    const sharedMatch = /noteShared:(true|false)/.exec(record);
-    const protectedMatch = /noteProtected:(true|false)/.exec(record);
-
-    if (idMatch && nameMatch) {
-      notes.push({
-        id: idMatch[1].trim(),
-        name: nameMatch[1].trim().replace(/^"|"$/g, ''),
-        content: contentMatch ? contentMatch[1].trim().replace(/^"|"$/g, '') : '',
-        created: createdMatch ? createdMatch[1].trim().replace(/^"|"$/g, '') : '',
-        modified: modifiedMatch ? modifiedMatch[1].trim().replace(/^"|"$/g, '') : '',
-        shared: sharedMatch ? sharedMatch[1] === 'true' : false,
-        passwordProtected: protectedMatch ? protectedMatch[1] === 'true' : false,
-      });
-    }
-  }
-
-  return notes;
+  // Map to our Note interface
+  return rawNotes.map((note) => ({
+    id: note.noteId,
+    name: note.noteName,
+    content: note.noteContent,
+    created: note.noteCreated,
+    modified: note.noteModified,
+    shared: note.noteShared,
+    passwordProtected: note.noteProtected,
+  }));
 }
 
 // Main execution
