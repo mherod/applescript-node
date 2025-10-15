@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import CliTable3 from 'cli-table3';
 import chalk from 'chalk';
 import { createScript, runScript, ScriptValidator } from '../src/index.js';
@@ -62,34 +63,38 @@ async function readMessagesConversations() {
     .tell('Messages')
     .set('chatList', [])
     .set('counter', 0)
-    .repeatWith('aChat', 'every chat')
-    .increment('counter')
-    .if('counter > 10')
-    .exitRepeat()
-    .end()
-    .try()
-    .comment('Get participants')
-    .set('participantList', [])
-    .repeatWith('p', 'every participant of aChat')
-    .try()
-    .setExpression('participantHandle', 'handle of p')
-    .setEndRaw('participantList', 'participantHandle')
-    .onError()
-    .comment('Skip participants with errors')
-    .end()
-    .end()
-    .setEndRecord('chatList', {
-      chatId: 'id of aChat',
-      chatName: 'name of aChat',
-      accountId: 'id of account of aChat',
-      participants: 'participantList',
-    })
-    .onError()
-    .comment('Skip chats with errors')
-    .end()
-    .end()
+    // Use forEachUntil for cleaner iteration with built-in break condition
+    .forEachUntil(
+      'aChat',
+      'every chat',
+      (e) => e.gt('counter', 10),
+      (b) =>
+        b.increment('counter').tryCatch(
+          (tryBlock) =>
+            tryBlock
+              .comment('Get participants')
+              .set('participantList', [])
+              // Use forEach with nested tryCatch for clean error handling
+              .forEach('p', 'every participant of aChat', (pb) =>
+                pb.tryCatch(
+                  (innerTry) =>
+                    innerTry
+                      .setExpression('participantHandle', 'handle of p')
+                      .setEndRaw('participantList', 'participantHandle'),
+                  (innerCatch) => innerCatch.comment('Skip participants with errors'),
+                ),
+              )
+              .setEndRecord('chatList', {
+                chatId: 'id of aChat',
+                chatName: 'name of aChat',
+                accountId: 'id of account of aChat',
+                participants: 'participantList',
+              }),
+          (catchBlock) => catchBlock.comment('Skip chats with errors'),
+        ),
+    )
     .returnRaw('chatList')
-    .end();
+    .endtell();
 
   // Validate the complex script before execution
   console.log(chalk.gray('Validating script...'));
