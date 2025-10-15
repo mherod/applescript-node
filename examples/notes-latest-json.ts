@@ -11,16 +11,16 @@ interface Note {
 }
 
 async function getLatestNotesAsJson(): Promise<Note[]> {
-  // Fetch latest 100 notes with full content
+  // Fetch latest 10 notes with full content
   const notesScript = createScript()
     .tell('Notes')
     .set('notesList', [])
     .set('counter', 0)
-    // Use forEachUntil to stop after 100 notes
+    // Use forEachUntil to stop after 10 notes
     .forEachUntil(
       'aNote',
       'every note',
-      (e) => e.gte('counter', 100),
+      (e) => e.gte('counter', 10),
       (b) =>
         b.increment('counter').tryCatch(
           (tryBlock) =>
