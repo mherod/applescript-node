@@ -31,7 +31,9 @@ A robust, type-safe Node.js library for executing AppleScript and JavaScript thr
 - 🗣 **Language Support**: Query available OSA languages and capabilities
 - 🪟 **Window Management**: Comprehensive window control and manipulation
 - 📱 **Application Control**: Advanced application management features
-- 🧪 **Well Tested**: 80+ tests with extensive coverage
+- 🔍 **Application Introspection**: Extract and parse scripting dictionaries (sdef) from any macOS app
+- ✅ **Script Validation**: Runtime validation with intelligent error detection and suggestions
+- 🧪 **Well Tested**: 180+ tests with extensive coverage
 - 🔍 **Static Analysis**: ESLint and Prettier integration
 
 ## Installation
@@ -284,6 +286,274 @@ const script = createScript().tellProcess('Finder').raw('set visible to false').
 await runScript(script);
 ```
 
+### Application Introspection with sdef
+
+The library provides comprehensive support for extracting and parsing application scripting dictionaries (sdef files). This enables runtime discovery of application capabilities, validation, and documentation generation.
+
+```typescript
+import {
+  getApplicationDictionary,
+  getAllCommands,
+  getAllClasses,
+  findCommand,
+  findClass,
+} from 'applescript-node';
+
+// Get the scripting dictionary for Messages.app
+const dictionary = await getApplicationDictionary('/System/Applications/Messages.app');
+
+// Explore available commands
+const commands = getAllCommands(dictionary);
+console.log(`Found ${commands.length} commands`);
+
+// Find a specific command
+const sendCommand = findCommand(dictionary, 'send');
+if (sendCommand) {
+  console.log('Send command parameters:', sendCommand.parameters);
+  console.log('Return type:', sendCommand.result?.type);
+}
+
+// Explore available classes
+const classes = getAllClasses(dictionary);
+console.log(`Found ${classes.length} classes`);
+
+// Find a specific class
+const chatClass = findClass(dictionary, 'chat');
+if (chatClass) {
+  console.log(
+    'Chat properties:',
+    chatClass.properties.map((p) => p.name),
+  );
+  console.log(
+    'Chat elements:',
+    chatClass.elements.map((e) => e.type),
+  );
+}
+
+// Iterate through suites
+for (const suite of dictionary.suites) {
+  console.log(`Suite: ${suite.name}`);
+  console.log(`  Commands: ${suite.commands.length}`);
+  console.log(`  Classes: ${suite.classes.length}`);
+  console.log(`  Enumerations: ${suite.enumerations.length}`);
+}
+```
+
+#### Caching
+
+The `getApplicationDictionary` function automatically caches parsed dictionaries for performance:
+
+```typescript
+// First call - parses the sdef
+const dict1 = await getApplicationDictionary('/System/Applications/Messages.app');
+
+// Second call - returns cached result (fast!)
+const dict2 = await getApplicationDictionary('/System/Applications/Messages.app');
+
+// Bypass cache if needed
+const dict3 = await getApplicationDictionary('/System/Applications/Messages.app', false);
+
+// Clear the cache
+import { clearSdefCache } from 'applescript-node';
+clearSdefCache();
+```
+
+#### Direct sdef Access
+
+You can also work with raw sdef XML:
+
+```typescript
+import { getSdef, parseSdef } from 'applescript-node';
+
+// Extract raw sdef XML
+const xml = await getSdef('/System/Applications/Music.app');
+console.log(xml);
+
+// Parse sdef XML manually
+const dictionary = parseSdef(xml);
+```
+
+#### Use Cases
+
+**Runtime Validation**
+
+```typescript
+const dictionary = await getApplicationDictionary('/System/Applications/Messages.app');
+const sendCommand = findCommand(dictionary, 'send');
+
+if (!sendCommand) {
+  throw new Error('Messages.app does not support the send command');
+}
+
+// Validate parameter types before building script
+console.log(
+  'Required parameters:',
+  sendCommand.parameters.filter((p) => !p.optional),
+);
+```
+
+**Documentation Generation**
+
+```typescript
+const dictionary = await getApplicationDictionary('/System/Applications/Music.app');
+
+for (const suite of dictionary.suites) {
+  console.log(`\n## ${suite.name}\n`);
+  console.log(suite.description);
+
+  for (const command of suite.commands) {
+    console.log(`\n### ${command.name}`);
+    console.log(command.description);
+    console.log('Parameters:');
+    command.parameters.forEach((param) => {
+      console.log(`- ${param.name} (${param.type.type})${param.optional ? ' [optional]' : ''}`);
+    });
+  }
+}
+```
+
+**Discovery and Exploration**
+
+```typescript
+// Find all applications that support a specific command
+const apps = [
+  '/System/Applications/Messages.app',
+  '/System/Applications/Mail.app',
+  '/System/Applications/Music.app',
+];
+
+for (const appPath of apps) {
+  try {
+    const dict = await getApplicationDictionary(appPath);
+    const hasCommand = findCommand(dict, 'send');
+    if (hasCommand) {
+      console.log(`${appPath.split('/').pop()} supports 'send' command`);
+    }
+  } catch (error) {
+    // App doesn't have scripting support
+  }
+}
+```
+
+### Script Validation
+
+The library provides powerful runtime script validation using application scripting dictionaries. Validate your scripts before execution to catch errors early and get helpful suggestions.
+
+```typescript
+import { ScriptValidator, createScript } from 'applescript-node';
+
+// Create a validator for Messages.app
+const validator = await ScriptValidator.forApplication('/System/Applications/Messages.app');
+
+// Build a script
+const script = createScript().tell('Messages').raw('send "Hello" to "+1234567890"').end();
+
+// Validate before execution
+const result = validator.validate(script.build());
+
+if (!result.valid) {
+  console.log('Validation errors:');
+  result.errors.forEach((err) => {
+    console.log(`- ${err.message}`);
+    if (err.suggestion) {
+      console.log(`  Suggestion: ${err.suggestion}`);
+    }
+  });
+}
+```
+
+#### Validation Features
+
+**Command Validation**
+Detects unknown commands and suggests corrections:
+
+```typescript
+const script = `
+  tell application "Messages"
+    sen "Hello"  // Typo: should be "send"
+  end tell
+`;
+
+const result = validator.validate(script, { provideSuggestions: true });
+// Warning: Command 'sen' might not exist in Messages
+// Suggestion: Did you mean 'send'?
+```
+
+**Property Access Validation**
+Prevents writes to read-only properties:
+
+```typescript
+const issues = validator.validatePropertyAccess('chat', 'id', 'write');
+// Error: Property 'id' is read-only on class 'chat'
+```
+
+**Parameter Validation**
+Ensures required parameters are provided:
+
+```typescript
+const issues = validator.validateCommand('send', {});
+// Error: Required parameter 'to' is missing for command 'send'
+```
+
+#### Validation Options
+
+```typescript
+interface ValidationOptions {
+  strictness?: 'strict' | 'normal' | 'lenient';
+  provideSuggestions?: boolean;
+}
+
+// Strict mode: warnings treated as errors
+const strictResult = validator.validate(script, { strictness: 'strict' });
+
+// Lenient mode: only report errors
+const lenientResult = validator.validate(script, { strictness: 'lenient' });
+
+// Disable suggestions for faster validation
+const fastResult = validator.validate(script, { provideSuggestions: false });
+```
+
+#### Validation Result Structure
+
+```typescript
+interface ValidationResult {
+  valid: boolean;
+  issues: ValidationIssue[];
+  errors: ValidationIssue[];
+  warnings: ValidationIssue[];
+  info: ValidationIssue[];
+}
+
+interface ValidationIssue {
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+  code?: string;
+  suggestion?: string;
+  line?: number;
+  column?: number;
+}
+```
+
+#### Quick Validation Helper
+
+For simple validation without creating a validator instance:
+
+```typescript
+import { validateScript } from 'applescript-node';
+
+const result = await validateScript(myScript, '/System/Applications/Messages.app', {
+  strictness: 'normal',
+});
+```
+
+#### Validation Benefits
+
+- **Catch errors early**: Find issues before script execution
+- **Better error messages**: Get specific feedback about what's wrong
+- **Helpful suggestions**: Receive "did you mean?" suggestions for typos
+- **Type safety**: Verify property access levels and parameter types
+- **Faster development**: Less trial-and-error debugging
+
 ## Development
 
 ### Setup
@@ -323,21 +593,53 @@ pnpm run example:basic     # Basic script execution
 pnpm run example:builder   # Fluent builder API
 pnpm run example:compile   # Script compilation
 pnpm run example:languages # Language information
-pnpm run example:list-apps # List running applications
-pnpm run example:windows   # Window management
+pnpm run example:list-apps  # List running applications
+pnpm run example:windows    # Window management
+pnpm run example:sdef       # Application introspection with sdef
+pnpm run example:validation # Script validation with sdef
+pnpm run example:messages   # Messages app automation
 ```
 
 ## API Reference
 
 ### Main Functions
 
+#### Script Execution
+
 - `runScript<T>(script: string | ScriptBuilder, options?: OsaScriptOptions): Promise<ScriptExecutionResult<T>>`
 - `runScriptFile<T>(filePath: string, options?: OsaScriptOptions): Promise<ScriptExecutionResult<T>>`
 - `createScript(): ScriptBuilder`
+
+#### Script Compilation
+
 - `compileScript(script: string, options?: CompileOptions): Promise<CompileResult>`
 - `compileScriptFile(filePath: string, options?: CompileOptions): Promise<CompileResult>`
+
+#### Language Information
+
 - `getInstalledLanguages(): Promise<OsaLanguageInfo[]>`
 - `getDefaultLanguage(): Promise<OsaLanguageInfo>`
+
+#### Application Introspection (sdef)
+
+- `getApplicationDictionary(appPath: string, useCache?: boolean): Promise<ApplicationDictionary>` - Get and parse application scripting dictionary
+- `getSdef(appPath: string): Promise<string>` - Extract raw sdef XML from application
+- `parseSdef(xml: string): ApplicationDictionary` - Parse sdef XML into structured types
+- `clearSdefCache(): void` - Clear the sdef cache
+- `getAllCommands(dictionary: ApplicationDictionary): Command[]` - Get all commands from all suites
+- `getAllClasses(dictionary: ApplicationDictionary): Class[]` - Get all classes from all suites
+- `findCommand(dictionary: ApplicationDictionary, commandName: string): Command | undefined` - Find a specific command
+- `findClass(dictionary: ApplicationDictionary, className: string): Class | undefined` - Find a specific class
+
+#### Script Validation
+
+- `ScriptValidator.forApplication(appPath: string): Promise<ScriptValidator>` - Create a validator for an application
+- `validator.validate(script: string, options?: ValidationOptions): ValidationResult` - Validate a script
+- `validator.validateCommand(commandName: string, parameters?: Record<string, unknown>): ValidationIssue[]` - Validate a command and its parameters
+- `validator.validatePropertyAccess(className: string, propertyName: string, accessType: 'read' | 'write'): ValidationIssue[]` - Validate property access
+- `validator.getAvailableCommands(): Command[]` - Get all available commands
+- `validator.getAvailableClasses(): Class[]` - Get all available classes
+- `validateScript(script: string, appPath: string, options?: ValidationOptions): Promise<ValidationResult>` - Quick validation helper
 
 ### ScriptBuilder Methods
 
@@ -443,6 +745,52 @@ interface OsaLanguageInfo {
     appleEvents: boolean;
   };
   description?: string;
+}
+
+// Application dictionary types (sdef)
+interface ApplicationDictionary {
+  suites: Suite[];
+}
+
+interface Suite {
+  name: string;
+  code: string;
+  description?: string;
+  classes: Class[];
+  commands: Command[];
+  enumerations: Enumeration[];
+}
+
+interface Class {
+  name: string;
+  code: string;
+  description?: string;
+  plural?: string;
+  inherits?: string;
+  properties: Property[];
+  elements: Element[];
+}
+
+interface Command {
+  name: string;
+  code: string;
+  description?: string;
+  directParameter?: TypeInfo & { description?: string };
+  parameters: Parameter[];
+  result?: TypeInfo & { description?: string };
+}
+
+interface Property {
+  name: string;
+  code: string;
+  type: TypeInfo;
+  access: 'r' | 'rw';
+  description?: string;
+}
+
+interface TypeInfo {
+  type: string;
+  list?: boolean;
 }
 ```
 

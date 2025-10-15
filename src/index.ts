@@ -11,12 +11,24 @@ export type {
   AppleScriptValue,
   ApplicationTarget,
   ScriptError,
+  ApplicationDictionary,
+  Suite,
+  Class,
+  Command,
+  Enumeration,
+  Property,
+  Element,
+  Parameter,
+  TypeInfo,
+  Enumerator,
 } from './types.js';
 export * from './executor.js';
 export * from './builder.js';
 export * from './languages.js';
 export * from './compiler.js';
 export * from './decompiler.js';
+export * from './sdef.js';
+export * from './validator.js';
 
 export const createScript = () => new AppleScriptBuilder();
 

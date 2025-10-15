@@ -33,3 +33,4 @@ Thumbs.db
 
 # Husky
 .husky/_
+.claude/settings.local.json

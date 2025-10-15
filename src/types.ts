@@ -54,6 +54,77 @@ export interface ScriptError {
   source?: string;
 }
 
+// Scripting definition (sdef) types for application introspection
+export interface TypeInfo {
+  type: string;
+  list?: boolean;
+}
+
+export interface Parameter {
+  name: string;
+  code: string;
+  type: TypeInfo;
+  optional?: boolean;
+  description?: string;
+}
+
+export interface Property {
+  name: string;
+  code: string;
+  type: TypeInfo;
+  access: 'r' | 'rw';
+  description?: string;
+}
+
+export interface Element {
+  type: string;
+  access?: 'r' | 'rw';
+}
+
+export interface Enumerator {
+  name: string;
+  code: string;
+  description?: string;
+}
+
+export interface Enumeration {
+  name: string;
+  code: string;
+  enumerators: Enumerator[];
+}
+
+export interface Command {
+  name: string;
+  code: string;
+  description?: string;
+  directParameter?: TypeInfo & { description?: string };
+  parameters: Parameter[];
+  result?: TypeInfo & { description?: string };
+}
+
+export interface Class {
+  name: string;
+  code: string;
+  description?: string;
+  plural?: string;
+  inherits?: string;
+  properties: Property[];
+  elements: Element[];
+}
+
+export interface Suite {
+  name: string;
+  code: string;
+  description?: string;
+  classes: Class[];
+  commands: Command[];
+  enumerations: Enumeration[];
+}
+
+export interface ApplicationDictionary {
+  suites: Suite[];
+}
+
 export interface ScriptBuilder {
   // Core language constructs
   tell: (target: string) => ScriptBuilder;
