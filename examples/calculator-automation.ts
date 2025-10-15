@@ -32,6 +32,9 @@ async function main() {
     .delay(0.5)
     .end()
     .end()
+    .tell('Calculator')
+    .quit()
+    .end()
     .build();
 
   writeFileSync('examples/output/calculator-addition.applescript', additionScript);
@@ -70,6 +73,9 @@ async function main() {
     .keystroke('\r')
     .delay(0.5)
     .end()
+    .end()
+    .tell('Calculator')
+    .quit()
     .end()
     .build();
 
@@ -121,6 +127,9 @@ async function main() {
     .delay(0.5)
     .end()
     .end()
+    .tell('Calculator')
+    .quit()
+    .end()
     .build();
 
   writeFileSync('examples/output/calculator-complex.applescript', complexScript);
@@ -158,6 +167,9 @@ async function main() {
     .delay(0.5)
     .end()
     .end()
+    .tell('Calculator')
+    .quit()
+    .end()
     .build();
 
   writeFileSync('examples/output/calculator-buttons.applescript', buttonClickScript);
@@ -186,6 +198,9 @@ async function main() {
       '"Window: " & windowName & ", Position: " & (item 1 of windowPosition) & "," & (item 2 of windowPosition) & ", Size: " & (item 1 of windowSize) & "x" & (item 2 of windowSize)',
     )
     .end()
+    .end()
+    .tell('Calculator')
+    .quit()
     .end()
     .returnRaw('info')
     .build();

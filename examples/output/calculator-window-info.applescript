@@ -10,4 +10,7 @@ tell application "System Events"
     set info to "Window: " & windowName & ", Position: " & (item 1 of windowPosition) & "," & (item 2 of windowPosition) & ", Size: " & (item 1 of windowSize) & "x" & (item 2 of windowSize)
   end tell
 end tell
+tell application "Calculator"
+  quit
+end tell
 return info

@@ -18,3 +18,6 @@ tell application "System Events"
     delay 0.5
   end tell
 end tell
+tell application "Calculator"
+  quit
+end tell
