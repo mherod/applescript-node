@@ -26,7 +26,7 @@ describe('AppleScriptBuilder', () => {
       const builder = new AppleScriptBuilder();
       const script = builder.if('true').then().set('x', 1).end().build();
 
-      expect(script).toBe('if true\n' + '  then\n' + '  set x to 1\n' + 'end if');
+      expect(script).toBe('if true then\n' + '  set x to 1\n' + 'end if');
     });
   });
 
@@ -129,10 +129,8 @@ describe('AppleScriptBuilder', () => {
         .build();
 
       expect(script).toBe(
-        'if x > 10\n' +
-          '  then\n' +
-          '  if y > 20\n' +
-          '    then\n' +
+        'if x > 10 then\n' +
+          '  if y > 20 then\n' +
           '    set result to "both conditions met"\n' +
           '  else\n' +
           '    set result to "only x > 10"\n' +
@@ -177,8 +175,7 @@ describe('AppleScriptBuilder', () => {
 
       expect(script).toBe(
         'considering case, punctuation\n' +
-          '  if someText contains "Hello!"\n' +
-          '    then\n' +
+          '  if someText contains "Hello!" then\n' +
           '    set exactMatch to true\n' +
           '  end if\n' +
           'end considering',
@@ -308,7 +305,7 @@ describe('AppleScriptBuilder', () => {
       const script = builder.tell('Finder').if('true').then().end().end().build();
 
       expect(script).toBe(
-        'tell application "Finder"\n' + '  if true\n' + '    then\n' + '  end if\n' + 'end tell',
+        'tell application "Finder"\n' + '  if true then\n' + '  end if\n' + 'end tell',
       );
     });
 
@@ -402,8 +399,7 @@ describe('AppleScriptBuilder', () => {
 
       expect(script).toBe(
         'tell application "Finder"\n' +
-          '  if true\n' +
-          '    then\n' +
+          '  if true then\n' +
           '    considering case\n' +
           '    end considering\n' +
           '  end if\n' +
@@ -507,11 +503,9 @@ describe('AppleScriptBuilder', () => {
           .build();
 
         expect(script).toBe(
-          'if x = 1\n' +
-            '  then\n' +
+          'if x = 1 then\n' +
             '  set result to "one"\n' +
-            'else if x = 2\n' +
-            '  then\n' +
+            'else if x = 2 then\n' +
             '  set result to "two"\n' +
             'else\n' +
             '  set result to "other"\n' +
@@ -571,8 +565,7 @@ describe('AppleScriptBuilder', () => {
 
         expect(script).toBe(
           'repeat 5 times\n' +
-            '  if x = 3\n' +
-            '    then\n' +
+            '  if x = 3 then\n' +
             '    exit repeat\n' +
             '  end if\n' +
             'end repeat',
@@ -585,8 +578,7 @@ describe('AppleScriptBuilder', () => {
 
         expect(script).toBe(
           'repeat 5 times\n' +
-            '  if x = 3\n' +
-            '    then\n' +
+            '  if x = 3 then\n' +
             '    continue repeat\n' +
             '  end if\n' +
             'end repeat',

@@ -224,7 +224,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
     if (this.blockStack.length === 0 || this.blockStack[this.blockStack.length - 1].type !== 'if') {
       throw new ScriptBuilderError('Cannot call then(): no if block is currently open');
     }
-    this.script.push(`${this.getIndentation()}then`);
+    // Append 'then' to the previous if statement line
+    const lastLine = this.script[this.script.length - 1];
+    this.script[this.script.length - 1] = `${lastLine} then`;
     return this;
   }
 

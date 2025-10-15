@@ -153,7 +153,7 @@ async function demonstrateNotesAutomation() {
               (e) => e.gt(e.length('notePlaintext'), 100),
               (then_) =>
                 then_.setExpression('notePreview', 'text 1 thru 100 of notePlaintext & "..."'),
-              (else_) => else_.set('notePreview', 'notePlaintext'),
+              (else_) => else_.setExpression('notePreview', 'notePlaintext'),
             )
             // Use setEndRecord for clean record creation
             .setEndRecord('notesList', {
