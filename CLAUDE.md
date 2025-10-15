@@ -4,27 +4,27 @@ This file provides comprehensive guidance to Claude Code (claude.ai/code) when w
 
 ## Project Overview
 
-**applescript-node** is a comprehensive, production-ready Node.js library that provides a robust, type-safe interface for executing AppleScript and JavaScript through macOS's `osascript` command. The library serves as a modern bridge between Node.js applications and macOS automation capabilities.
+**applescript-node** is a production-ready Node.js library providing a type-safe interface for executing AppleScript and JavaScript through macOS's `osascript` command. The library bridges Node.js applications and macOS automation.
 
 ### Core Purpose
 
 The library enables developers to:
 
-- **Automate macOS applications** programmatically from Node.js
-- **Build complex automation workflows** with a fluent, intuitive API
-- **Create system administration tools** that interact with macOS
-- **Develop testing frameworks** for macOS applications
-- **Integrate macOS scripting** into web applications and services
+- Automate macOS applications programmatically from Node.js
+- Build complex automation workflows with fluent, intuitive API
+- Create system administration tools interacting with macOS
+- Develop testing frameworks for macOS applications
+- Integrate macOS scripting into web applications and services
 
 ### Key Value Propositions
 
 - **Type Safety**: Full TypeScript support with comprehensive type definitions
-- **Developer Experience**: Fluent builder API that's intuitive and discoverable
-- **Production Ready**: Extensive testing, error handling, and documentation
-- **Modern Architecture**: Promise-based, async/await, ESM-first design
+- **Developer Experience**: Fluent builder API, intuitive and discoverable
+- **Production Ready**: Extensive testing, error handling, documentation
+- **Modern Architecture**: Promise-based, async/await, ESM-first
 - **Comprehensive Coverage**: Complete macOS automation capabilities
 
-**Platform requirement**: This library is macOS-only and requires the `osascript` command (macOS 10.10+).
+**Platform requirement**: macOS-only, requires `osascript` command (macOS 10.10+).
 
 ## Build and Development Commands
 
@@ -65,73 +65,73 @@ The library enables developers to:
 
 1. **executor.ts** (`ScriptExecutor`)
 
-   - **Primary execution engine** for all AppleScript/JavaScript execution
-   - Handles both string-based and file-based script execution
+   - Primary execution engine for AppleScript/JavaScript
+   - Handles string-based and file-based script execution
    - Manages `osascript` command flags and output formatting
    - Uses Node.js `child_process.exec` with promisified interface
-   - **Error handling**: Captures stderr, exit codes, and execution failures
-   - **Output processing**: Handles human-readable vs raw output formats
-   - **Security**: Properly escapes single quotes in script strings
+   - Error handling: Captures stderr, exit codes, execution failures
+   - Output processing: Handles human-readable vs raw output
+   - Security: Properly escapes single quotes in scripts
 
 2. **builder.ts** (`AppleScriptBuilder`)
 
-   - **Fluent API implementation** for constructing AppleScript commands
-   - **Block stack management**: Tracks nested blocks (tell/if/repeat/etc.)
-   - **Syntax validation**: Ensures blocks are properly opened/closed
-   - **Automatic indentation**: Maintains proper AppleScript formatting
-   - **Method chaining**: Returns `ScriptBuilder` for fluent interface
-   - **Value formatting**: Handles AppleScript data types (strings, numbers, arrays, objects)
-   - **IMPORTANT**: Block validation prevents malformed scripts
+   - Fluent API implementation for constructing AppleScript commands
+   - Block stack management: Tracks nested blocks (tell/if/repeat/etc.)
+   - Syntax validation: Ensures blocks properly opened/closed
+   - Automatic indentation: Maintains proper AppleScript formatting
+   - Method chaining: Returns `ScriptBuilder` for fluent interface
+   - Value formatting: Handles AppleScript data types (strings, numbers, arrays, objects)
+   - Block validation prevents malformed scripts
 
 3. **compiler.ts** (`ScriptCompiler`)
 
-   - **Script compilation** to `.scpt` (compiled) or `.scptd` (bundle) format
+   - Script compilation to `.scpt` (compiled) or `.scptd` (bundle) format
    - Uses `osacompile` command with various flags
-   - **Stay-open applications**: Creates persistent script applications
-   - **Bundle creation**: Supports `.scptd` bundle format
-   - **Execute-only compilation**: Creates protected scripts
-   - **Startup screen support**: Adds splash screens to applications
+   - Stay-open applications: Creates persistent script applications
+   - Bundle creation: Supports `.scptd` bundle format
+   - Execute-only compilation: Creates protected scripts
+   - Startup screen support: Adds splash screens to applications
 
 4. **decompiler.ts** (`ScriptDecompiler`)
 
-   - **Reverse compilation** of `.scpt` files back to source
+   - Reverse compilation of `.scpt` files to source
    - Uses `osadecompile` command
-   - **Error handling**: Manages decompilation failures gracefully
-   - **Source recovery**: Extracts original script text from compiled files
+   - Error handling: Manages decompilation failures gracefully
+   - Source recovery: Extracts original script text from compiled files
 
 5. **languages.ts** (`LanguageManager`)
 
-   - **OSA language discovery** and capability querying
+   - OSA language discovery and capability querying
    - Uses `osalang` command to enumerate available languages
-   - **Capability parsing**: Extracts language features and limitations
-   - **Language info**: Provides detailed information about each language
-   - **Default language detection**: Identifies system default scripting language
+   - Capability parsing: Extracts language features and limitations
+   - Language info: Provides detailed information per language
+   - Default language detection: Identifies system default scripting language
 
 6. **types.ts** (`TypeDefinitions`)
-   - **Central type system** for the entire library
-   - **Key interfaces**: `ScriptBuilder`, `ScriptExecutionResult`, `OsaScriptOptions`
-   - **AppleScript types**: `AppleScriptValue`, `AppleScriptPrimitive`
-   - **System types**: `WindowInfo`, `ProcessInfo`, `ApplicationTarget`
-   - **Configuration types**: `CompileOptions`, `OsaLanguageInfo`
-   - **Error types**: `ScriptError` with detailed error information
+   - Central type system for the library
+   - Key interfaces: `ScriptBuilder`, `ScriptExecutionResult`, `OsaScriptOptions`
+   - AppleScript types: `AppleScriptValue`, `AppleScriptPrimitive`
+   - System types: `WindowInfo`, `ProcessInfo`, `ApplicationTarget`
+   - Configuration types: `CompileOptions`, `OsaLanguageInfo`
+   - Error types: `ScriptError` with detailed error information
 
 ### Build System
 
-- **tsup** for JavaScript bundling (ESM + CJS dual package)
-- **TypeScript** compiler for type declarations (separate from JS build)
-- **Module system**: NodeNext (ESM with `.js` extensions in imports)
+- **tsup** for JavaScript bundling (ESM + CJS)
+- **TypeScript** compiler for type declarations (separate from JS)
+- **Module system**: NodeNext (ESM with `.js` extensions)
 - **Output**: `dist/` directory with dual package exports
 - **Bundling**: Rollup-based with tree shaking and minification
-- **Source maps**: Generated for debugging support
-- **Package exports**: Conditional exports for ESM/CJS compatibility
+- **Source maps**: Generated for debugging
+- **Package exports**: Conditional exports for ESM/CJS
 
 ### Testing Strategy
 
-- **Vitest** with node environment for fast execution
+- **Vitest** with node environment
 - **Coverage thresholds**: 80% minimum for statements/branches/functions/lines
-- **Test organization**: Co-located test files (\*.test.ts) with source files
-- **Execution**: Single-threaded mode with randomized test sequence
-- **Mocking**: Comprehensive mocking of `child_process.exec` for unit tests
+- **Test organization**: Co-located test files (\*.test.ts) with source
+- **Execution**: Single-threaded with randomized test sequence
+- **Mocking**: Comprehensive mocking of `child_process.exec`
 - **Integration tests**: Real `osascript` execution for end-to-end validation
 - **Test categories**:
   - Unit tests for individual methods and classes
@@ -141,41 +141,41 @@ The library enables developers to:
 
 ### Code Quality Standards
 
-- **ESLint v9** with flat configuration system
+- **ESLint v9** with flat configuration
 - **TypeScript strict mode** with comprehensive type checking
-- **Prettier** for consistent code formatting
-- **Key rules enforced**:
-  - Consistent type imports (`import type` for type-only imports)
-  - No explicit `any` types (warnings for any usage)
-  - Unused variables must start with `_` prefix
+- **Prettier** for consistent formatting
+- **Key rules**:
+  - Consistent type imports (`import type` for type-only)
+  - No explicit `any` types (warnings for usage)
+  - Unused variables start with `_` prefix
   - Array types use simple syntax (`string[]` not `Array<string>`)
-  - Interfaces preferred over type aliases for object shapes
-  - Consistent naming conventions (camelCase for variables, PascalCase for types)
-  - Maximum line length of 100 characters
+  - Interfaces preferred over type aliases for objects
+  - Consistent naming (camelCase for variables, PascalCase for types)
+  - Maximum line length 100 characters
   - Trailing commas in multiline structures
 
 ### Pre-commit Quality Gates
 
-The project uses **husky** + **lint-staged** for automated quality checks:
+**husky** + **lint-staged** for automated quality checks:
 
 - **ESLint + Prettier** on all TypeScript files
 - **Type checking** with `tsc --noEmit --skipLibCheck`
 - **Vitest execution** on related test files
 - **Type declaration build** verification
 - **Staged file processing** for optimal performance
-- **Automatic fixes** where possible (formatting, simple lint issues)
+- **Automatic fixes** where possible (formatting, lint issues)
 
 ## Key Implementation Patterns
 
 ### Script Building with Block Stack
 
-The `AppleScriptBuilder` maintains a sophisticated block stack to ensure proper AppleScript syntax:
+`AppleScriptBuilder` maintains block stack for proper AppleScript syntax:
 
 - **Block types**: `tell`, `if`, `repeat`, `considering`, `ignoring`, `using`, `with`, `try`, `on`
-- **Stack management**: Each opening method pushes a block, `end()` pops and validates
+- **Stack management**: Opening methods push blocks, `end()` pops and validates
 - **Nesting validation**: Ensures proper block hierarchy and closure
-- **Context awareness**: `then()` and `else()` validate they're inside an `if` block
-- **Build validation**: `build()` ensures all blocks are properly closed
+- **Context awareness**: `then()` and `else()` validate inside `if` block
+- **Build validation**: `build()` ensures all blocks properly closed
 
 Example of proper block usage:
 
@@ -194,23 +194,23 @@ createScript()
 
 ### Command Execution Pattern
 
-All script execution follows a consistent pattern through `ScriptExecutor`:
+Script execution follows consistent pattern through `ScriptExecutor`:
 
-1. **Flag building**: Convert options to `osascript` command flags
-2. **Script escaping**: Properly escape single quotes and special characters
-3. **Command construction**: Build complete `osascript` command string
+1. **Flag building**: Convert options to `osascript` flags
+2. **Script escaping**: Escape single quotes and special characters
+3. **Command construction**: Build complete `osascript` command
 4. **Execution**: Use `child_process.exec` with promisified interface
 5. **Result processing**: Parse stdout/stderr into structured result
 6. **Error handling**: Capture exit codes and error messages
 
 ### Type Safety Architecture
 
-The library provides comprehensive type safety through multiple layers:
+Comprehensive type safety through multiple layers:
 
-- **Generic return types**: `runScript<T>()` allows strongly-typed output
+- **Generic return types**: `runScript<T>()` for strongly-typed output
 - **Method chaining**: Builder methods return `ScriptBuilder` for fluent interface
 - **Options interfaces**: Strongly-typed configuration objects
-- **Union types**: For modifiers, window arrangements, and language options
+- **Union types**: For modifiers, window arrangements, language options
 - **AppleScript value types**: Proper typing for AppleScript data structures
 - **Error types**: Structured error information with line/column details
 
@@ -218,11 +218,11 @@ The library provides comprehensive type safety through multiple layers:
 
 ### Fluent Builder Pattern
 
-The library uses a fluent builder pattern for intuitive script construction:
+Fluent builder pattern for intuitive script construction:
 
-- **Method chaining**: Each method returns the builder for continued chaining
-- **Contextual methods**: Methods are grouped by functionality (UI, windows, apps)
-- **Progressive disclosure**: Simple methods for common tasks, advanced methods for complex scenarios
+- **Method chaining**: Each method returns builder for continued chaining
+- **Contextual methods**: Grouped by functionality (UI, windows, apps)
+- **Progressive disclosure**: Simple methods for common tasks, advanced for complex scenarios
 - **Discoverability**: IntelliSense provides comprehensive method suggestions
 
 ### Error Handling Strategy
@@ -237,13 +237,13 @@ Comprehensive error handling across all operations:
 
 ### Performance Considerations
 
-Optimized for both development and production use:
+Optimized for development and production:
 
-- **Lazy evaluation**: Scripts are built only when `build()` is called
+- **Lazy evaluation**: Scripts built only when `build()` called
 - **Efficient execution**: Direct `osascript` process spawning
 - **Memory management**: Minimal object creation during script building
-- **Caching**: Language information and capabilities are cached
-- **Streaming**: Large script outputs are handled efficiently
+- **Caching**: Language information and capabilities cached
+- **Streaming**: Large script outputs handled efficiently
 
 ## Common Use Cases and Patterns
 
@@ -298,7 +298,7 @@ if (!result.success) {
 
 ### Building Records from Variables (Shorthand Methods)
 
-The library provides several shorthand methods to eliminate repetitive boilerplate when extracting properties and creating records:
+Shorthand methods eliminate repetitive boilerplate when extracting properties and creating records:
 
 #### setExpression with Record Objects
 
@@ -327,7 +327,7 @@ const script = createScript()
 
 #### setEndRecord for Ultra-Clean Syntax
 
-The `setEndRecord()` method combines property extraction and record creation in one step:
+`setEndRecord()` combines property extraction and record creation in one step:
 
 ```typescript
 // Form 1: Direct expressions (use full expressions)
@@ -355,12 +355,12 @@ const script = createScript()
 
 **Implementation Details:**
 
-- `setEndRecord()` reduces boilerplate by ~31% compared to manual temporary variables
-- Form 1 accepts a Record with full expressions as values
-- Form 2 accepts a source object name and automatically constructs "property of source" expressions
-- Both forms generate AppleScript records and append them to lists in a single operation
+- `setEndRecord()` reduces boilerplate by ~31% vs manual temporary variables
+- Form 1 accepts Record with full expressions as values
+- Form 2 accepts source object name, automatically constructs "property of source" expressions
+- Both forms generate AppleScript records and append to lists in single operation
 - Type-safe with full TypeScript support
-- Validates that propertyMap is provided when using source object form
+- Validates propertyMap provided when using source object form
 
 ## Development Guidelines
 
@@ -400,16 +400,16 @@ Before submitting changes:
 
 ### Platform Requirements
 
-- **macOS only**: Tests require `osascript` command availability
-- **Real execution**: Integration tests use actual `osascript` execution
-- **Mocking strategy**: Unit tests mock `child_process.exec` for isolation
-- **Error simulation**: Test both success and failure scenarios
+- **macOS only**: Tests require `osascript` command
+- **Real execution**: Integration tests use actual `osascript`
+- **Mocking strategy**: Unit tests mock `child_process.exec`
+- **Error simulation**: Test success and failure scenarios
 
 ### Test Categories
 
 - **Unit tests**: Individual method and class testing with mocks
 - **Integration tests**: Full workflow testing with real `osascript`
-- **Error handling**: Test script failures, syntax errors, and system errors
+- **Error handling**: Test script failures, syntax errors, system errors
 - **Type safety**: Validate TypeScript type checking and inference
 - **Block validation**: Test builder block stack validation and error cases
 
@@ -428,12 +428,12 @@ vi.mocked(exec).mockRejectedValueOnce(new Error('Script execution failed'));
 
 ## Import Path Aliasing
 
-The project uses sophisticated path aliasing for development:
+Sophisticated path aliasing for development:
 
 - **`applescript-node`** maps to `./src/index.ts` for internal imports
 - **External package simulation**: Internal imports mimic external package usage
-- **TypeScript resolution**: Proper module resolution for both development and build
-- **IDE support**: Full IntelliSense and navigation support
+- **TypeScript resolution**: Proper module resolution for development and build
+- **IDE support**: Full IntelliSense and navigation
 
 ## File Structure and Organization
 
@@ -489,7 +489,7 @@ src/
 - **Incremental builds**: tsup supports incremental compilation
 - **Type-only builds**: Separate TypeScript compilation for types
 - **Parallel processing**: Multiple build steps run in parallel
-- **Caching**: Language information and capabilities are cached
+- **Caching**: Language information and capabilities cached
 
 ### Development Experience
 
@@ -503,7 +503,7 @@ src/
 ### Script Execution Safety
 
 - **Input validation**: Proper escaping of script strings
-- **Error isolation**: Script failures don't crash the Node.js process
+- **Error isolation**: Script failures don't crash Node.js process
 - **Permission handling**: Respects macOS security permissions
 - **Sandboxing**: Scripts run in isolated `osascript` processes
 
@@ -538,23 +538,23 @@ src/
 
 ### Getting Started
 
-1. **Fork and clone** the repository
-2. **Install dependencies** with `pnpm install`
-3. **Run tests** to ensure everything works
-4. **Create feature branch** for your changes
+1. Fork and clone repository
+2. Install dependencies with `pnpm install`
+3. Run tests to ensure everything works
+4. Create feature branch for changes
 
 ### Development Process
 
-1. **Make changes** following the coding standards
-2. **Add tests** for new functionality
-3. **Run quality checks** (`pnpm verify`)
-4. **Update documentation** as needed
-5. **Submit pull request** with detailed description
+1. Make changes following coding standards
+2. Add tests for new functionality
+3. Run quality checks (`pnpm verify`)
+4. Update documentation as needed
+5. Submit pull request with detailed description
 
 ### Release Process
 
-1. **Version bump** in package.json
-2. **Update changelog** with new features
-3. **Run full verification** (`pnpm verify`)
-4. **Publish to npm** (`pnpm publish`)
-5. **Create GitHub release** with release notes
+1. Version bump in package.json
+2. Update changelog with new features
+3. Run full verification (`pnpm verify`)
+4. Publish to npm (`pnpm publish`)
+5. Create GitHub release with release notes
