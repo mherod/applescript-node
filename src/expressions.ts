@@ -187,6 +187,111 @@ export class ExprBuilder {
   compare(left: string, operator: '>' | '<' | '≥' | '≤' | '=' | '≠', right: string): string {
     return `${left} ${operator} ${right}`;
   }
+
+  /**
+   * Collection accessor: every element of container
+   * Example: expr.every('participant', 'aChat') => "every participant of aChat"
+   * Example: expr.every('note', 'folder "Notes"') => "every note of folder \"Notes\""
+   */
+  every(element: string, container: string): string {
+    return `every ${element} of ${container}`;
+  }
+
+  /**
+   * Nested property accessor: chains multiple properties
+   * Example: expr.nestedProperty('aChat', 'account', 'id') => "id of account of aChat"
+   * Example: expr.nestedProperty('note', 'folder', 'name') => "name of folder of note"
+   */
+  nestedProperty(obj: string, ...properties: string[]): string {
+    if (properties.length === 0) {
+      return obj;
+    }
+    // Build from inside out: "id of account of aChat"
+    return properties.reduce((acc, prop) => `${prop} of ${acc}`, obj);
+  }
+
+  /**
+   * Type casting: expression as type
+   * Example: expr.asType('creation date of aNote', 'string') => "creation date of aNote as string"
+   * Example: expr.asType(expr.property('aNote', 'id'), 'text') => "id of aNote as text"
+   */
+  asType(expression: string, type: 'string' | 'text' | 'number' | 'integer' | 'list'): string {
+    return `${expression} as ${type}`;
+  }
+
+  /**
+   * Substring/range accessor: text start thru end of source
+   * Example: expr.text(1, 100, 'notePlaintext') => "text 1 thru 100 of notePlaintext"
+   * Example: expr.text(5, 10, 'myString') => "text 5 thru 10 of myString"
+   */
+  text(start: number, end: number, source: string): string {
+    return `text ${start} thru ${end} of ${source}`;
+  }
+
+  /**
+   * Character accessor: character n of source
+   * Example: expr.character(1, 'myString') => "character 1 of myString"
+   */
+  character(index: number, source: string): string {
+    return `character ${index} of ${source}`;
+  }
+
+  /**
+   * Item accessor: item n of collection
+   * Example: expr.item(1, 'myList') => "item 1 of myList"
+   * Example: expr.item('i', 'notes') => "item i of notes"
+   */
+  item(index: number | string, collection: string): string {
+    return `item ${index} of ${collection}`;
+  }
+
+  /**
+   * Items range: items start thru end of collection
+   * Example: expr.items(1, 5, 'myList') => "items 1 thru 5 of myList"
+   */
+  items(start: number, end: number, collection: string): string {
+    return `items ${start} thru ${end} of ${collection}`;
+  }
+
+  /**
+   * First item: first element of collection
+   * Example: expr.first('note', 'notes') => "first note of notes"
+   */
+  first(element: string, collection: string): string {
+    return `first ${element} of ${collection}`;
+  }
+
+  /**
+   * Last item: last element of collection
+   * Example: expr.last('note', 'notes') => "last note of notes"
+   */
+  last(element: string, collection: string): string {
+    return `last ${element} of ${collection}`;
+  }
+
+  /**
+   * Some: some element where condition
+   * Example: expr.some('note', 'notes', 'name contains "test"')
+   */
+  some(element: string, collection: string, condition: string): string {
+    return `some ${element} of ${collection} where ${condition}`;
+  }
+
+  /**
+   * Filter: every element where condition
+   * Example: expr.filter('note', 'notes', 'shared = true')
+   */
+  filter(element: string, collection: string, condition: string): string {
+    return `every ${element} of ${collection} where ${condition}`;
+  }
+
+  /**
+   * Concatenation: left & right
+   * Example: expr.concat('text 1 thru 50 of body', '"..."') => 'text 1 thru 50 of body & "..."'
+   */
+  concat(...parts: string[]): string {
+    return parts.join(' & ');
+  }
 }
 
 /**

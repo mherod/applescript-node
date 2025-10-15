@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { AppleScriptBuilder } from './builder.js';
 import { ExprBuilder, expr } from './expressions.js';
 
@@ -261,6 +261,110 @@ describe('ExprBuilder - Complex Expressions', () => {
     expect(e.compare('length of name1', '>', 'length of name2')).toBe(
       'length of name1 > length of name2',
     );
+  });
+});
+
+describe('ExprBuilder - Collection and Accessor Methods', () => {
+  it('should create "every" collection accessor', () => {
+    const e = new ExprBuilder();
+    expect(e.every('participant', 'aChat')).toBe('every participant of aChat');
+    expect(e.every('note', 'folder "Notes"')).toBe('every note of folder "Notes"');
+  });
+
+  it('should create nested property chains', () => {
+    const e = new ExprBuilder();
+    expect(e.nestedProperty('aChat', 'account', 'id')).toBe('id of account of aChat');
+    expect(e.nestedProperty('note', 'folder', 'account', 'name')).toBe(
+      'name of account of folder of note',
+    );
+    expect(e.nestedProperty('p', 'handle')).toBe('handle of p');
+  });
+
+  it('should handle type casting with asType', () => {
+    const e = new ExprBuilder();
+    expect(e.asType('creation date of aNote', 'string')).toBe('creation date of aNote as string');
+    expect(e.asType(e.property('aNote', 'id'), 'text')).toBe('id of aNote as text');
+    expect(e.asType('count of notes', 'integer')).toBe('count of notes as integer');
+  });
+
+  it('should create text range accessors', () => {
+    const e = new ExprBuilder();
+    expect(e.text(1, 100, 'notePlaintext')).toBe('text 1 thru 100 of notePlaintext');
+    expect(e.text(5, 10, 'myString')).toBe('text 5 thru 10 of myString');
+  });
+
+  it('should create character accessors', () => {
+    const e = new ExprBuilder();
+    expect(e.character(1, 'myString')).toBe('character 1 of myString');
+    expect(e.character(5, 'name')).toBe('character 5 of name');
+  });
+
+  it('should create item accessors', () => {
+    const e = new ExprBuilder();
+    expect(e.item(1, 'myList')).toBe('item 1 of myList');
+    expect(e.item('i', 'notes')).toBe('item i of notes');
+  });
+
+  it('should create items range accessors', () => {
+    const e = new ExprBuilder();
+    expect(e.items(1, 5, 'myList')).toBe('items 1 thru 5 of myList');
+    expect(e.items(10, 20, 'collection')).toBe('items 10 thru 20 of collection');
+  });
+
+  it('should create first and last accessors', () => {
+    const e = new ExprBuilder();
+    expect(e.first('note', 'notes')).toBe('first note of notes');
+    expect(e.last('item', 'list')).toBe('last item of list');
+  });
+
+  it('should create some expressions with conditions', () => {
+    const e = new ExprBuilder();
+    expect(e.some('note', 'notes', 'name contains "test"')).toBe(
+      'some note of notes where name contains "test"',
+    );
+  });
+
+  it('should create filter expressions', () => {
+    const e = new ExprBuilder();
+    expect(e.filter('note', 'notes', 'shared = true')).toBe(
+      'every note of notes where shared = true',
+    );
+  });
+
+  it('should concatenate expressions', () => {
+    const e = new ExprBuilder();
+    expect(e.concat('text 1 thru 50 of body', '"..."')).toBe('text 1 thru 50 of body & "..."');
+    expect(e.concat('firstName', '" "', 'lastName')).toBe('firstName & " " & lastName');
+  });
+
+  it('should compose complex real-world expressions', () => {
+    const e = new ExprBuilder();
+
+    // every participant of aChat
+    expect(e.every('participant', 'aChat')).toBe('every participant of aChat');
+
+    // id of account of aChat
+    expect(e.nestedProperty('aChat', 'account', 'id')).toBe('id of account of aChat');
+
+    // creation date of aNote as string
+    const creationDate = e.asType(e.property('aNote', 'creation date'), 'string');
+    expect(creationDate).toBe('creation date of aNote as string');
+
+    // text 1 thru 100 of notePlaintext & "..."
+    const preview = e.concat(e.text(1, 100, 'notePlaintext'), '"..."');
+    expect(preview).toBe('text 1 thru 100 of notePlaintext & "..."');
+  });
+
+  it('should combine new methods with existing conditions', () => {
+    const e = new ExprBuilder();
+
+    // if length of (text 1 thru 100 of body) > 50
+    const condition = e.gt(e.length(e.text(1, 100, 'body')), 50);
+    expect(condition).toBe('length of text 1 thru 100 of body > 50');
+
+    // count of (every note of folder) > 10
+    const countCondition = e.gt(e.count(e.every('note', 'folder')), 10);
+    expect(countCondition).toBe('count of every note of folder > 10');
   });
 });
 
