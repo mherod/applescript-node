@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import CliTable3 from 'cli-table3';
 import chalk from 'chalk';
 import { createScript, runScript, ScriptValidator } from '../src/index.js';
@@ -133,32 +134,46 @@ async function demonstrateNotesAutomation() {
       .set('counter', 0)
       .repeatWith('aNote', 'every note')
       .increment('counter')
-      .if(`counter > ${notesToFetch}`)
-      .exitRepeat()
-      .end()
-      .try()
-      .setExpression('notePlaintext', 'plaintext of aNote')
-      .comment('Truncate plaintext to first 100 characters')
-      .if('length of notePlaintext > 100')
-      .setExpression('notePreview', 'text 1 thru 100 of notePlaintext & "..."')
-      .else()
-      .set('notePreview', 'notePlaintext')
-      .end()
-      .setEndRecord('notesList', {
-        noteName: 'name of aNote',
-        noteId: 'id of aNote',
-        preview: 'notePreview',
-        created: 'creation date of aNote as string',
-        modified: 'modification date of aNote as string',
-        isShared: 'shared of aNote',
-        isProtected: 'password protected of aNote',
-      })
-      .onError()
-      .comment('Skip notes with errors')
-      .end()
-      .end()
+      // Use new explicit paired endings for cleaner code
+      .ifThen(
+        (e) => e.gt('counter', notesToFetch),
+        (b) => {
+          b.exitRepeat();
+        },
+      )
+      // Use tryCatch convenience helper for automatic block closing
+      .tryCatch(
+        (tryBlock) => {
+          tryBlock.setExpression('notePlaintext', 'plaintext of aNote');
+          tryBlock.comment('Truncate plaintext to first 100 characters');
+          // Use ifThenElse with ExprBuilder for type-safe conditions
+          tryBlock.ifThenElse(
+            (e) => e.gt(e.length('notePlaintext'), 100),
+            (then_) => {
+              then_.setExpression('notePreview', 'text 1 thru 100 of notePlaintext & "..."');
+            },
+            (else_) => {
+              else_.set('notePreview', 'notePlaintext');
+            },
+          );
+          // Use setEndRecord for clean record creation
+          tryBlock.setEndRecord('notesList', {
+            noteName: 'name of aNote',
+            noteId: 'id of aNote',
+            preview: 'notePreview',
+            created: 'creation date of aNote as string',
+            modified: 'modification date of aNote as string',
+            isShared: 'shared of aNote',
+            isProtected: 'password protected of aNote',
+          });
+        },
+        (catchBlock) => {
+          catchBlock.comment('Skip notes with errors');
+        },
+      )
+      .endrepeat()
       .returnRaw('notesList')
-      .end();
+      .endtell();
 
     console.log(chalk.gray('Validating script...'));
     const notesValidation = validator.validate(notesScript.build());

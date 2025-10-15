@@ -362,6 +362,209 @@ const script = createScript()
 - Type-safe with full TypeScript support
 - Validates propertyMap provided when using source object form
 
+### Explicit Paired Endings
+
+Explicit block endings improve code clarity and reduce errors when working with nested blocks:
+
+```typescript
+// Use explicit endings for clarity
+const script = createScript()
+  .tell('Finder')
+  .if('count of windows > 0')
+  .raw('activate front window')
+  .endif() // Explicit: ends the if block
+  .endtell() // Explicit: ends the tell block
+  .build();
+
+// These validate correct block types - will error if mismatched
+builder.if('x > 5').endif(); // ✓ Correct
+builder.repeat(5).endrepeat(); // ✓ Correct
+builder.try().endtry(); // ✓ Correct
+builder.tell('App').endtell(); // ✓ Correct
+
+// Type-safe - will throw error if block types don't match
+builder.if('x > 5').endrepeat(); // ✗ Error: trying to close repeat, not if
+```
+
+**Available explicit endings:**
+
+- `endif()` - for if blocks
+- `endrepeat()` - for repeat blocks
+- `endtry()` - for try blocks
+- `endtell()` - for tell blocks
+- `endon()` - for on handler blocks
+- `endconsidering()` - for considering blocks
+- `endignoring()` - for ignoring blocks
+- `endusing()` - for using blocks
+- `endwith()` - for with blocks
+
+**Benefits:**
+
+- Eliminates confusion about which `end()` closes which block
+- IDE autocomplete shows all ending options
+- Runtime validation catches mismatched block types
+- Self-documenting code that's easy to understand
+
+### Convenience Helper Methods
+
+Convenience helpers simplify common patterns and automatically manage block closing:
+
+#### ifThen and ifThenElse
+
+```typescript
+// OLD WAY: Manual block management
+const script = createScript().if('counter > 10').then().raw('log "greater"').endif();
+
+// NEW WAY: Cleaner with convenience helper
+const script = createScript().ifThen('counter > 10', (b) => {
+  b.raw('log "greater"');
+});
+
+// if-then-else pattern
+const script = createScript().ifThenElse(
+  'counter > 10',
+  (then_) => {
+    then_.raw('log "greater"');
+  },
+  (else_) => {
+    else_.raw('log "not greater"');
+  },
+);
+```
+
+#### tryCatch
+
+```typescript
+// OLD WAY: Manual try-catch management
+const script = createScript().try().raw('activate').onError().raw('log "failed"').endtry();
+
+// NEW WAY: Simplified with helper
+const script = createScript().tryCatch(
+  (try_) => {
+    try_.raw('activate');
+  },
+  (catch_) => {
+    catch_.raw('log "failed"');
+  },
+);
+
+// With error variable capture
+const script = createScript().tryCatchError(
+  (try_) => {
+    try_.raw('activate');
+  },
+  'errorMsg', // Error variable name
+  (catch_) => {
+    catch_.raw('log errorMsg');
+  },
+);
+```
+
+**Benefits:**
+
+- Blocks automatically closed - no forgotten `endif()` calls
+- Callback parameters clearly show scope
+- JavaScript indentation matches block hierarchy
+- Callbacks can use standard TypeScript features
+
+### Type-Safe Expressions with ExprBuilder
+
+`ExprBuilder` provides type-safe expression building with autocomplete:
+
+```typescript
+import { ExprBuilder } from 'applescript-node';
+
+// OLD WAY: String-based conditions are error-prone
+.if('counter > 10')  // Typo: what if you type 'countre'? No error until runtime!
+
+// NEW WAY: Type-safe with ExprBuilder
+.if((e) => e.gt('counter', 10))  // ✓ Autocomplete, type checking
+
+// Comparison operators
+const e = new ExprBuilder();
+e.gt('x', 5)              // x > 5
+e.lt('x', 5)              // x < 5
+e.gte('x', 5)             // x ≥ 5
+e.lte('x', 5)             // x ≤ 5
+e.eq('status', 'done')    // status = "done"
+e.ne('status', 'pending') // status ≠ "pending"
+
+// String operations
+e.length('name')          // length of name
+e.contains('name', '"J"') // name contains "J"
+e.startsWith('text', '"A"') // text begins with "A"
+e.endsWith('text', '"Z"') // text ends with "Z"
+
+// Property and count operations
+e.property('note', 'name')      // name of note
+e.count('notes')                // count of notes
+e.exists('window "Settings"')   // exists window "Settings"
+e.typeEquals('value', 'text')   // the type of value is text
+
+// Logical operators
+e.and('x > 5', 'y < 10')        // x > 5 and y < 10
+e.or('x > 5', 'y > 10')         // x > 5 or y > 10
+e.not('exists window')          // not exists window
+
+// Complex expressions
+const cond = e.and(
+  e.gt(e.length('name'), 5),
+  e.eq('status', 'active')
+);
+// Produces: length of name > 5 and status = "active"
+```
+
+**Usage with builder:**
+
+```typescript
+const script = createScript()
+  .tell('Notes')
+  .set('notesList', [])
+  .repeatWith('aNote', 'every note')
+  // Use ExprBuilder for condition
+  .ifThen(
+    (e) => e.gt('counter', 50),
+    (b) => {
+      b.exitRepeat();
+    },
+  )
+  .tryCatch(
+    (b) => {
+      b.setExpression('notePlaintext', 'plaintext of aNote');
+      // Nested expressions
+      b.ifThenElse(
+        (e) => e.gt(e.length('notePlaintext'), 100),
+        (then_) => {
+          then_.setExpression('notePreview', 'text 1 thru 100 of notePlaintext & "..."');
+        },
+        (else_) => {
+          else_.set('notePreview', 'notePlaintext');
+        },
+      );
+      b.setEndRecord('notesList', {
+        noteName: 'name of aNote',
+        noteId: 'id of aNote',
+        preview: 'notePreview',
+      });
+    },
+    (c) => {
+      c.comment('Skip notes with errors');
+    },
+  )
+  .endrepeat()
+  .returnRaw('notesList')
+  .endtell()
+  .build();
+```
+
+**Benefits:**
+
+- Type-safe conditions with TypeScript checking
+- IDE autocomplete for all operators
+- Self-documenting: `e.gt()` is clearer than `>`
+- Composable expressions with `and()`, `or()`, `not()`
+- Prevents common mistakes like property name typos
+
 ## Development Guidelines
 
 ### Adding New Features

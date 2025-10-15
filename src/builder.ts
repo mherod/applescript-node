@@ -1,4 +1,5 @@
 import type { AppleScriptValue, ScriptBuilder } from './types.js';
+import { ExprBuilder } from './expressions.js';
 
 type BlockType =
   | 'tell'
@@ -80,6 +81,20 @@ export class AppleScriptBuilder implements ScriptBuilder {
     this.indentLevel--;
   }
 
+  private validateBlockType(expectedType: BlockType): void {
+    if (this.blockStack.length === 0) {
+      throw new ScriptBuilderError(
+        `Cannot end ${expectedType} block: no blocks are currently open`,
+      );
+    }
+    const currentBlock = this.blockStack[this.blockStack.length - 1];
+    if (currentBlock.type !== expectedType) {
+      throw new ScriptBuilderError(
+        `Cannot end ${expectedType} block: currently inside ${currentBlock.type} block`,
+      );
+    }
+  }
+
   private addLine(line: string): void {
     this.script.push(`${this.getIndentation()}${line}`);
   }
@@ -117,8 +132,90 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  if(condition: string): ScriptBuilder {
-    this.script.push(`${this.getIndentation()}if ${condition}`);
+  /**
+   * Explicitly end an if block.
+   * Preferred over end() for clarity when working with multiple nested blocks.
+   */
+  endif(): ScriptBuilder {
+    this.validateBlockType('if');
+    return this.end();
+  }
+
+  /**
+   * Explicitly end a repeat block.
+   * Preferred over end() for clarity when working with multiple nested blocks.
+   */
+  endrepeat(): ScriptBuilder {
+    this.validateBlockType('repeat');
+    return this.end();
+  }
+
+  /**
+   * Explicitly end a try block.
+   * Preferred over end() for clarity when working with multiple nested blocks.
+   */
+  endtry(): ScriptBuilder {
+    this.validateBlockType('try');
+    return this.end();
+  }
+
+  /**
+   * Explicitly end a tell block.
+   * Preferred over end() for clarity when working with multiple nested blocks.
+   */
+  endtell(): ScriptBuilder {
+    this.validateBlockType('tell');
+    return this.end();
+  }
+
+  /**
+   * Explicitly end an on handler block.
+   * Preferred over end() for clarity when working with multiple nested blocks.
+   */
+  endon(): ScriptBuilder {
+    this.validateBlockType('on');
+    return this.end();
+  }
+
+  /**
+   * Explicitly end a considering block.
+   * Preferred over end() for clarity when working with multiple nested blocks.
+   */
+  endconsidering(): ScriptBuilder {
+    this.validateBlockType('considering');
+    return this.end();
+  }
+
+  /**
+   * Explicitly end an ignoring block.
+   * Preferred over end() for clarity when working with multiple nested blocks.
+   */
+  endignoring(): ScriptBuilder {
+    this.validateBlockType('ignoring');
+    return this.end();
+  }
+
+  /**
+   * Explicitly end a using block.
+   * Preferred over end() for clarity when working with multiple nested blocks.
+   */
+  endusing(): ScriptBuilder {
+    this.validateBlockType('using');
+    return this.end();
+  }
+
+  /**
+   * Explicitly end a with block.
+   * Preferred over end() for clarity when working with multiple nested blocks.
+   */
+  endwith(): ScriptBuilder {
+    this.validateBlockType('with');
+    return this.end();
+  }
+
+  if(condition: string | ((expr: ExprBuilder) => string)): ScriptBuilder {
+    const conditionStr = typeof condition === 'function' ? condition(new ExprBuilder()) : condition;
+    this.script.push(`${this.getIndentation()}if ${conditionStr}`);
     this.pushBlock('if');
     return this;
   }
@@ -790,6 +887,76 @@ export class AppleScriptBuilder implements ScriptBuilder {
       `tell application "System Events" to click menu item "${this.escapeString(itemName)}" of menu "${this.escapeString(menuName)}" of menu bar 1`,
     );
     return this;
+  }
+
+  // Convenience helpers for cleaner API
+  /**
+   * Simplified if-then pattern that automatically closes the if block.
+   * Cleaner than manually calling if()...then()...endif().
+   * @param condition The condition to check (string or ExprBuilder callback)
+   * @param thenBlock Callback that builds the then branch
+   */
+  ifThen(
+    condition: string | ((expr: ExprBuilder) => string),
+    thenBlock: (builder: ScriptBuilder) => void,
+  ): ScriptBuilder {
+    this.if(condition).then();
+    thenBlock(this);
+    return this.endif();
+  }
+
+  /**
+   * Simplified if-then-else pattern that automatically closes the if block.
+   * Cleaner than manually calling if()...then()...else()...endif().
+   * @param condition The condition to check (string or ExprBuilder callback)
+   * @param thenBlock Callback that builds the then branch
+   * @param elseBlock Callback that builds the else branch
+   */
+  ifThenElse(
+    condition: string | ((expr: ExprBuilder) => string),
+    thenBlock: (builder: ScriptBuilder) => void,
+    elseBlock: (builder: ScriptBuilder) => void,
+  ): ScriptBuilder {
+    this.if(condition).then();
+    thenBlock(this);
+    this.else();
+    elseBlock(this);
+    return this.endif();
+  }
+
+  /**
+   * Simplified try-catch pattern that automatically closes the try block.
+   * Cleaner than manually calling try()...onError()...endtry().
+   * @param tryBlock Callback that builds the try branch
+   * @param catchBlock Callback that builds the on error branch
+   */
+  tryCatch(
+    tryBlock: (builder: ScriptBuilder) => void,
+    catchBlock: (builder: ScriptBuilder) => void,
+  ): ScriptBuilder {
+    this.try();
+    tryBlock(this);
+    this.onError();
+    catchBlock(this);
+    return this.endtry();
+  }
+
+  /**
+   * Simplified try-catch pattern with error variable capture.
+   * @param tryBlock Callback that builds the try branch
+   * @param errorVarName Name of the variable to capture the error
+   * @param catchBlock Callback that builds the on error branch
+   */
+  tryCatchError(
+    tryBlock: (builder: ScriptBuilder) => void,
+    errorVarName: string,
+    catchBlock: (builder: ScriptBuilder) => void,
+  ): ScriptBuilder {
+    this.try();
+    tryBlock(this);
+    this.onError(errorVarName);
+    catchBlock(this);
+    return this.endtry();
   }
 
   build(): string {

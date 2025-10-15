@@ -24,6 +24,7 @@ export type {
 } from './types.js';
 export * from './executor.js';
 export * from './builder.js';
+export * from './expressions.js';
 export * from './languages.js';
 export * from './compiler.js';
 export * from './decompiler.js';

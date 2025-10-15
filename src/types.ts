@@ -130,7 +130,17 @@ export interface ScriptBuilder {
   tell: (target: string) => ScriptBuilder;
   tellProcess: (processName: string) => ScriptBuilder;
   end: () => ScriptBuilder;
-  if: (condition: string) => ScriptBuilder;
+  // Explicit block endings for clarity
+  endif: () => ScriptBuilder;
+  endrepeat: () => ScriptBuilder;
+  endtry: () => ScriptBuilder;
+  endtell: () => ScriptBuilder;
+  endon: () => ScriptBuilder;
+  endconsidering: () => ScriptBuilder;
+  endignoring: () => ScriptBuilder;
+  endusing: () => ScriptBuilder;
+  endwith: () => ScriptBuilder;
+  if: (condition: string | ((expr: any) => string)) => ScriptBuilder;
   then: () => ScriptBuilder;
   else: () => ScriptBuilder;
   elseIf: (condition: string) => ScriptBuilder;
@@ -152,6 +162,26 @@ export interface ScriptBuilder {
   returnRaw: (expression: string) => ScriptBuilder;
   log: (message: string) => ScriptBuilder;
   comment: (text: string) => ScriptBuilder;
+
+  // Convenience helpers for cleaner API
+  ifThen: (
+    condition: string | ((expr: any) => string),
+    thenBlock: (builder: ScriptBuilder) => void,
+  ) => ScriptBuilder;
+  ifThenElse: (
+    condition: string | ((expr: any) => string),
+    thenBlock: (builder: ScriptBuilder) => void,
+    elseBlock: (builder: ScriptBuilder) => void,
+  ) => ScriptBuilder;
+  tryCatch: (
+    tryBlock: (builder: ScriptBuilder) => void,
+    catchBlock: (builder: ScriptBuilder) => void,
+  ) => ScriptBuilder;
+  tryCatchError: (
+    tryBlock: (builder: ScriptBuilder) => void,
+    errorVarName: string,
+    catchBlock: (builder: ScriptBuilder) => void,
+  ) => ScriptBuilder;
 
   // Enhanced Application control
   activate: () => ScriptBuilder;
