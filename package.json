@@ -35,6 +35,7 @@
     "example:list-apps": "tsx --tsconfig examples/tsconfig.json examples/list-applications.ts",
     "example:windows": "tsx --tsconfig examples/tsconfig.json examples/window-management.ts",
     "example:messages": "tsx --tsconfig examples/tsconfig.json examples/messages-reader.ts",
+    "example:notes": "tsx --tsconfig examples/tsconfig.json examples/notes-automation.ts",
     "example:sdef": "tsx --tsconfig examples/tsconfig.json examples/sdef-introspection.ts",
     "example:validation": "tsx --tsconfig examples/tsconfig.json examples/script-validation.ts",
     "examples": "pnpm run example:basic && pnpm run example:languages && pnpm run example:compile && pnpm run example:builder && pnpm run example:decompile && pnpm run example:list-apps && pnpm run example:windows && pnpm run example:sdef && pnpm run example:validation",
