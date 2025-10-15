@@ -182,6 +182,14 @@ export interface ScriptBuilder {
     errorVarName: string,
     catchBlock: (builder: ScriptBuilder) => void,
   ) => ScriptBuilder;
+  forEach: (
+    variable: string,
+    list: string,
+    block: (builder: ScriptBuilder) => void,
+  ) => ScriptBuilder;
+  repeatTimes: (times: number, block: (builder: ScriptBuilder) => void) => ScriptBuilder;
+  repeatWhileBlock: (condition: string, block: (builder: ScriptBuilder) => void) => ScriptBuilder;
+  repeatUntilBlock: (condition: string, block: (builder: ScriptBuilder) => void) => ScriptBuilder;
 
   // Enhanced Application control
   activate: () => ScriptBuilder;

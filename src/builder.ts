@@ -961,6 +961,52 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this.endtry();
   }
 
+  /**
+   * Iterate over items with automatic block closing.
+   * More intuitive name for repeatWith that uses callback pattern.
+   * @param variable Loop variable name
+   * @param list Expression for the list to iterate (e.g., 'every note')
+   * @param block Callback that builds the loop body
+   */
+  forEach(variable: string, list: string, block: (builder: ScriptBuilder) => void): ScriptBuilder {
+    this.repeatWith(variable, list);
+    block(this);
+    return this.endrepeat();
+  }
+
+  /**
+   * Repeat a fixed number of times with automatic block closing.
+   * @param times Number of times to repeat
+   * @param block Callback that builds the loop body
+   */
+  repeatTimes(times: number, block: (builder: ScriptBuilder) => void): ScriptBuilder {
+    this.repeat(times);
+    block(this);
+    return this.endrepeat();
+  }
+
+  /**
+   * Repeat while condition is true with automatic block closing.
+   * @param condition Condition to check (continues while true)
+   * @param block Callback that builds the loop body
+   */
+  repeatWhileBlock(condition: string, block: (builder: ScriptBuilder) => void): ScriptBuilder {
+    this.repeatWhile(condition);
+    block(this);
+    return this.endrepeat();
+  }
+
+  /**
+   * Repeat until condition is true with automatic block closing.
+   * @param condition Condition to check (continues until true)
+   * @param block Callback that builds the loop body
+   */
+  repeatUntilBlock(condition: string, block: (builder: ScriptBuilder) => void): ScriptBuilder {
+    this.repeatUntil(condition);
+    block(this);
+    return this.endrepeat();
+  }
+
   build(): string {
     this.validateBlockStack();
     return this.script.join('\n');

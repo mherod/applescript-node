@@ -396,3 +396,98 @@ describe('Factory Function', () => {
     expect(e.gt('x', 5)).toBe('x > 5');
   });
 });
+
+describe('Builder - Repeat Convenience Helpers', () => {
+  it('should use forEach to iterate with callback', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .forEach('item', 'every note', (b) => {
+        b.setEndRaw('results', 'item');
+      })
+      .build();
+
+    expect(script).toContain('repeat with item in every note');
+    expect(script).toContain('set end of results to item');
+    expect(script).toContain('end repeat');
+    expect(script.split('end repeat').length).toBe(2);
+  });
+
+  it('should use repeatTimes with callback', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('counter', 0)
+      .repeatTimes(5, (b) => {
+        b.increment('counter');
+      })
+      .build();
+
+    expect(script).toContain('repeat 5 times');
+    expect(script).toContain('set counter to counter + 1');
+    expect(script).toContain('end repeat');
+  });
+
+  it('should use repeatWhileBlock with callback', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('counter', 0)
+      .repeatWhileBlock('counter < 10', (b) => {
+        b.increment('counter');
+      })
+      .build();
+
+    expect(script).toContain('repeat while counter < 10');
+    expect(script).toContain('set counter to counter + 1');
+    expect(script).toContain('end repeat');
+  });
+
+  it('should use repeatUntilBlock with callback', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('counter', 0)
+      .repeatUntilBlock('counter >= 10', (b) => {
+        b.increment('counter');
+      })
+      .build();
+
+    expect(script).toContain('repeat until counter >= 10');
+    expect(script).toContain('set counter to counter + 1');
+    expect(script).toContain('end repeat');
+  });
+
+  it('should support fluent chaining within forEach callback', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .forEach('item', 'sourceList', (b) =>
+        b
+          .setExpression('processed', 'transform(item)')
+          .comment('Add to results')
+          .setEndRaw('results', 'processed'),
+      )
+      .build();
+
+    expect(script).toContain('repeat with item in sourceList');
+    expect(script).toContain('set processed to transform(item)');
+    expect(script).toContain('-- Add to results');
+    expect(script).toContain('set end of results to processed');
+    expect(script).toContain('end repeat');
+  });
+
+  it('should support nested repeat helpers', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .forEach('outer', 'every folder', (b1) => {
+        b1.forEach('inner', 'every note', (b2) => {
+          b2.raw('log inner');
+        });
+      })
+      .build();
+
+    expect(script).toContain('repeat with outer in every folder');
+    expect(script).toContain('repeat with inner in every note');
+    expect(script).toContain('log inner');
+    const endRepeats = script.split('end repeat');
+    expect(endRepeats.length).toBe(3); // 2 end repeats + 1 remainder
+  });
+});
