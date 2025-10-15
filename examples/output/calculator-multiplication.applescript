@@ -8,11 +8,10 @@ tell application "System Events" to tell process "Calculator"
   keystroke "1"
   delay 0.1
   keystroke "2"
-  delay 0.2
+  delay 0.1
   keystroke "*"
-  delay 0.2
+  delay 0.1
   keystroke "4"
-  delay 0.2
   keystroke "\r"
   delay 0.5
 end tell

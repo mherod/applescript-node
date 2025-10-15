@@ -14,19 +14,10 @@ async function main() {
     .end()
     .delay(0.5)
     .tellProcess('Calculator')
-    // Clear calculator first
+    // Clear calculator and perform calculation
     .keystroke('c')
     .delay(0.2)
-    // Press 5
-    .keystroke('5')
-    .delay(0.2)
-    // Press +
-    .keystroke('+')
-    .delay(0.2)
-    // Press 3
-    .keystroke('3')
-    .delay(0.2)
-    // Press = (return key)
+    .keystrokes('5+3')
     .keystroke('\r')
     .delay(0.5)
     .end()
@@ -52,19 +43,10 @@ async function main() {
     .end()
     .delay(0.5)
     .tellProcess('Calculator')
-    // Clear calculator
+    // Clear calculator and perform calculation
     .keystroke('c')
     .delay(0.2)
-    // Press 12 using keystrokes shorthand
-    .keystrokes('12')
-    .delay(0.2)
-    // Press * (multiply)
-    .keystroke('*')
-    .delay(0.2)
-    // Press 4
-    .keystroke('4')
-    .delay(0.2)
-    // Press = (return key)
+    .keystrokes('12*4')
     .keystroke('\r')
     .delay(0.5)
     .end()
@@ -90,28 +72,13 @@ async function main() {
     .end()
     .delay(0.5)
     .tellProcess('Calculator')
-    // Clear calculator
+    // Clear calculator and perform calculation
     .keystroke('c')
     .delay(0.2)
-    // Press 25 using keystrokes shorthand
-    .keystrokes('25')
-    .delay(0.2)
-    // Press / (divide)
-    .keystroke('/')
-    .delay(0.2)
-    // Press 5
-    .keystroke('5')
-    .delay(0.2)
-    // Press = to get intermediate result
+    .keystrokes('25/5')
     .keystroke('\r')
     .delay(0.3)
-    // Press + (add)
-    .keystroke('+')
-    .delay(0.2)
-    // Press 10 using keystrokes shorthand
-    .keystrokes('10')
-    .delay(0.2)
-    // Press = for final result
+    .keystrokes('+10')
     .keystroke('\r')
     .delay(0.5)
     .end()
@@ -129,27 +96,18 @@ async function main() {
     console.error(`  Error: ${complexResult.error}\n`);
   }
 
-  // Example 4: Using button clicks instead of keystrokes
-  console.log('Example 4: Click Calculator Buttons (7 - 2)');
-  const buttonClickScript = createScript()
+  // Example 4: Subtraction (7 - 2 = 5)
+  console.log('Example 4: Subtraction (7 - 2)');
+  const subtractionScript = createScript()
     .tell('Calculator')
     .activate()
     .end()
     .delay(0.5)
     .tellProcess('Calculator')
-    // Clear calculator
+    // Clear calculator and perform calculation
     .keystroke('c')
     .delay(0.2)
-    // Enter 7 via keystroke (easier than finding button)
-    .keystroke('7')
-    .delay(0.2)
-    // Press subtract
-    .keystroke('-')
-    .delay(0.2)
-    // Enter 2
-    .keystroke('2')
-    .delay(0.2)
-    // Press equals
+    .keystrokes('7-2')
     .keystroke('\r')
     .delay(0.5)
     .end()
@@ -158,13 +116,13 @@ async function main() {
     .end()
     .build();
 
-  writeFileSync('examples/output/calculator-buttons.applescript', buttonClickScript);
+  writeFileSync('examples/output/calculator-subtraction.applescript', subtractionScript);
 
-  const buttonResult = await runScript(buttonClickScript);
-  if (buttonResult.success) {
+  const subtractionResult = await runScript(subtractionScript);
+  if (subtractionResult.success) {
     console.log('  ✓ Calculation performed (7 - 2 = 5)\n');
   } else {
-    console.error(`  Error: ${buttonResult.error}\n`);
+    console.error(`  Error: ${subtractionResult.error}\n`);
   }
 
   // Example 5: Get Calculator window properties
