@@ -1,5 +1,5 @@
-import CliTable3 from 'cli-table3';
 import chalk from 'chalk';
+import CliTable3 from 'cli-table3';
 import { createScript, runScript, ScriptValidator } from '../src/index.js';
 
 async function readMessagesConversations() {
@@ -25,7 +25,9 @@ async function readMessagesConversations() {
   const activateValidation = validator.validate(activateScript.build());
   if (!activateValidation.valid) {
     console.log(chalk.red('✗ Script validation failed:'));
-    activateValidation.errors.forEach((err) => console.log(chalk.red(`  - ${err.message}`)));
+    for (const err of activateValidation.errors) {
+      console.log(chalk.red(`  - ${err.message}`));
+    }
     return;
   }
 
@@ -102,9 +104,9 @@ async function readMessagesConversations() {
     console.log(
       chalk.yellow(`⚠ ${chatsValidation.warnings.length} validation warnings (executing anyway):`),
     );
-    chatsValidation.warnings.slice(0, 3).forEach((warn) => {
+    for (const warn of chatsValidation.warnings.slice(0, 3)) {
       console.log(chalk.yellow(`  - ${warn.message}`));
-    });
+    }
   }
 
   const chatsResult = await runScript(chatsScript);
@@ -128,7 +130,7 @@ async function readMessagesConversations() {
         // Simple parsing of the AppleScript record format
         const chatRecords = output.split('chatId:').slice(1);
 
-        chatRecords.forEach((record, index) => {
+        for (const [index, record] of chatRecords.entries()) {
           const idMatch = /^([^,]+)/.exec(record);
           const participantsMatch = /participants:\{([^}]*)\}/.exec(record);
 
@@ -150,7 +152,7 @@ async function readMessagesConversations() {
               chalk.gray(truncatedId),
             ]);
           }
-        });
+        }
 
         console.log(chatTable.toString());
       } else {
