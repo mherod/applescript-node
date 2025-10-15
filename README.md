@@ -33,7 +33,7 @@ A robust, type-safe Node.js library for executing AppleScript and JavaScript thr
 - 📱 **Application Control**: Advanced application management features
 - 🔍 **Application Introspection**: Extract and parse scripting dictionaries (sdef) from any macOS app
 - ✅ **Script Validation**: Runtime validation with intelligent error detection and suggestions
-- 🧪 **Well Tested**: 189 tests with extensive coverage
+- 🧪 **Well Tested**: 293 tests with extensive coverage
 - 🔍 **Static Analysis**: ESLint and Prettier integration
 
 ## Installation
@@ -68,6 +68,20 @@ if (result.success) {
 
 ### New Features (Latest)
 
+- **Ultra-Shorthand Collection Mapping**: New `mapToJson()` method for one-line collection-to-JSON conversion
+  - Reduces ~30 lines of code to a single method call
+  - Handles initialization, iteration, property extraction, error handling, and JSON conversion
+  - Supports limit, until, while, and skipErrors options
+  - Perfect for extracting structured data from macOS applications
+- **Smart Property Picking**: New `pickEndRecord()` method with intelligent expression detection
+  - Automatically detects simple properties vs complex expressions
+  - Simple properties get "of source" appended automatically
+  - Complex expressions (with "of", "as", "where", etc.) used as-is
+  - Eliminates manual expression construction
+- **Type-Safe Expressions**: All condition methods now accept ExprBuilder for compile-time type safety
+  - Autocomplete support for comparison operators (gt, lt, gte, lte, eq, ne)
+  - String operations (contains, startsWith, endsWith, length)
+  - Logical operators (and, or, not) for composing complex conditions
 - **Simplified Record Creation**: `setExpression()` and `setEndRaw()` now accept Record objects directly, eliminating the need for `createScript().makeRecordFrom()` wrapper
 - **Smart Record Building**: New `setEndRecord()` method with automatic "of source" appending for ultra-clean syntax
   - Reduces boilerplate by 31% in common patterns
@@ -343,6 +357,174 @@ const result = await runScript(newScript2);
 - No temporary variables needed
 - Direct property-to-record mapping
 - More readable and maintainable
+
+### Smart Property Picking with pickEndRecord()
+
+The `pickEndRecord()` method intelligently detects whether properties are simple names or complex expressions, automatically appending "of source" only when needed.
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+const script = createScript()
+  .tell('Notes')
+  .set('notesList', [])
+  .repeatWith('aNote', 'every note')
+  .pickEndRecord('notesList', 'aNote', {
+    // Simple properties - automatically get "of aNote" appended
+    id: 'id',
+    name: 'name',
+    shared: 'shared',
+    // Complex expressions - used as-is (detected by keywords like "of", "as", "where")
+    created: 'creation date of aNote as string',
+    preview: 'text 1 thru 100 of body',
+    participantCount: 'count of participants',
+  })
+  .end()
+  .end();
+
+await runScript(script);
+```
+
+**Smart Detection Rules:**
+
+The method detects complex expressions by checking for AppleScript keywords:
+
+- Property access: `of`, `'s`
+- Type casting: `as`
+- Filtering: `where`, `whose`
+- Ranges: `thru`, `through`
+- Collections: `every`, `some`, `first`, `last`
+- Functions: `count`, `length`
+- String operations: `contains`, `begins with`, `ends with`
+
+**Benefits:**
+
+- No need to manually write "of source" for every property
+- Prevents double-appending errors
+- Self-documenting code - clear which are simple properties vs expressions
+- Type-safe with full TypeScript support
+
+### Ultra-Shorthand Collection to JSON with mapToJson()
+
+The `mapToJson()` method is the ultimate shorthand for the common pattern of iterating over a collection, extracting properties, and converting to JSON.
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+// Extract first 10 notes as JSON with automatic error handling
+const script = createScript()
+  .tell('Notes')
+  .mapToJson(
+    'aNote',
+    'every note',
+    {
+      id: 'id',
+      name: 'name',
+      content: 'plaintext',
+      created: 'creation date of aNote as string',
+      modified: 'modification date of aNote as string',
+      shared: 'shared',
+      passwordProtected: 'password protected',
+    },
+    { limit: 10, skipErrors: true },
+  )
+  .endtell()
+  .build();
+
+const result = await runScript<
+  Array<{
+    id: string;
+    name: string;
+    content: string;
+    created: string;
+    modified: string;
+    shared: boolean;
+    passwordProtected: boolean;
+  }>
+>(script);
+
+if (result.success) {
+  const notes = JSON.parse(result.output);
+  console.log(`Retrieved ${notes.length} notes`);
+  notes.forEach((note) => console.log(`- ${note.name}`));
+}
+```
+
+**Advanced Options:**
+
+```typescript
+// Limit number of items
+.mapToJson('item', 'collection', { prop: 'value' }, { limit: 50 })
+
+// Conditional iteration with ExprBuilder
+.mapToJson('item', 'collection', { prop: 'value' }, {
+  until: (e) => e.gt('counter', 100)
+})
+
+// String-based conditions
+.mapToJson('item', 'collection', { prop: 'value' }, {
+  until: 'found = true'
+})
+
+// While conditions
+.mapToJson('item', 'collection', { prop: 'value' }, {
+  while: (e) => e.lt('counter', 50)
+})
+
+// Disable error handling for better performance (if you trust the data)
+.mapToJson('item', 'collection', { prop: 'value' }, {
+  skipErrors: false
+})
+
+// No options - collect everything
+.mapToJson('item', 'collection', { prop: 'value' })
+```
+
+**What It Does Behind the Scenes:**
+
+The single `mapToJson()` call expands to approximately 30 lines of AppleScript:
+
+1. Creates temporary collection list
+2. Sets up counter (if limit specified)
+3. Iterates with repeat loop
+4. Adds exit condition (if limit/until/while specified)
+5. Wraps in try-catch (if skipErrors enabled)
+6. Uses `pickEndRecord()` for smart property extraction
+7. Generates JSON helper functions (escapeJsonString, valueToJson, etc.)
+8. Converts records to JSON objects
+9. Returns properly formatted JSON array
+
+**Real-World Example - Messages.app:**
+
+```typescript
+// Extract recent chats with participant info
+const chatsScript = createScript()
+  .tell('Messages')
+  .mapToJson(
+    'aChat',
+    'every chat',
+    {
+      id: 'id',
+      displayName: 'name',
+      participants: 'count of participants',
+      lastMessage: 'text of last message',
+    },
+    { limit: 20, skipErrors: true },
+  )
+  .endtell();
+
+const result = await runScript(chatsScript);
+const chats = JSON.parse(result.output);
+```
+
+**Benefits:**
+
+- **~97% code reduction**: From ~30 lines to 1 method call
+- **Automatic JSON handling**: No manual string escaping or formatting
+- **Robust error handling**: Skip problematic items without crashing
+- **Flexible iteration**: Limit, conditional loops, early exit
+- **Type-safe**: Full TypeScript support for input and output
+- **Performance**: Built-in optimizations like counter-based limits
 
 ### Working with System Events Processes
 
@@ -774,10 +956,22 @@ The ScriptBuilder provides a rich set of methods for constructing AppleScript co
 - `setEndRecord(listVariable: string, sourceOrExpressions: string | Record<string, string>, propertyMap?: Record<string, string>): ScriptBuilder` - Shorthand for appending records to lists
   - Form 1: `setEndRecord(list, source, {key: 'property'})` - Automatically appends "of source"
   - Form 2: `setEndRecord(list, {key: 'full expression'})` - Uses expressions as-is
+- `pickEndRecord(listVariable: string, sourceObject: string, propertyMap: Record<string, string>): ScriptBuilder` - Smart property picking with automatic expression detection
+  - Detects simple properties vs complex expressions based on AppleScript keywords
+  - Simple properties automatically get "of source" appended
+  - Complex expressions (with "of", "as", "where", etc.) used as-is
 - `get(property: string): ScriptBuilder`
 - `copy(value: AppleScriptValue, to: string): ScriptBuilder`
 - `count(items: string): ScriptBuilder`
 - `exists(item: string): ScriptBuilder`
+
+#### Collection and JSON Operations
+
+- `mapToJson(itemVariable: string, collection: string, properties: Record<string, string>, options?: MapToJsonOptions): ScriptBuilder` - Ultra-shorthand for collection-to-JSON conversion
+  - Handles initialization, iteration, property extraction, error handling, and JSON conversion in one call
+  - Options: `{ limit?, until?, while?, skipErrors? }`
+  - Reduces ~30 lines of code to a single method call
+  - Returns properly formatted JSON array string
 
 #### Utility Methods
 
