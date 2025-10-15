@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { createScript, runScript } from '../src/index.js';
 
 interface Note {
@@ -48,6 +49,9 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
       noteProtected: 'noteProtected',
     })
     .endtell();
+
+  // Write generated script to output directory
+  writeFileSync('examples/output/notes-latest-json.applescript', notesScript.build());
 
   const result = await runScript(notesScript);
 
