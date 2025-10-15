@@ -10,5 +10,4 @@ end tell
 tell application "Calculator"
   quit
 end tell
-set jsonOutput to "{" & "\"name\":\"" & winName & "\",\"position\":\"" & winPosition & "\",\"size\":\"" & winSize & "\"" & "}"
-return jsonOutput
+return "{" & "\"name\":\"" & winName & "\"" & ",\"position\":\"" & winPosition & "\"" & ",\"size\":\"" & winSize & "\"" & "}"

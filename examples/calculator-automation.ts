@@ -140,12 +140,11 @@ async function main() {
     .tellApp('Calculator', (app) => {
       app.quit();
     })
-    // Manually build JSON string
-    .setExpression(
-      'jsonOutput',
-      '"{" & "\\"name\\":\\"" & winName & "\\",\\"position\\":\\"" & winPosition & "\\",\\"size\\":\\"" & winSize & "\\"" & "}"',
-    )
-    .returnRaw('jsonOutput')
+    .returnJsonObject({
+      name: 'winName',
+      position: 'winPosition',
+      size: 'winSize',
+    })
     .build();
 
   writeFileSync('examples/output/calculator-window-info.applescript', windowInfoScript);

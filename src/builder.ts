@@ -382,6 +382,66 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   /**
+   * Build a JSON object string from AppleScript variables.
+   * Generates clean, readable JSON without manual string concatenation.
+   *
+   * @param variableMap Mapping of JSON keys to AppleScript variable names
+   * @returns AppleScript expression that evaluates to a JSON string
+   *
+   * @example
+   * // Instead of manual string building:
+   * // '"{" & "\\"name\\":\\"" & winName & "\\"}" '
+   *
+   * // Use:
+   * const jsonExpr = builder.buildJsonObject({
+   *   name: 'winName',
+   *   position: 'winPosition',
+   *   size: 'winSize'
+   * });
+   * builder.returnRaw(jsonExpr);
+   *
+   * // Generates: '{"name":"Calculator","position":"100,200","size":"800x600"}'
+   */
+  buildJsonObject(variableMap: Record<string, string>): string {
+    const entries = Object.entries(variableMap);
+
+    // Build the JSON string expression
+    const parts: string[] = ['"{"'];
+
+    entries.forEach(([jsonKey, varName], index) => {
+      const comma = index > 0 ? ',' : '';
+      // Each part: ,"key":"value"
+      parts.push(`"${comma}\\"${jsonKey}\\":\\""`);
+      parts.push(varName);
+      parts.push('"\\""');
+    });
+
+    parts.push('"}"');
+
+    // Join with & operators
+    return parts.join(' & ');
+  }
+
+  /**
+   * Build and return a JSON object from AppleScript variables.
+   * Convenience method that combines buildJsonObject() with returnRaw().
+   *
+   * @param variableMap Mapping of JSON keys to AppleScript variable names
+   *
+   * @example
+   * .setExpression('winName', 'name of window 1')
+   * .setExpression('winPosition', 'position of window 1 as text')
+   * .returnJsonObject({
+   *   name: 'winName',
+   *   position: 'winPosition'
+   * })
+   */
+  returnJsonObject(variableMap: Record<string, string>): ScriptBuilder {
+    const jsonExpr = this.buildJsonObject(variableMap);
+    return this.returnRaw(jsonExpr);
+  }
+
+  /**
    * Ultra-convenient shorthand for the common "map collection to JSON" pattern.
    * Replaces verbose manual iteration, property extraction, and JSON conversion.
    *

@@ -1212,6 +1212,114 @@ describe('AppleScriptBuilder', () => {
           );
         });
       });
+
+      describe('buildJsonObject() and returnJsonObject()', () => {
+        it('should build JSON expression from variable map', () => {
+          const builder = new AppleScriptBuilder();
+          const jsonExpr = builder.buildJsonObject({
+            name: 'winName',
+            position: 'winPosition',
+            size: 'winSize',
+          });
+
+          expect(jsonExpr).toBe(
+            '"{" & "\\"name\\":\\"" & winName & "\\"" & ",\\"position\\":\\"" & winPosition & "\\"" & ",\\"size\\":\\"" & winSize & "\\"" & "}"',
+          );
+        });
+
+        it('should build JSON with single property', () => {
+          const builder = new AppleScriptBuilder();
+          const jsonExpr = builder.buildJsonObject({
+            id: 'itemId',
+          });
+
+          expect(jsonExpr).toBe('"{" & "\\"id\\":\\"" & itemId & "\\"" & "}"');
+        });
+
+        it('should handle multiple properties in correct order', () => {
+          const builder = new AppleScriptBuilder();
+          const jsonExpr = builder.buildJsonObject({
+            first: 'var1',
+            second: 'var2',
+            third: 'var3',
+          });
+
+          expect(jsonExpr).toBe(
+            '"{" & "\\"first\\":\\"" & var1 & "\\"" & ",\\"second\\":\\"" & var2 & "\\"" & ",\\"third\\":\\"" & var3 & "\\"" & "}"',
+          );
+        });
+
+        it('should generate returnJsonObject script', () => {
+          const builder = new AppleScriptBuilder();
+          const script = builder
+            .setExpression('winName', 'name of window 1')
+            .setExpression('winPosition', 'position of window 1 as text')
+            .returnJsonObject({
+              name: 'winName',
+              position: 'winPosition',
+            })
+            .build();
+
+          expect(script).toBe(
+            'set winName to name of window 1\n' +
+              'set winPosition to position of window 1 as text\n' +
+              'return "{" & "\\"name\\":\\"" & winName & "\\"" & ",\\"position\\":\\"" & winPosition & "\\"" & "}"',
+          );
+        });
+
+        it('should work with tellApp and returnJsonObject', () => {
+          const builder = new AppleScriptBuilder();
+          const script = builder
+            .tellApp('Calculator', (app) => {
+              app.activate();
+            })
+            .delay(0.5)
+            .tellProcess('Calculator')
+            .setExpression('winName', 'name of window 1')
+            .setExpression('winSize', 'size of window 1 as text')
+            .end()
+            .tellApp('Calculator', (app) => {
+              app.quit();
+            })
+            .returnJsonObject({
+              name: 'winName',
+              size: 'winSize',
+            })
+            .build();
+
+          expect(script).toBe(
+            'tell application "Calculator"\n' +
+              '  activate\n' +
+              'end tell\n' +
+              'delay 0.5\n' +
+              'tell application "System Events" to tell process "Calculator"\n' +
+              '  set winName to name of window 1\n' +
+              '  set winSize to size of window 1 as text\n' +
+              'end tell\n' +
+              'tell application "Calculator"\n' +
+              '  quit\n' +
+              'end tell\n' +
+              'return "{" & "\\"name\\":\\"" & winName & "\\"" & ",\\"size\\":\\"" & winSize & "\\"" & "}"',
+          );
+        });
+
+        it('should work with setExpression using buildJsonObject', () => {
+          const builder = new AppleScriptBuilder();
+          const script = builder
+            .setExpression('var1', 'value1')
+            .setExpression('var2', 'value2')
+            .setExpression('jsonString', builder.buildJsonObject({ key1: 'var1', key2: 'var2' }))
+            .returnRaw('jsonString')
+            .build();
+
+          expect(script).toBe(
+            'set var1 to value1\n' +
+              'set var2 to value2\n' +
+              'set jsonString to "{" & "\\"key1\\":\\"" & var1 & "\\"" & ",\\"key2\\":\\"" & var2 & "\\"" & "}"\n' +
+              'return jsonString',
+          );
+        });
+      });
     });
   });
 });

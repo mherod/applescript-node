@@ -162,6 +162,8 @@ export interface ScriptBuilder {
   error: (message: string, number?: number) => ScriptBuilder;
   return: (value: AppleScriptValue) => ScriptBuilder;
   returnRaw: (expression: string) => ScriptBuilder;
+  buildJsonObject: (variableMap: Record<string, string>) => string;
+  returnJsonObject: (variableMap: Record<string, string>) => ScriptBuilder;
   returnAsJson: (listVariable: string, propertyMap: Record<string, string>) => ScriptBuilder;
   mapToJson: (
     itemVariable: string,
