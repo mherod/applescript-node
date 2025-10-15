@@ -1011,5 +1011,64 @@ describe('AppleScriptBuilder', () => {
         );
       });
     });
+
+    describe('keystrokes() shorthand', () => {
+      it('should generate multiple keystroke calls for each character', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.keystrokes('123').build();
+
+        expect(script).toBe('keystroke "1"\ndelay 0.1\nkeystroke "2"\ndelay 0.1\nkeystroke "3"');
+      });
+
+      it('should use custom delay between keystrokes', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.keystrokes('abc', 0.2).build();
+
+        expect(script).toBe('keystroke "a"\ndelay 0.2\nkeystroke "b"\ndelay 0.2\nkeystroke "c"');
+      });
+
+      it('should not add delay after the last keystroke', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.keystrokes('xy', 0.15).build();
+
+        expect(script).toBe('keystroke "x"\ndelay 0.15\nkeystroke "y"');
+      });
+
+      it('should handle single character without delay', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.keystrokes('a').build();
+
+        expect(script).toBe('keystroke "a"');
+      });
+
+      it('should work inside tell blocks', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tellProcess('Calculator').keystrokes('25').end().build();
+
+        expect(script).toBe(
+          'tell application "System Events" to tell process "Calculator"\n' +
+            '  keystroke "2"\n' +
+            '  delay 0.1\n' +
+            '  keystroke "5"\n' +
+            'end tell',
+        );
+      });
+
+      it('should handle special characters', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.keystrokes('+-*/').build();
+
+        expect(script).toBe(
+          'keystroke "+"\ndelay 0.1\nkeystroke "-"\ndelay 0.1\nkeystroke "*"\ndelay 0.1\nkeystroke "/"',
+        );
+      });
+
+      it('should properly escape quotes in keystrokes', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.keystrokes('a"b').build();
+
+        expect(script).toBe('keystroke "a"\ndelay 0.1\nkeystroke "\\""\ndelay 0.1\nkeystroke "b"');
+      });
+    });
   });
 });

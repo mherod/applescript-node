@@ -259,6 +259,7 @@ export interface ScriptBuilder {
   // Enhanced UI interaction
   click: (target: string) => ScriptBuilder;
   keystroke: (text: string, modifiers?: string[]) => ScriptBuilder;
+  keystrokes: (text: string, delayBetween?: number) => ScriptBuilder;
   delay: (seconds: number) => ScriptBuilder;
   pressKey: (
     key: string,

@@ -630,6 +630,29 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
+  /**
+   * Type multiple characters with automatic delays between each keystroke.
+   * Convenient shorthand for typing sequences like numbers or text.
+   * @param text String of characters to type (each character gets a separate keystroke)
+   * @param delayBetween Delay in seconds between each keystroke (default: 0.1)
+   * @example
+   * // Instead of:
+   * // .keystroke('1').delay(0.1).keystroke('2').delay(0.1).keystroke('3')
+   * // Use:
+   * // .keystrokes('123')
+   */
+  keystrokes(text: string, delayBetween = 0.1): ScriptBuilder {
+    const chars = text.split('');
+    chars.forEach((char, index) => {
+      this.keystroke(char);
+      // Add delay after each keystroke except the last one
+      if (index < chars.length - 1) {
+        this.delay(delayBetween);
+      }
+    });
+    return this;
+  }
+
   delay(seconds: number): ScriptBuilder {
     this.script.push(`${this.getIndentation()}delay ${seconds}`);
     return this;

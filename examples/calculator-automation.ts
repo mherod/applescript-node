@@ -55,10 +55,8 @@ async function main() {
     // Clear calculator
     .keystroke('c')
     .delay(0.2)
-    // Press 12
-    .keystroke('1')
-    .delay(0.1)
-    .keystroke('2')
+    // Press 12 using keystrokes shorthand
+    .keystrokes('12')
     .delay(0.2)
     // Press * (multiply)
     .keystroke('*')
@@ -95,10 +93,8 @@ async function main() {
     // Clear calculator
     .keystroke('c')
     .delay(0.2)
-    // Press 25
-    .keystroke('2')
-    .delay(0.1)
-    .keystroke('5')
+    // Press 25 using keystrokes shorthand
+    .keystrokes('25')
     .delay(0.2)
     // Press / (divide)
     .keystroke('/')
@@ -112,10 +108,8 @@ async function main() {
     // Press + (add)
     .keystroke('+')
     .delay(0.2)
-    // Press 10
-    .keystroke('1')
-    .delay(0.1)
-    .keystroke('0')
+    // Press 10 using keystrokes shorthand
+    .keystrokes('10')
     .delay(0.2)
     // Press = for final result
     .keystroke('\r')
