@@ -1,5 +1,5 @@
-import CliTable3 from 'cli-table3';
 import chalk from 'chalk';
+import CliTable3 from 'cli-table3';
 import { createScript, runScript, ScriptValidator } from '../src/index.js';
 
 async function demonstrateNotesAutomation() {
@@ -112,7 +112,7 @@ async function demonstrateNotesAutomation() {
     .end();
 
   const statsResult = await runScript(statsScript);
-  const totalNotes = statsResult.success ? parseInt(String(statsResult.output)) : 0;
+  const totalNotes = statsResult.success ? Number.parseInt(String(statsResult.output)) : 0;
 
   console.log(chalk.white(`Total notes in Notes.app: ${chalk.yellow(totalNotes)}\n`));
 
@@ -326,7 +326,11 @@ async function demonstrateNotesAutomation() {
     { className: 'note', propertyName: 'name', accessType: 'write' as const },
     { className: 'note', propertyName: 'body', accessType: 'write' as const },
     { className: 'note', propertyName: 'id', accessType: 'write' as const },
-    { className: 'note', propertyName: 'plaintext', accessType: 'write' as const },
+    {
+      className: 'note',
+      propertyName: 'plaintext',
+      accessType: 'write' as const,
+    },
     { className: 'folder', propertyName: 'name', accessType: 'write' as const },
   ];
 
@@ -361,6 +365,12 @@ async function demonstrateNotesAutomation() {
   }
 
   console.log('\n' + propertyTable.toString());
+
+  // Close Notes.app
+  console.log(chalk.yellow('\n\nClosing Notes.app...'));
+  const quitScript = createScript().tell('Notes').quit().end();
+  await runScript(quitScript);
+  console.log(chalk.green('✓ Notes.app closed'));
 
   console.log(chalk.bold.green('\n✓ Notes.app automation demo complete!\n'));
 }

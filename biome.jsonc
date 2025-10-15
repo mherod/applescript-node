@@ -1,37 +1,27 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "extends": ["ultracite"],
-  "linter": {
-    "rules": {
-      "suspicious": {
-        "noConsole": "off"
-      },
-      "complexity": {
-        "noExcessiveCognitiveComplexity": "off"
-      },
-      "style": {
-        "noMagicNumbers": "off",
-        "useTemplate": "off"
-      },
-      "performance": {
-        "useTopLevelRegex": "off"
-      }
-    }
-  },
   "overrides": [
     {
       "includes": ["examples/**/*.ts"],
       "linter": {
         "rules": {
           "suspicious": {
-            "noConsole": "off"
+            "noConsole": "off",
+            "useIterableCallbackReturn": "off",
+            "noEvolvingTypes": "off"
           },
           "complexity": {
-            "noExcessiveCognitiveComplexity": "off"
+            "noExcessiveCognitiveComplexity": "off",
+            "noForEach": "off"
           },
           "style": {
             "noMagicNumbers": "off",
-            "useTemplate": "off"
+            "useTemplate": "off",
+            "useBlockStatements": "off"
+          },
+          "correctness": {
+            "useParseIntRadix": "off"
           },
           "performance": {
             "useTopLevelRegex": "off"
