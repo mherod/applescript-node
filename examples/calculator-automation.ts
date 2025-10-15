@@ -13,7 +13,6 @@ async function main() {
     .activate()
     .end()
     .delay(0.5)
-    .tell('System Events')
     .tellProcess('Calculator')
     // Clear calculator first
     .keystroke('c')
@@ -30,7 +29,6 @@ async function main() {
     // Press = (return key)
     .keystroke('\r')
     .delay(0.5)
-    .end()
     .end()
     .tell('Calculator')
     .quit()
@@ -53,7 +51,6 @@ async function main() {
     .activate()
     .end()
     .delay(0.5)
-    .tell('System Events')
     .tellProcess('Calculator')
     // Clear calculator
     .keystroke('c')
@@ -72,7 +69,6 @@ async function main() {
     // Press = (return key)
     .keystroke('\r')
     .delay(0.5)
-    .end()
     .end()
     .tell('Calculator')
     .quit()
@@ -95,7 +91,6 @@ async function main() {
     .activate()
     .end()
     .delay(0.5)
-    .tell('System Events')
     .tellProcess('Calculator')
     // Clear calculator
     .keystroke('c')
@@ -126,7 +121,6 @@ async function main() {
     .keystroke('\r')
     .delay(0.5)
     .end()
-    .end()
     .tell('Calculator')
     .quit()
     .end()
@@ -148,7 +142,6 @@ async function main() {
     .activate()
     .end()
     .delay(0.5)
-    .tell('System Events')
     .tellProcess('Calculator')
     // Clear calculator
     .keystroke('c')
@@ -165,7 +158,6 @@ async function main() {
     // Press equals
     .keystroke('\r')
     .delay(0.5)
-    .end()
     .end()
     .tell('Calculator')
     .quit()
@@ -188,7 +180,6 @@ async function main() {
     .activate()
     .end()
     .delay(0.5)
-    .tell('System Events')
     .tellProcess('Calculator')
     .setExpression('windowName', 'name of window 1')
     .setExpression('windowPosition', 'position of window 1')
@@ -197,7 +188,6 @@ async function main() {
       'info',
       '"Window: " & windowName & ", Position: " & (item 1 of windowPosition) & "," & (item 2 of windowPosition) & ", Size: " & (item 1 of windowSize) & "x" & (item 2 of windowSize)',
     )
-    .end()
     .end()
     .tell('Calculator')
     .quit()
