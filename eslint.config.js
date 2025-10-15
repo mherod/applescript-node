@@ -16,7 +16,7 @@ const typescript = {
         './tsconfig.lint.json',
         './tsconfig.build.json',
         './examples/tsconfig.json',
-        './tsconfig.config.json'
+        './tsconfig.config.json',
       ],
       tsconfigRootDir: import.meta.dirname,
     },
@@ -31,39 +31,54 @@ const typescript = {
     ...eslintConfigPrettier.rules,
     'prettier/prettier': 'error',
     '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/no-unused-vars': ['error', {
-      argsIgnorePattern: '^_',
-      varsIgnorePattern: '^_',
-      caughtErrorsIgnorePattern: '^_'
-    }],
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+      },
+    ],
     '@typescript-eslint/consistent-type-imports': [
       'error',
-      { prefer: 'type-imports', fixStyle: 'separate-type-imports' }
+      { prefer: 'type-imports', fixStyle: 'separate-type-imports' },
     ],
     '@typescript-eslint/no-import-type-side-effects': 'error',
     '@typescript-eslint/consistent-type-exports': [
       'error',
-      { fixMixedExportsWithInlineTypeSpecifier: true }
+      { fixMixedExportsWithInlineTypeSpecifier: true },
     ],
     '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
     '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
-    '@typescript-eslint/restrict-template-expressions': ['error', {
-      allowNumber: true,
-      allowBoolean: true,
-      allowAny: false,
-      allowNullish: true,
-      allowRegExp: true,
-    }],
-    '@typescript-eslint/no-confusing-void-expression': ['error', {
-      ignoreArrowShorthand: true,
-    }],
-    '@typescript-eslint/no-unnecessary-condition': ['error', {
-      allowConstantLoopConditions: true,
-    }],
-    '@typescript-eslint/no-extraneous-class': ['error', {
-      allowWithDecorator: true,
-      allowStaticOnly: true,
-    }],
+    '@typescript-eslint/restrict-template-expressions': [
+      'error',
+      {
+        allowNumber: true,
+        allowBoolean: true,
+        allowAny: false,
+        allowNullish: true,
+        allowRegExp: true,
+      },
+    ],
+    '@typescript-eslint/no-confusing-void-expression': [
+      'error',
+      {
+        ignoreArrowShorthand: true,
+      },
+    ],
+    '@typescript-eslint/no-unnecessary-condition': [
+      'error',
+      {
+        allowConstantLoopConditions: true,
+      },
+    ],
+    '@typescript-eslint/no-extraneous-class': [
+      'error',
+      {
+        allowWithDecorator: true,
+        allowStaticOnly: true,
+      },
+    ],
   },
 };
 

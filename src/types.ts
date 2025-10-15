@@ -57,22 +57,30 @@ export interface ScriptError {
 export interface ScriptBuilder {
   // Core language constructs
   tell: (target: string) => ScriptBuilder;
+  tellProcess: (processName: string) => ScriptBuilder;
   end: () => ScriptBuilder;
   if: (condition: string) => ScriptBuilder;
   then: () => ScriptBuilder;
   else: () => ScriptBuilder;
+  elseIf: (condition: string) => ScriptBuilder;
   repeat: (times?: number) => ScriptBuilder;
   repeatWith: (variable: string, list: string) => ScriptBuilder;
   repeatUntil: (condition: string) => ScriptBuilder;
   repeatWhile: (condition: string) => ScriptBuilder;
+  exitRepeat: () => ScriptBuilder;
+  continueRepeat: () => ScriptBuilder;
   on: (handlerName: string, parameters?: string[]) => ScriptBuilder;
   considering: (attributes: string[]) => ScriptBuilder;
   ignoring: (attributes: string[]) => ScriptBuilder;
   using: (terms: string[]) => ScriptBuilder;
   with: (timeout?: number, transaction?: boolean) => ScriptBuilder;
   try: () => ScriptBuilder;
+  onError: (variableName?: string) => ScriptBuilder;
   error: (message: string, number?: number) => ScriptBuilder;
   return: (value: AppleScriptValue) => ScriptBuilder;
+  returnRaw: (expression: string) => ScriptBuilder;
+  log: (message: string) => ScriptBuilder;
+  comment: (text: string) => ScriptBuilder;
 
   // Enhanced Application control
   activate: () => ScriptBuilder;
@@ -150,10 +158,18 @@ export interface ScriptBuilder {
 
   // Variables and properties
   set: (variable: string, value: AppleScriptValue) => ScriptBuilder;
+  setExpression: (variable: string, expression: string) => ScriptBuilder;
+  increment: (variable: string, by?: number) => ScriptBuilder;
+  decrement: (variable: string, by?: number) => ScriptBuilder;
   get: (property: string) => ScriptBuilder;
   copy: (value: AppleScriptValue, to: string) => ScriptBuilder;
   count: (items: string) => ScriptBuilder;
+  setCountOf: (variable: string, items: string) => ScriptBuilder;
   exists: (item: string) => ScriptBuilder;
+  setEnd: (variable: string, value: AppleScriptValue) => ScriptBuilder;
+  setEndRaw: (variable: string, expression: string) => ScriptBuilder;
+  setProperty: (variable: string, property: string, value: AppleScriptValue) => ScriptBuilder;
+  makeRecordFrom: (variableNames: Record<string, string>) => string;
 
   // List operations
   first: (items: string) => ScriptBuilder;
@@ -162,6 +178,9 @@ export interface ScriptBuilder {
   reverse: (items: string) => ScriptBuilder;
   some: (items: string, test: string) => ScriptBuilder;
   every: (items: string, test: string) => ScriptBuilder;
+  whose: (items: string, condition: string) => string;
+  getEvery: (itemType: string, location?: string) => ScriptBuilder;
+  getEveryWhere: (itemType: string, condition: string, location?: string) => ScriptBuilder;
 
   // Text operations
   offset: (text: string, in_: string) => ScriptBuilder;
@@ -178,4 +197,5 @@ export interface ScriptBuilder {
   // Raw script and building
   raw: (script: string) => ScriptBuilder;
   build: () => string;
+  reset: () => ScriptBuilder;
 }

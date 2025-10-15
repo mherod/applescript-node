@@ -28,15 +28,33 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this.INDENT.repeat(this.indentLevel);
   }
 
+  private escapeString(str: string): string {
+    // In AppleScript, backslashes and quotes need to be escaped
+    // Also handle common escape sequences
+    return str
+      .replace(/\\/g, '\\\\') // Backslash
+      .replace(/"/g, '\\"') // Quote
+      .replace(/\n/g, '\\n') // Newline
+      .replace(/\r/g, '\\r') // Carriage return
+      .replace(/\t/g, '\\t'); // Tab
+  }
+
   private formatValue(value: AppleScriptValue): string {
     if (value === null) return 'missing value';
-    if (typeof value === 'string') return `"${value}"`;
+    if (typeof value === 'string') return `"${this.escapeString(value)}"`;
     if (typeof value === 'number') return value.toString();
     if (typeof value === 'boolean') return value.toString();
     if (Array.isArray(value)) {
       return `{${value.map((v) => this.formatValue(v)).join(', ')}}`;
     }
     const entries = Object.entries(value as Record<string, AppleScriptValue>)
+      .map(([k, v]) => `${k}:${this.formatValue(v)}`)
+      .join(', ');
+    return `{${entries}}`;
+  }
+
+  private makeRecord(properties: Record<string, AppleScriptValue>): string {
+    const entries = Object.entries(properties)
       .map(([k, v]) => `${k}:${this.formatValue(v)}`)
       .join(', ');
     return `{${entries}}`;
@@ -68,8 +86,16 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   // Core language constructs
   tell(target: string): ScriptBuilder {
-    this.script.push(`${this.getIndentation()}tell application "${target}"`);
+    this.script.push(`${this.getIndentation()}tell application "${this.escapeString(target)}"`);
     this.pushBlock('tell', target);
+    return this;
+  }
+
+  tellProcess(processName: string): ScriptBuilder {
+    this.script.push(
+      `${this.getIndentation()}tell application "System Events" to tell process "${this.escapeString(processName)}"`,
+    );
+    this.pushBlock('tell', processName);
     return this;
   }
 
@@ -115,6 +141,16 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
+  elseIf(condition: string): ScriptBuilder {
+    if (this.blockStack.length === 0 || this.blockStack[this.blockStack.length - 1].type !== 'if') {
+      throw new ScriptBuilderError('Cannot call elseIf(): no if block is currently open');
+    }
+    this.indentLevel--;
+    this.script.push(`${this.getIndentation()}else if ${condition}`);
+    this.indentLevel++;
+    return this;
+  }
+
   repeat(times?: number): ScriptBuilder {
     if (times !== undefined && (!Number.isInteger(times) || times < 1)) {
       throw new ScriptBuilderError('Repeat times must be a positive integer');
@@ -156,6 +192,26 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
+  exitRepeat(): ScriptBuilder {
+    const hasRepeatBlock = this.blockStack.some((block) => block.type === 'repeat');
+    if (!hasRepeatBlock) {
+      throw new ScriptBuilderError('Cannot call exitRepeat(): no repeat block is currently open');
+    }
+    this.script.push(`${this.getIndentation()}exit repeat`);
+    return this;
+  }
+
+  continueRepeat(): ScriptBuilder {
+    const hasRepeatBlock = this.blockStack.some((block) => block.type === 'repeat');
+    if (!hasRepeatBlock) {
+      throw new ScriptBuilderError(
+        'Cannot call continueRepeat(): no repeat block is currently open',
+      );
+    }
+    this.script.push(`${this.getIndentation()}continue repeat`);
+    return this;
+  }
+
   considering(attributes: string[]): ScriptBuilder {
     if (!attributes.length) {
       throw new ScriptBuilderError('At least one attribute must be provided for considering');
@@ -176,7 +232,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   using(terms: string[]): ScriptBuilder {
     this.script.push(`${this.getIndentation()}using terms from ${terms.join(', ')}`);
-    this.indentLevel++;
+    this.pushBlock('using');
     return this;
   }
 
@@ -185,18 +241,32 @@ export class AppleScriptBuilder implements ScriptBuilder {
     if (timeout !== undefined) command += ` timeout of ${timeout}`;
     if (transaction) command += ' transaction';
     this.script.push(command);
-    this.indentLevel++;
+    this.pushBlock('with');
     return this;
   }
 
   try(): ScriptBuilder {
     this.script.push(`${this.getIndentation()}try`);
+    this.pushBlock('try');
+    return this;
+  }
+
+  onError(variableName?: string): ScriptBuilder {
+    if (
+      this.blockStack.length === 0 ||
+      this.blockStack[this.blockStack.length - 1].type !== 'try'
+    ) {
+      throw new ScriptBuilderError('Cannot call onError(): no try block is currently open');
+    }
+    this.indentLevel--;
+    const varPart = variableName ? ` ${variableName}` : '';
+    this.script.push(`${this.getIndentation()}on error${varPart}`);
     this.indentLevel++;
     return this;
   }
 
   error(message: string, number?: number): ScriptBuilder {
-    let command = `${this.getIndentation()}error "${message}"`;
+    let command = `${this.getIndentation()}error "${this.escapeString(message)}"`;
     if (number !== undefined) command += ` number ${number}`;
     this.script.push(command);
     return this;
@@ -204,6 +274,21 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   return(value: AppleScriptValue): ScriptBuilder {
     this.script.push(`${this.getIndentation()}return ${this.formatValue(value)}`);
+    return this;
+  }
+
+  returnRaw(expression: string): ScriptBuilder {
+    this.script.push(`${this.getIndentation()}return ${expression}`);
+    return this;
+  }
+
+  log(message: string): ScriptBuilder {
+    this.script.push(`${this.getIndentation()}log "${this.escapeString(message)}"`);
+    return this;
+  }
+
+  comment(text: string): ScriptBuilder {
+    this.script.push(`${this.getIndentation()}-- ${text}`);
     return this;
   }
 
@@ -236,7 +321,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
   // Window management
   closeWindow(window?: string): ScriptBuilder {
     if (window) {
-      this.script.push(`${this.getIndentation()}close window "${window}"`);
+      this.script.push(`${this.getIndentation()}close window "${this.escapeString(window)}"`);
     } else {
       this.script.push(`${this.getIndentation()}close front window`);
     }
@@ -250,7 +335,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   minimizeWindow(window?: string): ScriptBuilder {
     if (window) {
-      this.script.push(`${this.getIndentation()}set miniaturized of window "${window}" to true`);
+      this.script.push(
+        `${this.getIndentation()}set miniaturized of window "${this.escapeString(window)}" to true`,
+      );
     } else {
       this.script.push(`${this.getIndentation()}set miniaturized of front window to true`);
     }
@@ -259,7 +346,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   zoomWindow(window?: string): ScriptBuilder {
     if (window) {
-      this.script.push(`${this.getIndentation()}set zoomed of window "${window}" to true`);
+      this.script.push(
+        `${this.getIndentation()}set zoomed of window "${this.escapeString(window)}" to true`,
+      );
     } else {
       this.script.push(`${this.getIndentation()}set zoomed of front window to true`);
     }
@@ -274,7 +363,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   keystroke(text: string, modifiers?: string[]): ScriptBuilder {
     const modString = modifiers?.length ? ` using {${modifiers.join(', ')}}` : '';
-    this.script.push(`${this.getIndentation()}keystroke "${text}"${modString}`);
+    this.script.push(`${this.getIndentation()}keystroke "${this.escapeString(text)}"${modString}`);
     return this;
   }
 
@@ -293,14 +382,15 @@ export class AppleScriptBuilder implements ScriptBuilder {
       givingUpAfter?: number;
     } = {},
   ): ScriptBuilder {
-    let command = `${this.getIndentation()}display dialog "${text}"`;
+    let command = `${this.getIndentation()}display dialog "${this.escapeString(text)}"`;
 
     if (options.buttons?.length) {
-      command += ` buttons {"${options.buttons.join('", "')}"}`;
+      const escapedButtons = options.buttons.map((b) => this.escapeString(b));
+      command += ` buttons {"${escapedButtons.join('", "')}"}`;
     }
 
     if (options.defaultButton) {
-      command += ` default button "${options.defaultButton}"`;
+      command += ` default button "${this.escapeString(options.defaultButton)}"`;
     }
 
     if (options.withIcon) {
@@ -323,18 +413,18 @@ export class AppleScriptBuilder implements ScriptBuilder {
       sound?: string;
     } = {},
   ): ScriptBuilder {
-    let command = `${this.getIndentation()}display notification "${text}"`;
+    let command = `${this.getIndentation()}display notification "${this.escapeString(text)}"`;
 
     if (options.title) {
-      command += ` with title "${options.title}"`;
+      command += ` with title "${this.escapeString(options.title)}"`;
     }
 
     if (options.subtitle) {
-      command += ` subtitle "${options.subtitle}"`;
+      command += ` subtitle "${this.escapeString(options.subtitle)}"`;
     }
 
     if (options.sound) {
-      command += ` sound name "${options.sound}"`;
+      command += ` sound name "${this.escapeString(options.sound)}"`;
     }
 
     this.script.push(command);
@@ -344,6 +434,21 @@ export class AppleScriptBuilder implements ScriptBuilder {
   // Variables and properties
   set(variable: string, value: AppleScriptValue): ScriptBuilder {
     this.script.push(`${this.getIndentation()}set ${variable} to ${this.formatValue(value)}`);
+    return this;
+  }
+
+  setExpression(variable: string, expression: string): ScriptBuilder {
+    this.script.push(`${this.getIndentation()}set ${variable} to ${expression}`);
+    return this;
+  }
+
+  increment(variable: string, by = 1): ScriptBuilder {
+    this.script.push(`${this.getIndentation()}set ${variable} to ${variable} + ${by}`);
+    return this;
+  }
+
+  decrement(variable: string, by = 1): ScriptBuilder {
+    this.script.push(`${this.getIndentation()}set ${variable} to ${variable} - ${by}`);
     return this;
   }
 
@@ -362,9 +467,40 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
+  setCountOf(variable: string, items: string): ScriptBuilder {
+    this.script.push(`${this.getIndentation()}set ${variable} to count of (${items})`);
+    return this;
+  }
+
   exists(item: string): ScriptBuilder {
     this.script.push(`${this.getIndentation()}exists ${item}`);
     return this;
+  }
+
+  setEnd(variable: string, value: AppleScriptValue): ScriptBuilder {
+    this.script.push(
+      `${this.getIndentation()}set end of ${variable} to ${this.formatValue(value)}`,
+    );
+    return this;
+  }
+
+  setEndRaw(variable: string, expression: string): ScriptBuilder {
+    this.script.push(`${this.getIndentation()}set end of ${variable} to ${expression}`);
+    return this;
+  }
+
+  setProperty(variable: string, property: string, value: AppleScriptValue): ScriptBuilder {
+    this.script.push(
+      `${this.getIndentation()}set ${property} of ${variable} to ${this.formatValue(value)}`,
+    );
+    return this;
+  }
+
+  makeRecordFrom(variableNames: Record<string, string>): string {
+    const entries = Object.entries(variableNames)
+      .map(([key, varName]) => `${key}:${varName}`)
+      .join(', ');
+    return `{${entries}}`;
   }
 
   // List operations
@@ -395,6 +531,22 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   every(items: string, test: string): ScriptBuilder {
     this.script.push(`${this.getIndentation()}every item of ${items} where ${test}`);
+    return this;
+  }
+
+  whose(items: string, condition: string): string {
+    return `${items} whose ${condition}`;
+  }
+
+  getEvery(itemType: string, location?: string): ScriptBuilder {
+    const loc = location ? ` of ${location}` : '';
+    this.script.push(`${this.getIndentation()}get every ${itemType}${loc}`);
+    return this;
+  }
+
+  getEveryWhere(itemType: string, condition: string, location?: string): ScriptBuilder {
+    const loc = location ? ` of ${location}` : '';
+    this.script.push(`${this.getIndentation()}get every ${itemType}${loc} where ${condition}`);
     return this;
   }
 
@@ -431,12 +583,12 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   do(script: string): ScriptBuilder {
-    this.script.push(`${this.getIndentation()}do script "${script}"`);
+    this.script.push(`${this.getIndentation()}do script "${this.escapeString(script)}"`);
     return this;
   }
 
   doShellScript(command: string, administrator?: boolean): ScriptBuilder {
-    let cmd = `${this.getIndentation()}do shell script "${command}"`;
+    let cmd = `${this.getIndentation()}do shell script "${this.escapeString(command)}"`;
     if (administrator) {
       cmd += ' with administrator privileges';
     }
@@ -452,74 +604,78 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   // Enhanced Application control
   getRunningApplications(): ScriptBuilder {
-    this.tell('System Events')
-      .raw(
-        'tell application "System Events" to return {name, bundle identifier, visible, frontmost} of every process where background only is false',
-      )
-      .end();
+    this.raw(
+      'tell application "System Events" to return {name, bundle identifier, visible, frontmost} of every process where background only is false',
+    );
     return this;
   }
 
   getFrontmostApplication(): ScriptBuilder {
-    this.tell('System Events')
-      .raw(
-        'tell application "System Events" to return name of first process where frontmost is true',
-      )
-      .end();
+    this.raw(
+      'tell application "System Events" to return name of first process where frontmost is true',
+    );
     return this;
   }
 
   activateApplication(appName: string): ScriptBuilder {
-    this.tell(appName).raw('activate').end();
+    this.raw(`tell application "${this.escapeString(appName)}" to activate`);
     return this;
   }
 
   hideApplication(appName: string): ScriptBuilder {
-    this.tell('System Events').raw(`tell process "${appName}" to set visible to false`).end();
+    this.raw(
+      `tell application "System Events" to tell process "${this.escapeString(appName)}" to set visible to false`,
+    );
     return this;
   }
 
   unhideApplication(appName: string): ScriptBuilder {
-    this.tell('System Events').raw(`tell process "${appName}" to set visible to true`).end();
+    this.raw(
+      `tell application "System Events" to tell process "${this.escapeString(appName)}" to set visible to true`,
+    );
     return this;
   }
 
   quitApplication(appName: string): ScriptBuilder {
-    this.tell(appName).raw('quit').end();
+    this.raw(`tell application "${this.escapeString(appName)}" to quit`);
     return this;
   }
 
   isApplicationRunning(appName: string): ScriptBuilder {
-    this.tell('System Events').raw(`return exists (processes where name is "${appName}")`).end();
+    this.raw(
+      `tell application "System Events" to return exists (processes where name is "${this.escapeString(appName)}")`,
+    );
     return this;
   }
 
   getApplicationInfo(appName: string): ScriptBuilder {
-    this.tell('System Events').raw(`tell process "${appName}" to return properties`).end();
+    this.raw(
+      `tell application "System Events" to tell process "${this.escapeString(appName)}" to return properties`,
+    );
     return this;
   }
 
   // Enhanced Window management
   getWindowInfo(appName: string, windowName?: string): ScriptBuilder {
-    this.tell(appName)
-      .raw(
-        windowName
-          ? `tell window "${windowName}" to return {name, id, bounds, miniaturized, zoomed}`
-          : 'tell front window to return {name, id, bounds, miniaturized, zoomed}',
-      )
-      .end();
+    this.raw(
+      windowName
+        ? `tell application "${this.escapeString(appName)}" to tell window "${this.escapeString(windowName)}" to return {name, id, bounds, miniaturized, zoomed}`
+        : `tell application "${this.escapeString(appName)}" to tell front window to return {name, id, bounds, miniaturized, zoomed}`,
+    );
     return this;
   }
 
   getAllWindows(appName: string): ScriptBuilder {
-    this.tell(appName).raw('return {name, id, bounds, miniaturized, zoomed} of every window').end();
+    this.raw(
+      `tell application "${this.escapeString(appName)}" to return {name, id, bounds, miniaturized, zoomed} of every window`,
+    );
     return this;
   }
 
   getFrontmostWindow(appName: string): ScriptBuilder {
-    this.tell(appName)
-      .raw('tell front window to return {name, id, bounds, miniaturized, zoomed}')
-      .end();
+    this.raw(
+      `tell application "${this.escapeString(appName)}" to tell front window to return {name, id, bounds, miniaturized, zoomed}`,
+    );
     return this;
   }
 
@@ -528,35 +684,36 @@ export class AppleScriptBuilder implements ScriptBuilder {
     windowName: string,
     bounds: { x: number; y: number; width: number; height: number },
   ): ScriptBuilder {
-    this.tell(appName)
-      .raw(
-        `tell window "${windowName}" to set bounds to {${bounds.x}, ${bounds.y}, ${bounds.x + bounds.width}, ${bounds.y + bounds.height}}`,
-      )
-      .end();
+    this.raw(
+      `tell application "${this.escapeString(appName)}" to tell window "${this.escapeString(windowName)}" to set bounds to {${bounds.x}, ${bounds.y}, ${bounds.x + bounds.width}, ${bounds.y + bounds.height}}`,
+    );
     return this;
   }
 
   moveWindow(appName: string, windowName: string, x: number, y: number): ScriptBuilder {
-    this.tell(appName).raw(`tell window "${windowName}" to set position to {${x}, ${y}}`).end();
+    this.raw(
+      `tell application "${this.escapeString(appName)}" to tell window "${this.escapeString(windowName)}" to set position to {${x}, ${y}}`,
+    );
     return this;
   }
 
   resizeWindow(appName: string, windowName: string, width: number, height: number): ScriptBuilder {
-    this.tell(appName)
-      .raw(`tell window "${windowName}" to set size to {${width}, ${height}}`)
-      .end();
+    this.raw(
+      `tell application "${this.escapeString(appName)}" to tell window "${this.escapeString(windowName)}" to set size to {${width}, ${height}}`,
+    );
     return this;
   }
 
   arrangeWindows(arrangement: 'cascade' | 'tile' | 'stack'): ScriptBuilder {
-    this.tell('System Events')
-      .raw(`tell application "System Events" to tell process "Finder" to ${arrangement} windows`)
-      .end();
+    this.raw(`tell application "System Events" to tell process "Finder" to ${arrangement} windows`);
     return this;
   }
 
   focusWindow(appName: string, windowName: string): ScriptBuilder {
-    this.tell(appName).raw('activate').raw(`tell window "${windowName}" to set index to 1`).end();
+    this.raw(`tell application "${this.escapeString(appName)}" to activate`);
+    this.raw(
+      `tell application "${this.escapeString(appName)}" to tell window "${this.escapeString(windowName)}" to set index to 1`,
+    );
     return this;
   }
 
@@ -570,7 +727,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     modifiers?: Array<'command' | 'option' | 'control' | 'shift'>,
   ): ScriptBuilder {
     const modString = modifiers?.length ? ` using {${modifiers.join(', ')}}` : '';
-    this.tell('System Events').raw(`key code ${key}${modString}`).end();
+    this.raw(`tell application "System Events" to key code ${key}${modString}`);
     return this;
   }
 
@@ -579,24 +736,24 @@ export class AppleScriptBuilder implements ScriptBuilder {
     modifiers?: Array<'command' | 'option' | 'control' | 'shift'>,
   ): ScriptBuilder {
     const modString = modifiers?.length ? ` using {${modifiers.join(', ')}}` : '';
-    this.tell('System Events').raw(`key code ${keyCode}${modString}`).end();
+    this.raw(`tell application "System Events" to key code ${keyCode}${modString}`);
     return this;
   }
 
   typeText(text: string): ScriptBuilder {
-    this.tell('System Events').raw(`keystroke "${text}"`).end();
+    this.raw(`tell application "System Events" to keystroke "${this.escapeString(text)}"`);
     return this;
   }
 
   clickButton(buttonName: string): ScriptBuilder {
-    this.tell('System Events').raw(`click button "${buttonName}"`).end();
+    this.raw(`tell application "System Events" to click button "${this.escapeString(buttonName)}"`);
     return this;
   }
 
   clickMenuItem(menuName: string, itemName: string): ScriptBuilder {
-    this.tell('System Events')
-      .raw(`click menu item "${itemName}" of menu "${menuName}" of menu bar 1`)
-      .end();
+    this.raw(
+      `tell application "System Events" to click menu item "${this.escapeString(itemName)}" of menu "${this.escapeString(menuName)}" of menu bar 1`,
+    );
     return this;
   }
 
@@ -605,10 +762,10 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this.script.join('\n');
   }
 
-  private handleError(error: unknown): never {
-    if (error instanceof Error) {
-      throw new ScriptBuilderError(error.message);
-    }
-    throw new ScriptBuilderError('An unknown error occurred');
+  reset(): ScriptBuilder {
+    this.script = [];
+    this.indentLevel = 0;
+    this.blockStack = [];
+    return this;
   }
 }

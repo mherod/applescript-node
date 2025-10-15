@@ -34,6 +34,7 @@
     "example:decompile": "tsx --tsconfig examples/tsconfig.json examples/script-decompilation.ts",
     "example:list-apps": "tsx --tsconfig examples/tsconfig.json examples/list-applications.ts",
     "example:windows": "tsx --tsconfig examples/tsconfig.json examples/window-management.ts",
+    "example:messages": "tsx --tsconfig examples/tsconfig.json examples/messages-reader.ts",
     "examples": "pnpm run example:basic && pnpm run example:languages && pnpm run example:compile && pnpm run example:builder && pnpm run example:decompile && pnpm run example:list-apps && pnpm run example:windows",
     "prepare": "husky",
     "lint-staged": "lint-staged",
@@ -50,8 +51,7 @@
     ],
     "examples/**/*.{ts,tsx}": [
       "eslint --fix",
-      "prettier --write",
-      "tsc --noEmit --skipLibCheck"
+      "prettier --write"
     ],
     "*.{json,md,yml,yaml}": [
       "prettier --write"
@@ -89,5 +89,9 @@
     "typescript": "^5.7.2",
     "vite": "6.0.3",
     "vitest": "2.1.8"
+  },
+  "dependencies": {
+    "chalk": "5.6.2",
+    "cli-table3": "0.6.5"
   }
 }

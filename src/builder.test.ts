@@ -16,7 +16,7 @@ describe('AppleScriptBuilder', () => {
 
       expect(script).toBe(
         'tell application "System Events"\n' +
-          '  tell application "process "Finder""\n' +
+          '  tell application "process \\"Finder\\""\n' +
           '  end tell\n' +
           'end tell',
       );
@@ -36,9 +36,7 @@ describe('AppleScriptBuilder', () => {
       const script = builder.getRunningApplications().build();
 
       expect(script).toBe(
-        'tell application "System Events"\n' +
-          '  tell application "System Events" to return {name, bundle identifier, visible, frontmost} of every process where background only is false\n' +
-          'end tell',
+        'tell application "System Events" to return {name, bundle identifier, visible, frontmost} of every process where background only is false',
       );
     });
 
@@ -47,9 +45,7 @@ describe('AppleScriptBuilder', () => {
       const script = builder.getFrontmostApplication().build();
 
       expect(script).toBe(
-        'tell application "System Events"\n' +
-          '  tell application "System Events" to return name of first process where frontmost is true\n' +
-          'end tell',
+        'tell application "System Events" to return name of first process where frontmost is true',
       );
     });
   });
@@ -60,9 +56,7 @@ describe('AppleScriptBuilder', () => {
       const script = builder.getWindowInfo('Finder', 'Downloads').build();
 
       expect(script).toBe(
-        'tell application "Finder"\n' +
-          '  tell window "Downloads" to return {name, id, bounds, miniaturized, zoomed}\n' +
-          'end tell',
+        'tell application "Finder" to tell window "Downloads" to return {name, id, bounds, miniaturized, zoomed}',
       );
     });
 
@@ -74,12 +68,8 @@ describe('AppleScriptBuilder', () => {
         .build();
 
       expect(script).toBe(
-        'tell application "Finder"\n' +
-          '  tell window "Downloads" to set position to {100, 200}\n' +
-          'end tell\n' +
-          'tell application "Finder"\n' +
-          '  tell window "Downloads" to set size to {800, 600}\n' +
-          'end tell',
+        'tell application "Finder" to tell window "Downloads" to set position to {100, 200}\n' +
+          'tell application "Finder" to tell window "Downloads" to set size to {800, 600}',
       );
     });
   });
@@ -419,6 +409,502 @@ describe('AppleScriptBuilder', () => {
           '  end if\n' +
           'end tell',
       );
+    });
+  });
+
+  describe('New features', () => {
+    describe('Block stack tracking fixes', () => {
+      it('should properly track using() blocks', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.using(['terms from application "Finder"']).end().build();
+
+        expect(script).toBe('using terms from terms from application "Finder"\n' + 'end using');
+      });
+
+      it('should properly track with() blocks', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.with(30).end().build();
+
+        expect(script).toBe('with timeout of 30\n' + 'end with');
+      });
+
+      it('should properly track try() blocks', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.try().set('x', 1).end().build();
+
+        expect(script).toBe('try\n' + '  set x to 1\n' + 'end try');
+      });
+    });
+
+    describe('String escaping', () => {
+      it('should escape quotes in string values', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.set('myString', 'Say "Hello"').build();
+
+        expect(script).toBe('set myString to "Say \\"Hello\\""');
+      });
+
+      it('should escape backslashes in string values', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.set('myPath', 'C:\\Users\\Test').build();
+
+        expect(script).toBe('set myPath to "C:\\\\Users\\\\Test"');
+      });
+
+      it('should escape quotes in displayDialog', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.displayDialog('Say "Hello"').build();
+
+        expect(script).toBe('display dialog "Say \\"Hello\\""');
+      });
+
+      it('should escape quotes in tell application', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tell('App "Test"').end().build();
+
+        expect(script).toBe('tell application "App \\"Test\\""\n' + 'end tell');
+      });
+    });
+
+    describe('reset() method', () => {
+      it('should reset builder state', () => {
+        const builder = new AppleScriptBuilder();
+        builder.tell('Finder').end();
+        const firstScript = builder.build();
+
+        builder.reset();
+        builder.tell('Safari').end();
+        const secondScript = builder.build();
+
+        expect(firstScript).toBe('tell application "Finder"\n' + 'end tell');
+        expect(secondScript).toBe('tell application "Safari"\n' + 'end tell');
+      });
+
+      it('should clear block stack', () => {
+        const builder = new AppleScriptBuilder();
+        builder.tell('Finder');
+
+        builder.reset();
+        const script = builder.tell('Safari').end().build();
+
+        expect(script).toBe('tell application "Safari"\n' + 'end tell');
+      });
+    });
+
+    describe('elseIf() method', () => {
+      it('should handle elseIf chains', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .if('x = 1')
+          .then()
+          .set('result', 'one')
+          .elseIf('x = 2')
+          .then()
+          .set('result', 'two')
+          .else()
+          .set('result', 'other')
+          .end()
+          .build();
+
+        expect(script).toBe(
+          'if x = 1\n' +
+            '  then\n' +
+            '  set result to "one"\n' +
+            'else if x = 2\n' +
+            '  then\n' +
+            '  set result to "two"\n' +
+            'else\n' +
+            '  set result to "other"\n' +
+            'end if',
+        );
+      });
+
+      it('should throw when calling elseIf() without an if block', () => {
+        const builder = new AppleScriptBuilder();
+        expect(() => builder.elseIf('x = 2')).toThrow(
+          'Cannot call elseIf(): no if block is currently open',
+        );
+      });
+    });
+
+    describe('onError() handler', () => {
+      it('should handle try-onError blocks', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .try()
+          .set('x', 1)
+          .onError('errorMessage')
+          .displayDialog('Error occurred')
+          .end()
+          .build();
+
+        expect(script).toBe(
+          'try\n' +
+            '  set x to 1\n' +
+            'on error errorMessage\n' +
+            '  display dialog "Error occurred"\n' +
+            'end try',
+        );
+      });
+
+      it('should handle onError without variable', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.try().set('x', 1).onError().displayDialog('Error').end().build();
+
+        expect(script).toBe(
+          'try\n' + '  set x to 1\n' + 'on error\n' + '  display dialog "Error"\n' + 'end try',
+        );
+      });
+
+      it('should throw when calling onError() without a try block', () => {
+        const builder = new AppleScriptBuilder();
+        expect(() => builder.onError()).toThrow(
+          'Cannot call onError(): no try block is currently open',
+        );
+      });
+    });
+
+    describe('Loop control methods', () => {
+      it('should add exitRepeat statement', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.repeat(5).if('x = 3').then().exitRepeat().end().end().build();
+
+        expect(script).toBe(
+          'repeat 5 times\n' +
+            '  if x = 3\n' +
+            '    then\n' +
+            '    exit repeat\n' +
+            '  end if\n' +
+            'end repeat',
+        );
+      });
+
+      it('should add continueRepeat statement', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.repeat(5).if('x = 3').then().continueRepeat().end().end().build();
+
+        expect(script).toBe(
+          'repeat 5 times\n' +
+            '  if x = 3\n' +
+            '    then\n' +
+            '    continue repeat\n' +
+            '  end if\n' +
+            'end repeat',
+        );
+      });
+
+      it('should throw when calling exitRepeat() without a repeat block', () => {
+        const builder = new AppleScriptBuilder();
+        expect(() => builder.exitRepeat()).toThrow(
+          'Cannot call exitRepeat(): no repeat block is currently open',
+        );
+      });
+
+      it('should throw when calling continueRepeat() without a repeat block', () => {
+        const builder = new AppleScriptBuilder();
+        expect(() => builder.continueRepeat()).toThrow(
+          'Cannot call continueRepeat(): no repeat block is currently open',
+        );
+      });
+    });
+
+    describe('tellProcess() method', () => {
+      it('should create a tell process block', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tellProcess('Finder').raw('set visible to false').end().build();
+
+        expect(script).toBe(
+          'tell application "System Events" to tell process "Finder"\n' +
+            '  set visible to false\n' +
+            'end tell',
+        );
+      });
+
+      it('should escape quotes in process names', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tellProcess('App "Test"').end().build();
+
+        expect(script).toBe(
+          'tell application "System Events" to tell process "App \\"Test\\""\n' + 'end tell',
+        );
+      });
+    });
+
+    describe('Logging and comments', () => {
+      it('should add log statements', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.log('Debug message').build();
+
+        expect(script).toBe('log "Debug message"');
+      });
+
+      it('should escape quotes in log messages', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.log('Message with "quotes"').build();
+
+        expect(script).toBe('log "Message with \\"quotes\\""');
+      });
+
+      it('should add comments', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.comment('This is a comment').set('x', 1).build();
+
+        expect(script).toBe('-- This is a comment\nset x to 1');
+      });
+    });
+
+    describe('Enhanced string escaping', () => {
+      it('should escape newlines', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.set('text', 'Line 1\nLine 2').build();
+
+        expect(script).toBe('set text to "Line 1\\nLine 2"');
+      });
+
+      it('should escape tabs', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.set('text', 'Col1\tCol2').build();
+
+        expect(script).toBe('set text to "Col1\\tCol2"');
+      });
+
+      it('should escape carriage returns', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.set('text', 'Line 1\rLine 2').build();
+
+        expect(script).toBe('set text to "Line 1\\rLine 2"');
+      });
+
+      it('should escape all special characters together', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.set('text', 'Test "quoted"\nNew line\tTab').build();
+
+        expect(script).toBe('set text to "Test \\"quoted\\"\\nNew line\\tTab"');
+      });
+    });
+
+    describe('List operations', () => {
+      it('should add setEnd for appending to lists', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.setEnd('myList', 'newItem').build();
+
+        expect(script).toBe('set end of myList to "newItem"');
+      });
+
+      it('should add setProperty', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.setProperty('myObject', 'name', 'Test').build();
+
+        expect(script).toBe('set name of myObject to "Test"');
+      });
+
+      it('should create whose clause', () => {
+        const builder = new AppleScriptBuilder();
+        const filtered = builder.whose('every chat', 'unread count > 0');
+
+        expect(filtered).toBe('every chat whose unread count > 0');
+      });
+
+      it('should add getEvery method', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.getEvery('chat').build();
+
+        expect(script).toBe('get every chat');
+      });
+
+      it('should add getEvery with location', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.getEvery('message', 'first chat').build();
+
+        expect(script).toBe('get every message of first chat');
+      });
+
+      it('should add getEveryWhere method', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.getEveryWhere('chat', 'unread count > 0').build();
+
+        expect(script).toBe('get every chat where unread count > 0');
+      });
+
+      it('should add getEveryWhere with location', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .getEveryWhere('message', 'direction = incoming', 'first chat')
+          .build();
+
+        expect(script).toBe('get every message of first chat where direction = incoming');
+      });
+
+      it('should set a variable to count of items', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.setCountOf('totalChats', 'every chat').build();
+
+        expect(script).toBe('set totalChats to count of (every chat)');
+      });
+
+      it('should set a variable to count of filtered items', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .setCountOf('iMessageChats', 'every chat whose service type = iMessage')
+          .build();
+
+        expect(script).toBe(
+          'set iMessageChats to count of (every chat whose service type = iMessage)',
+        );
+      });
+
+      it('should work in a tell block', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .tell('Messages')
+          .setCountOf('unreadCount', 'every chat whose unread count > 0')
+          .end()
+          .build();
+
+        expect(script).toBe(
+          'tell application "Messages"\n' +
+            '  set unreadCount to count of (every chat whose unread count > 0)\n' +
+            'end tell',
+        );
+      });
+    });
+
+    describe('Expression and variable operations', () => {
+      it('should set variable to raw expression with setExpression', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.setExpression('chatId', 'id of aChat').build();
+
+        expect(script).toBe('set chatId to id of aChat');
+      });
+
+      it('should increment variable', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.set('counter', 0).increment('counter').build();
+
+        expect(script).toBe('set counter to 0\nset counter to counter + 1');
+      });
+
+      it('should increment variable by custom amount', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.increment('counter', 5).build();
+
+        expect(script).toBe('set counter to counter + 5');
+      });
+
+      it('should decrement variable', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.set('counter', 10).decrement('counter').build();
+
+        expect(script).toBe('set counter to 10\nset counter to counter - 1');
+      });
+
+      it('should decrement variable by custom amount', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.decrement('counter', 3).build();
+
+        expect(script).toBe('set counter to counter - 3');
+      });
+
+      it('should return raw expression with returnRaw', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.returnRaw('myVariable').build();
+
+        expect(script).toBe('return myVariable');
+      });
+
+      it('should return complex expression', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.returnRaw('count of every chat').build();
+
+        expect(script).toBe('return count of every chat');
+      });
+
+      it('should append raw variable to list with setEndRaw', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.setEndRaw('myList', 'newItem').build();
+
+        expect(script).toBe('set end of myList to newItem');
+      });
+
+      it('should work in loop context', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('result', [])
+          .repeatWith('item', 'sourceList')
+          .setExpression('processed', 'transform(item)')
+          .setEndRaw('result', 'processed')
+          .end()
+          .returnRaw('result')
+          .build();
+
+        expect(script).toBe(
+          'set result to {}\n' +
+            'repeat with item in sourceList\n' +
+            '  set processed to transform(item)\n' +
+            '  set end of result to processed\n' +
+            'end repeat\n' +
+            'return result',
+        );
+      });
+    });
+
+    describe('Record creation from variables', () => {
+      it('should create record from variable names', () => {
+        const builder = new AppleScriptBuilder();
+        const record = builder.makeRecordFrom({
+          chatId: 'chatId',
+          chatName: 'chatName',
+        });
+
+        expect(record).toBe('{chatId:chatId, chatName:chatName}');
+      });
+
+      it('should use makeRecordFrom in setExpression', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .setExpression(
+            'chatInfo',
+            builder.makeRecordFrom({
+              id: 'chatId',
+              name: 'chatName',
+              count: 'messageCount',
+            }),
+          )
+          .build();
+
+        expect(script).toBe('set chatInfo to {id:chatId, name:chatName, count:messageCount}');
+      });
+
+      it('should work in complex workflow', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('results', [])
+          .repeatWith('item', 'dataList')
+          .setExpression('id', 'id of item')
+          .setExpression('value', 'value of item')
+          .setExpression(
+            'record',
+            builder.makeRecordFrom({
+              itemId: 'id',
+              itemValue: 'value',
+            }),
+          )
+          .setEndRaw('results', 'record')
+          .end()
+          .returnRaw('results')
+          .build();
+
+        expect(script).toBe(
+          'set results to {}\n' +
+            'repeat with item in dataList\n' +
+            '  set id to id of item\n' +
+            '  set value to value of item\n' +
+            '  set record to {itemId:id, itemValue:value}\n' +
+            '  set end of results to record\n' +
+            'end repeat\n' +
+            'return results',
+        );
+      });
     });
   });
 });

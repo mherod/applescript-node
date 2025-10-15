@@ -20,14 +20,18 @@ A robust, type-safe Node.js library for executing AppleScript and JavaScript thr
 - 🔒 **Type-safe**: Full TypeScript support with proper type definitions
 - 🛠 **Fluent Builder API**: Intuitive script construction with method chaining
 - 🚀 **Promise-based**: Modern async/await interface
-- 🎯 **Error Handling**: Comprehensive error capture and reporting
+- 🎯 **Error Handling**: Comprehensive error capture with try-catch support
+- 🔁 **Loop Control**: Full support for repeat loops with exit and continue
+- 🔀 **Conditional Logic**: If-elseIf-else chains with proper nesting
+- 🔄 **Builder Reusability**: Reset and reuse builder instances
+- 🛡️ **String Escaping**: Automatic escaping of quotes and special characters
 - 📝 **File Support**: Execute scripts from files or strings
 - 🔄 **Flexible Output**: Control output formatting and error redirection
 - 🔨 **Script Compilation**: Compile scripts to `.scpt` or `.scptd` bundles
 - 🗣 **Language Support**: Query available OSA languages and capabilities
 - 🪟 **Window Management**: Comprehensive window control and manipulation
 - 📱 **Application Control**: Advanced application management features
-- 🧪 **Well Tested**: Extensive test coverage with Vitest
+- 🧪 **Well Tested**: 80+ tests with extensive coverage
 - 🔍 **Static Analysis**: ESLint and Prettier integration
 
 ## Installation
@@ -57,6 +61,23 @@ if (result.success) {
   console.error('Error:', result.error);
 }
 ```
+
+## Recent Improvements
+
+### New Features
+
+- **Error Handling**: Added `try()` and `onError()` methods for proper exception handling
+- **Conditional Logic**: New `elseIf()` method for chained conditional statements
+- **Loop Control**: Added `exitRepeat()` and `continueRepeat()` for loop flow control
+- **Process Support**: New `tellProcess()` method for simplified System Events process commands
+- **Builder Reusability**: Added `reset()` method to reuse builder instances
+
+### Improvements
+
+- **String Escaping**: Automatic escaping of quotes and backslashes in all string values
+- **Block Tracking**: Fixed block stack tracking for `using()`, `with()`, and `try()` blocks
+- **Enhanced Methods**: Improved fluent chaining for window and application methods
+- **Test Coverage**: Expanded to 80+ tests with comprehensive coverage of new features
 
 ## Usage Examples
 
@@ -172,6 +193,97 @@ if (result.success) {
 }
 ```
 
+### Error Handling with Try-Catch
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+const script = createScript()
+  .try()
+  .tell('Finder')
+  .raw('get name of window "NonExistentWindow"')
+  .end()
+  .onError('errorMessage')
+  .displayDialog('An error occurred')
+  .raw('log errorMessage')
+  .end();
+
+await runScript(script);
+```
+
+### Conditional Logic with elseIf
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+const script = createScript()
+  .set('temperature', 75)
+  .if('temperature > 80')
+  .then()
+  .displayDialog('Hot!')
+  .elseIf('temperature > 60')
+  .then()
+  .displayDialog('Warm')
+  .else()
+  .displayDialog('Cold')
+  .end();
+
+await runScript(script);
+```
+
+### Loop Control
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+// Exit loop early
+const exitScript = createScript()
+  .repeat(10)
+  .set('counter', 'counter + 1')
+  .if('counter = 5')
+  .then()
+  .exitRepeat()
+  .end()
+  .end();
+
+// Skip iteration
+const continueScript = createScript()
+  .repeatWith('i', '{1, 2, 3, 4, 5}')
+  .if('i = 3')
+  .then()
+  .continueRepeat()
+  .end()
+  .raw('log i')
+  .end();
+```
+
+### Reusing Builder with reset()
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+const builder = createScript();
+
+// First script
+builder.tell('Finder').activate().end();
+const result1 = await runScript(builder.build());
+
+// Reset and create a new script
+builder.reset();
+builder.tell('Safari').activate().end();
+const result2 = await runScript(builder.build());
+```
+
+### Working with System Events Processes
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+const script = createScript().tellProcess('Finder').raw('set visible to false').end();
+
+await runScript(script);
+```
+
 ## Development
 
 ### Setup
@@ -233,13 +345,26 @@ The ScriptBuilder provides a rich set of methods for constructing AppleScript co
 
 #### Core Language Constructs
 
-- `tell(target: string): ScriptBuilder`
-- `end(): ScriptBuilder`
-- `if(condition: string): ScriptBuilder`
-- `then(): ScriptBuilder`
-- `else(): ScriptBuilder`
-- `repeat(times?: number): ScriptBuilder`
-- `on(handlerName: string, parameters?: string[]): ScriptBuilder`
+- `tell(target: string): ScriptBuilder` - Tell an application to execute commands
+- `tellProcess(processName: string): ScriptBuilder` - Tell a System Events process
+- `end(): ScriptBuilder` - End the current block
+- `if(condition: string): ScriptBuilder` - Start conditional block
+- `then(): ScriptBuilder` - Then clause for if statements
+- `else(): ScriptBuilder` - Else clause for if statements
+- `elseIf(condition: string): ScriptBuilder` - Else-if clause for chained conditions
+- `repeat(times?: number): ScriptBuilder` - Repeat loop
+- `repeatWith(variable: string, list: string): ScriptBuilder` - Repeat with loop
+- `repeatUntil(condition: string): ScriptBuilder` - Repeat until loop
+- `repeatWhile(condition: string): ScriptBuilder` - Repeat while loop
+- `exitRepeat(): ScriptBuilder` - Exit from repeat loop
+- `continueRepeat(): ScriptBuilder` - Continue to next iteration
+- `try(): ScriptBuilder` - Start try-catch block
+- `onError(variableName?: string): ScriptBuilder` - Error handler for try blocks
+- `on(handlerName: string, parameters?: string[]): ScriptBuilder` - Define handler
+- `using(terms: string[]): ScriptBuilder` - Using terms block
+- `with(timeout?: number, transaction?: boolean): ScriptBuilder` - With timeout/transaction
+- `considering(attributes: string[]): ScriptBuilder` - Considering block
+- `ignoring(attributes: string[]): ScriptBuilder` - Ignoring block
 
 #### Application Control
 
@@ -263,8 +388,27 @@ The ScriptBuilder provides a rich set of methods for constructing AppleScript co
 - `click(target: string): ScriptBuilder`
 - `keystroke(text: string, modifiers?: string[]): ScriptBuilder`
 - `delay(seconds: number): ScriptBuilder`
+- `pressKey(key: string, modifiers?: Array<'command' | 'option' | 'control' | 'shift'>): ScriptBuilder`
+- `pressKeyCode(keyCode: number, modifiers?: Array<'command' | 'option' | 'control' | 'shift'>): ScriptBuilder`
+- `typeText(text: string): ScriptBuilder`
+- `clickButton(buttonName: string): ScriptBuilder`
+- `clickMenuItem(menuName: string, itemName: string): ScriptBuilder`
 - `displayDialog(text: string, options?: DialogOptions): ScriptBuilder`
 - `displayNotification(text: string, options?: NotificationOptions): ScriptBuilder`
+
+#### Variables and Properties
+
+- `set(variable: string, value: AppleScriptValue): ScriptBuilder`
+- `get(property: string): ScriptBuilder`
+- `copy(value: AppleScriptValue, to: string): ScriptBuilder`
+- `count(items: string): ScriptBuilder`
+- `exists(item: string): ScriptBuilder`
+
+#### Utility Methods
+
+- `raw(script: string): ScriptBuilder` - Insert raw AppleScript code
+- `build(): string` - Build the final script
+- `reset(): ScriptBuilder` - Reset builder state for reuse
 
 ### Configuration Types
 
