@@ -1,5 +1,5 @@
-import { promisify } from 'node:util';
 import { exec as execCallback } from 'node:child_process';
+import { promisify } from 'node:util';
 import type { OsaScriptOptions, ScriptExecutionResult } from './types.js';
 
 const exec = promisify(execCallback);
@@ -28,7 +28,7 @@ export class ScriptExecutor {
     options: OsaScriptOptions = {},
   ): Promise<ScriptExecutionResult<T>> {
     try {
-      const flags = this.buildFlags(options);
+      const flags = ScriptExecutor.buildFlags(options);
       const command = `osascript ${flags} -e '${script.replace(/'/g, "'\"'\"'")}'`;
 
       const { stdout } = await exec(command);
@@ -54,7 +54,7 @@ export class ScriptExecutor {
     options: OsaScriptOptions = {},
   ): Promise<ScriptExecutionResult<T>> {
     try {
-      const flags = this.buildFlags(options);
+      const flags = ScriptExecutor.buildFlags(options);
       const command = `osascript ${flags} "${filePath}"`;
 
       const { stdout } = await exec(command);

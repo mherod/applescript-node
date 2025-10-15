@@ -1,6 +1,44 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "extends": ["ultracite"],
+  "formatter": {
+    "enabled": false
+  },
+  "linter": {
+    "rules": {
+      "nursery": {
+        "useConsistentTypeDefinitions": "off"
+      },
+      "style": {
+        "noMagicNumbers": "off",
+        "useBlockStatements": "off",
+        "useAtIndex": "off",
+        "noNestedTernary": "off",
+        "useTemplate": "off",
+        "useReadonlyClassProperties": "off",
+        "useConsistentMemberAccessibility": "off"
+      },
+      "correctness": {
+        "noUnusedPrivateClassMembers": "off",
+        "noUnusedFunctionParameters": "off"
+      },
+      "complexity": {
+        "noStaticOnlyClass": "off",
+        "noExcessiveCognitiveComplexity": "off"
+      },
+      "performance": {
+        "useTopLevelRegex": "off",
+        "noBarrelFile": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noThenProperty": "off",
+        "noEvolvingTypes": "off",
+        "noAssignInExpressions": "off",
+        "useAwait": "off"
+      }
+    }
+  },
   "overrides": [
     {
       "includes": ["examples/**/*.ts"],
@@ -25,16 +63,9 @@
           },
           "performance": {
             "useTopLevelRegex": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/**/*.test.ts"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noMagicNumbers": "off"
+          },
+          "nursery": {
+            "useConsistentTypeDefinitions": "off"
           }
         }
       }

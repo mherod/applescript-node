@@ -1,34 +1,34 @@
-import type { OsaScriptOptions, ScriptBuilder, ScriptExecutionResult } from './types.js';
-import { ScriptExecutor } from './executor.js';
 import { AppleScriptBuilder } from './builder.js';
+import { ScriptExecutor } from './executor.js';
+import type { OsaScriptOptions, ScriptBuilder, ScriptExecutionResult } from './types.js';
 
-export type {
-  OsaScriptOptions,
-  ScriptBuilder,
-  ScriptExecutionResult,
-  WindowInfo,
-  ProcessInfo,
-  AppleScriptValue,
-  ApplicationTarget,
-  ScriptError,
-  ApplicationDictionary,
-  Suite,
-  Class,
-  Command,
-  Enumeration,
-  Property,
-  Element,
-  Parameter,
-  TypeInfo,
-  Enumerator,
-} from './types.js';
-export * from './executor.js';
 export * from './builder.js';
-export * from './expressions.js';
-export * from './languages.js';
 export * from './compiler.js';
 export * from './decompiler.js';
+export * from './executor.js';
+export * from './expressions.js';
+export * from './languages.js';
 export * from './sdef.js';
+export type {
+  AppleScriptValue,
+  ApplicationDictionary,
+  ApplicationTarget,
+  Class,
+  Command,
+  Element,
+  Enumeration,
+  Enumerator,
+  OsaScriptOptions,
+  Parameter,
+  ProcessInfo,
+  Property,
+  ScriptBuilder,
+  ScriptError,
+  ScriptExecutionResult,
+  Suite,
+  TypeInfo,
+  WindowInfo,
+} from './types.js';
 export * from './validator.js';
 
 export const createScript = () => new AppleScriptBuilder();
@@ -44,6 +44,4 @@ export const runScript = async <T = string>(
 export const runScriptFile = async <T = string>(
   filePath: string,
   options?: OsaScriptOptions,
-): Promise<ScriptExecutionResult<T>> => {
-  return ScriptExecutor.executeFile<T>(filePath, options);
-};
+): Promise<ScriptExecutionResult<T>> => ScriptExecutor.executeFile<T>(filePath, options);

@@ -1,6 +1,6 @@
 import { exec } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
-import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 import { compileScript, compileScriptFile } from './compiler.js';
 
 type ExecCallback = (error: Error | null, result: { stdout: string; stderr: string }) => void;

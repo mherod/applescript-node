@@ -1,5 +1,5 @@
-import type { ApplicationDictionary, Command, Class, Property } from './types.js';
-import { getApplicationDictionary, findCommand, findClass, getAllClasses } from './sdef.js';
+import { findClass, findCommand, getAllClasses, getApplicationDictionary } from './sdef.js';
+import type { ApplicationDictionary, Class, Command, Property } from './types.js';
 
 /**
  * Validation severity levels
@@ -311,7 +311,7 @@ export class ScriptValidator {
 
     // Simple Levenshtein-like matching
     let bestMatch: Command | undefined;
-    let bestScore = Infinity;
+    let bestScore = Number.POSITIVE_INFINITY;
 
     for (const cmd of allCommands) {
       const distance = this.levenshteinDistance(commandName.toLowerCase(), cmd.name.toLowerCase());

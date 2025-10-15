@@ -1,17 +1,17 @@
-import { promisify } from 'node:util';
 import { exec as execCallback } from 'node:child_process';
+import { promisify } from 'node:util';
 import { XMLParser } from 'fast-xml-parser';
 import type {
   ApplicationDictionary,
-  Suite,
   Class,
   Command,
-  Enumeration,
-  Property,
   Element,
-  Parameter,
-  TypeInfo,
+  Enumeration,
   Enumerator,
+  Parameter,
+  Property,
+  Suite,
+  TypeInfo,
 } from './types.js';
 
 const exec = promisify(execCallback);
@@ -296,7 +296,7 @@ export function findCommand(
     const command = suite.commands.find((cmd) => cmd.name === commandName);
     if (command) return command;
   }
-  return undefined;
+  return;
 }
 
 /**
@@ -310,5 +310,5 @@ export function findClass(dictionary: ApplicationDictionary, className: string):
     const cls = suite.classes.find((c) => c.name === className);
     if (cls) return cls;
   }
-  return undefined;
+  return;
 }

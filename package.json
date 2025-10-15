@@ -61,7 +61,13 @@
     "*.{json,md,yml,yaml}": [
       "prettier --write"
     ],
-    "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
+    "*.{js,jsx,json,jsonc,css,scss,md,mdx}": [
+      "pnpm dlx ultracite fix"
+    ],
+    "src/**/!(*.test).ts": [
+      "pnpm dlx ultracite fix"
+    ],
+    "examples/**/*.ts": [
       "pnpm dlx ultracite fix"
     ]
   },

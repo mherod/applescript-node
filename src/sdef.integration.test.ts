@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { parseSdef, getAllCommands, getAllClasses, findCommand, findClass } from './sdef.js';
+import { describe, expect, it } from 'vitest';
+import { findClass, findCommand, getAllClasses, getAllCommands, parseSdef } from './sdef.js';
 
 /**
  * Integration tests for sdef parsing using real application dictionaries

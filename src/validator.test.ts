@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { ScriptValidator, validateScript } from './validator.js';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { parseSdef } from './sdef.js';
 import type { ApplicationDictionary } from './types.js';
+import { ScriptValidator } from './validator.js';
 
 describe('Script Validator', () => {
   let messagesDictionary: ApplicationDictionary;

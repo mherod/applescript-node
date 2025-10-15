@@ -26,7 +26,7 @@ describe('AppleScriptBuilder', () => {
       const builder = new AppleScriptBuilder();
       const script = builder.if('true').then().set('x', 1).end().build();
 
-      expect(script).toBe('if true then\n' + '  set x to 1\n' + 'end if');
+      expect(script).toBe('if true then\n  set x to 1\nend if');
     });
   });
 
@@ -304,9 +304,7 @@ describe('AppleScriptBuilder', () => {
       const builder = new AppleScriptBuilder();
       const script = builder.tell('Finder').if('true').then().end().end().build();
 
-      expect(script).toBe(
-        'tell application "Finder"\n' + '  if true then\n' + '  end if\n' + 'end tell',
-      );
+      expect(script).toBe('tell application "Finder"\n  if true then\n  end if\nend tell');
     });
 
     it('should throw when trying to end too many blocks', () => {
@@ -414,21 +412,21 @@ describe('AppleScriptBuilder', () => {
         const builder = new AppleScriptBuilder();
         const script = builder.using(['terms from application "Finder"']).end().build();
 
-        expect(script).toBe('using terms from terms from application "Finder"\n' + 'end using');
+        expect(script).toBe('using terms from terms from application "Finder"\nend using');
       });
 
       it('should properly track with() blocks', () => {
         const builder = new AppleScriptBuilder();
         const script = builder.with(30).end().build();
 
-        expect(script).toBe('with timeout of 30\n' + 'end with');
+        expect(script).toBe('with timeout of 30\nend with');
       });
 
       it('should properly track try() blocks', () => {
         const builder = new AppleScriptBuilder();
         const script = builder.try().set('x', 1).end().build();
 
-        expect(script).toBe('try\n' + '  set x to 1\n' + 'end try');
+        expect(script).toBe('try\n  set x to 1\nend try');
       });
     });
 
@@ -458,7 +456,7 @@ describe('AppleScriptBuilder', () => {
         const builder = new AppleScriptBuilder();
         const script = builder.tell('App "Test"').end().build();
 
-        expect(script).toBe('tell application "App \\"Test\\""\n' + 'end tell');
+        expect(script).toBe('tell application "App \\"Test\\""\nend tell');
       });
     });
 
@@ -472,8 +470,8 @@ describe('AppleScriptBuilder', () => {
         builder.tell('Safari').end();
         const secondScript = builder.build();
 
-        expect(firstScript).toBe('tell application "Finder"\n' + 'end tell');
-        expect(secondScript).toBe('tell application "Safari"\n' + 'end tell');
+        expect(firstScript).toBe('tell application "Finder"\nend tell');
+        expect(secondScript).toBe('tell application "Safari"\nend tell');
       });
 
       it('should clear block stack', () => {
@@ -483,7 +481,7 @@ describe('AppleScriptBuilder', () => {
         builder.reset();
         const script = builder.tell('Safari').end().build();
 
-        expect(script).toBe('tell application "Safari"\n' + 'end tell');
+        expect(script).toBe('tell application "Safari"\nend tell');
       });
     });
 
@@ -545,9 +543,7 @@ describe('AppleScriptBuilder', () => {
         const builder = new AppleScriptBuilder();
         const script = builder.try().set('x', 1).onError().displayDialog('Error').end().build();
 
-        expect(script).toBe(
-          'try\n' + '  set x to 1\n' + 'on error\n' + '  display dialog "Error"\n' + 'end try',
-        );
+        expect(script).toBe('try\n  set x to 1\non error\n  display dialog "Error"\nend try');
       });
 
       it('should throw when calling onError() without a try block', () => {
@@ -617,7 +613,7 @@ describe('AppleScriptBuilder', () => {
         const script = builder.tellProcess('App "Test"').end().build();
 
         expect(script).toBe(
-          'tell application "System Events" to tell process "App \\"Test\\""\n' + 'end tell',
+          'tell application "System Events" to tell process "App \\"Test\\""\nend tell',
         );
       });
     });

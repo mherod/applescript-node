@@ -1,5 +1,5 @@
 import { exec } from 'node:child_process';
-import { describe, expect, it, vi, type MockInstance } from 'vitest';
+import { describe, expect, it, type MockInstance, vi } from 'vitest';
 import { decompileScript } from './decompiler.js';
 
 type ExecCallback = (error: Error | null, result: { stdout: string; stderr: string }) => void;

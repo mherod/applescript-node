@@ -1,5 +1,5 @@
-import type { AppleScriptValue, ScriptBuilder } from './types.js';
 import { ExprBuilder } from './expressions.js';
+import type { AppleScriptValue, ScriptBuilder } from './types.js';
 
 type BlockType =
   | 'tell'
@@ -265,7 +265,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   repeatWith(variable: string, list: string): ScriptBuilder {
-    if (!variable || !list) {
+    if (!(variable && list)) {
       throw new ScriptBuilderError('Both variable and list must be provided for repeatWith');
     }
     this.script.push(`${this.getIndentation()}repeat with ${variable} in ${list}`);

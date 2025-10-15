@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { exec } from 'node:child_process';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  clearSdefCache,
+  findClass,
+  findCommand,
+  getAllClasses,
+  getAllCommands,
+  getApplicationDictionary,
   getSdef,
   parseSdef,
-  getApplicationDictionary,
-  clearSdefCache,
-  getAllCommands,
-  getAllClasses,
-  findCommand,
-  findClass,
 } from './sdef.js';
 
 // Mock the exec function
