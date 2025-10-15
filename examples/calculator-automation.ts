@@ -125,33 +125,42 @@ async function main() {
     console.error(`  Error: ${subtractionResult.error}\n`);
   }
 
-  // Example 5: Get Calculator window properties
-  console.log('Example 5: Get Calculator Window Info');
+  // Example 5: Get Calculator window properties (as JSON)
+  console.log('Example 5: Get Calculator Window Info (JSON output)');
   const windowInfoScript = createScript()
     .tellApp('Calculator', (app) => {
       app.activate();
     })
     .delay(0.5)
     .tellProcess('Calculator')
-    .setExpression('windowName', 'name of window 1')
-    .setExpression('windowPosition', 'position of window 1')
-    .setExpression('windowSize', 'size of window 1')
-    .setExpression(
-      'info',
-      '"Window: " & windowName & ", Position: " & (item 1 of windowPosition) & "," & (item 2 of windowPosition) & ", Size: " & (item 1 of windowSize) & "x" & (item 2 of windowSize)',
-    )
+    .setExpression('winName', 'name of window 1')
+    .setExpression('winPosition', 'position of window 1 as text')
+    .setExpression('winSize', 'size of window 1 as text')
     .end()
     .tellApp('Calculator', (app) => {
       app.quit();
     })
-    .returnRaw('info')
+    // Manually build JSON string
+    .setExpression(
+      'jsonOutput',
+      '"{" & "\\"name\\":\\"" & winName & "\\",\\"position\\":\\"" & winPosition & "\\",\\"size\\":\\"" & winSize & "\\"" & "}"',
+    )
+    .returnRaw('jsonOutput')
     .build();
 
   writeFileSync('examples/output/calculator-window-info.applescript', windowInfoScript);
 
   const windowInfo = await runScript<string>(windowInfoScript);
   if (windowInfo.success) {
-    console.log(`  ${windowInfo.output}\n`);
+    const data = JSON.parse(windowInfo.output) as {
+      name: string;
+      position: string;
+      size: string;
+    };
+    console.log('  Window data (JSON):', data);
+    console.log(`  - Name: ${data.name}`);
+    console.log(`  - Position: ${data.position}`);
+    console.log(`  - Size: ${data.size}\n`);
   } else {
     console.error(`  Error: ${windowInfo.error}\n`);
   }
