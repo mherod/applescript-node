@@ -1,5 +1,5 @@
-import CliTable3 from 'cli-table3';
 import chalk from 'chalk';
+import CliTable3 from 'cli-table3';
 import { createScript, runScript, ScriptValidator } from '../src/index.js';
 
 async function demonstrateNoteCreation() {
@@ -73,10 +73,7 @@ Features demonstrated:
 
   console.log(chalk.gray('Creating plain text note...'));
   const plainTextValidation = validator.validate(plainTextScript.build());
-  if (!plainTextValidation.valid) {
-    console.log(chalk.red('✗ Validation failed:'));
-    plainTextValidation.errors.forEach((err) => console.log(chalk.red(`  - ${err.message}`)));
-  } else {
+  if (plainTextValidation.valid) {
     const plainTextResult = await runScript(plainTextScript);
     if (plainTextResult.success) {
       const idMatch = /noteId:([^,}]+)/.exec(String(plainTextResult.output));
@@ -86,6 +83,9 @@ Features demonstrated:
     } else {
       console.log(chalk.red(`✗ Failed: ${plainTextResult.error}\n`));
     }
+  } else {
+    console.log(chalk.red('✗ Validation failed:'));
+    plainTextValidation.errors.forEach((err) => console.log(chalk.red(`  - ${err.message}`)));
   }
 
   // Example 2: HTML formatted note
@@ -433,6 +433,12 @@ end tell`;
   console.log(chalk.gray('• Note titles are auto-generated from the first line'));
   console.log(chalk.gray('• Validation ensures scripts are correct before execution'));
   console.log(chalk.gray('• New notes appear at the top of the folder (note 1)\n'));
+
+  // Close Notes.app
+  console.log(chalk.yellow('Closing Notes.app...'));
+  const quitScript = createScript().tell('Notes').quit().end();
+  await runScript(quitScript);
+  console.log(chalk.green('✓ Notes.app closed\n'));
 
   console.log(chalk.bold.blue('✓ Note creation demo complete!\n'));
 }
