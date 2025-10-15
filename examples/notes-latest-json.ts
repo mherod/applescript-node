@@ -51,7 +51,7 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
 
   const result = await runScript(notesScript);
 
-  if (!result.success || !result.output) {
+  if (!(result.success && result.output)) {
     throw new Error(`Failed to fetch notes: ${result.error}`);
   }
 
