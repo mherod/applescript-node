@@ -1135,6 +1135,18 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   // Convenience helpers for cleaner API
   /**
+   * Simplified tell application pattern with automatic block closing.
+   * Cleaner than manually calling tell()...end().
+   * @param appName Name of the application to tell
+   * @param block Callback that builds commands for the application
+   */
+  tellApp(appName: string, block: (builder: ScriptBuilder) => void): ScriptBuilder {
+    this.tell(appName);
+    block(this);
+    return this.end();
+  }
+
+  /**
    * Simplified if-then pattern that automatically closes the if block.
    * Cleaner than manually calling if()...then()...endif().
    * @param condition The condition to check (string or ExprBuilder callback)

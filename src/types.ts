@@ -178,6 +178,7 @@ export interface ScriptBuilder {
   comment: (text: string) => ScriptBuilder;
 
   // Convenience helpers for cleaner API
+  tellApp: (appName: string, block: (builder: ScriptBuilder) => void) => ScriptBuilder;
   ifThen: (
     condition: string | ((expr: ExprBuilder) => string),
     thenBlock: (builder: ScriptBuilder) => void,

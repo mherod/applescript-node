@@ -1070,5 +1070,148 @@ describe('AppleScriptBuilder', () => {
         expect(script).toBe('keystroke "a"\ndelay 0.1\nkeystroke "\\""\ndelay 0.1\nkeystroke "b"');
       });
     });
+
+    describe('Convenience helpers', () => {
+      describe('tellApp() helper', () => {
+        it('should create tell application block with automatic closing', () => {
+          const builder = new AppleScriptBuilder();
+          const script = builder
+            .tellApp('Calculator', (app) => {
+              app.activate();
+            })
+            .build();
+
+          expect(script).toBe('tell application "Calculator"\n  activate\nend tell');
+        });
+
+        it('should handle multiple commands in callback', () => {
+          const builder = new AppleScriptBuilder();
+          const script = builder
+            .tellApp('Finder', (app) => {
+              app.activate();
+              app.closeWindow();
+              app.delay(0.5);
+            })
+            .build();
+
+          expect(script).toBe(
+            'tell application "Finder"\n' +
+              '  activate\n' +
+              '  close front window\n' +
+              '  delay 0.5\n' +
+              'end tell',
+          );
+        });
+
+        it('should work with nested blocks inside callback', () => {
+          const builder = new AppleScriptBuilder();
+          const script = builder
+            .tellApp('Finder', (app) => {
+              app.if('count of windows > 0').then();
+              app.closeWindow();
+              app.endif();
+            })
+            .build();
+
+          expect(script).toBe(
+            'tell application "Finder"\n' +
+              '  if count of windows > 0 then\n' +
+              '    close front window\n' +
+              '  end if\n' +
+              'end tell',
+          );
+        });
+
+        it('should allow chaining after tellApp', () => {
+          const builder = new AppleScriptBuilder();
+          const script = builder
+            .tellApp('Calculator', (app) => {
+              app.activate();
+            })
+            .delay(1)
+            .tellApp('Finder', (app) => {
+              app.activate();
+            })
+            .build();
+
+          expect(script).toBe(
+            'tell application "Calculator"\n' +
+              '  activate\n' +
+              'end tell\n' +
+              'delay 1\n' +
+              'tell application "Finder"\n' +
+              '  activate\n' +
+              'end tell',
+          );
+        });
+
+        it('should escape quotes in application names', () => {
+          const builder = new AppleScriptBuilder();
+          const script = builder
+            .tellApp('App "Test"', (app) => {
+              app.activate();
+            })
+            .build();
+
+          expect(script).toBe('tell application "App \\"Test\\""\n  activate\nend tell');
+        });
+
+        it('should work with empty callback', () => {
+          const builder = new AppleScriptBuilder();
+          const script = builder
+            .tellApp('Finder', () => {
+              // Empty callback
+            })
+            .build();
+
+          expect(script).toBe('tell application "Finder"\nend tell');
+        });
+
+        it('should handle complex nested structure', () => {
+          const builder = new AppleScriptBuilder();
+          const script = builder
+            .tellApp('Notes', (app) => {
+              app.set('notesList', []);
+              app.repeatWith('aNote', 'every note');
+              app.setEndRecord('notesList', 'aNote', {
+                noteName: 'name',
+                noteId: 'id',
+              });
+              app.endrepeat();
+              app.returnRaw('notesList');
+            })
+            .build();
+
+          expect(script).toBe(
+            'tell application "Notes"\n' +
+              '  set notesList to {}\n' +
+              '  repeat with aNote in every note\n' +
+              '    set end of notesList to {noteName:name of aNote, noteId:id of aNote}\n' +
+              '  end repeat\n' +
+              '  return notesList\n' +
+              'end tell',
+          );
+        });
+
+        it('should work with convenience helper methods inside', () => {
+          const builder = new AppleScriptBuilder();
+          const script = builder
+            .tellApp('Finder', (app) => {
+              app.ifThen('count of windows > 5', (then_) => {
+                then_.displayDialog('Too many windows!');
+              });
+            })
+            .build();
+
+          expect(script).toBe(
+            'tell application "Finder"\n' +
+              '  if count of windows > 5 then\n' +
+              '    display dialog "Too many windows!"\n' +
+              '  end if\n' +
+              'end tell',
+          );
+        });
+      });
+    });
   });
 });

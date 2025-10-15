@@ -9,9 +9,9 @@ async function main() {
   // Example 1: Simple Addition (5 + 3 = 8)
   console.log('Example 1: Simple Addition (5 + 3)');
   const additionScript = createScript()
-    .tell('Calculator')
-    .activate()
-    .end()
+    .tellApp('Calculator', (app) => {
+      app.activate();
+    })
     .delay(0.5)
     .tellProcess('Calculator')
     // Clear calculator and perform calculation
@@ -21,9 +21,9 @@ async function main() {
     .keystroke('\r')
     .delay(0.5)
     .end()
-    .tell('Calculator')
-    .quit()
-    .end()
+    .tellApp('Calculator', (app) => {
+      app.quit();
+    })
     .build();
 
   writeFileSync('examples/output/calculator-addition.applescript', additionScript);
@@ -38,9 +38,9 @@ async function main() {
   // Example 2: Multiplication (12 * 4 = 48)
   console.log('Example 2: Multiplication (12 × 4)');
   const multiplicationScript = createScript()
-    .tell('Calculator')
-    .activate()
-    .end()
+    .tellApp('Calculator', (app) => {
+      app.activate();
+    })
     .delay(0.5)
     .tellProcess('Calculator')
     // Clear calculator and perform calculation
@@ -50,9 +50,9 @@ async function main() {
     .keystroke('\r')
     .delay(0.5)
     .end()
-    .tell('Calculator')
-    .quit()
-    .end()
+    .tellApp('Calculator', (app) => {
+      app.quit();
+    })
     .build();
 
   writeFileSync('examples/output/calculator-multiplication.applescript', multiplicationScript);
@@ -67,9 +67,9 @@ async function main() {
   // Example 3: Complex Calculation (25 / 5 + 10 = 15)
   console.log('Example 3: Complex Calculation (25 ÷ 5 + 10)');
   const complexScript = createScript()
-    .tell('Calculator')
-    .activate()
-    .end()
+    .tellApp('Calculator', (app) => {
+      app.activate();
+    })
     .delay(0.5)
     .tellProcess('Calculator')
     // Clear calculator and perform calculation
@@ -82,9 +82,9 @@ async function main() {
     .keystroke('\r')
     .delay(0.5)
     .end()
-    .tell('Calculator')
-    .quit()
-    .end()
+    .tellApp('Calculator', (app) => {
+      app.quit();
+    })
     .build();
 
   writeFileSync('examples/output/calculator-complex.applescript', complexScript);
@@ -99,9 +99,9 @@ async function main() {
   // Example 4: Subtraction (7 - 2 = 5)
   console.log('Example 4: Subtraction (7 - 2)');
   const subtractionScript = createScript()
-    .tell('Calculator')
-    .activate()
-    .end()
+    .tellApp('Calculator', (app) => {
+      app.activate();
+    })
     .delay(0.5)
     .tellProcess('Calculator')
     // Clear calculator and perform calculation
@@ -111,9 +111,9 @@ async function main() {
     .keystroke('\r')
     .delay(0.5)
     .end()
-    .tell('Calculator')
-    .quit()
-    .end()
+    .tellApp('Calculator', (app) => {
+      app.quit();
+    })
     .build();
 
   writeFileSync('examples/output/calculator-subtraction.applescript', subtractionScript);
@@ -128,9 +128,9 @@ async function main() {
   // Example 5: Get Calculator window properties
   console.log('Example 5: Get Calculator Window Info');
   const windowInfoScript = createScript()
-    .tell('Calculator')
-    .activate()
-    .end()
+    .tellApp('Calculator', (app) => {
+      app.activate();
+    })
     .delay(0.5)
     .tellProcess('Calculator')
     .setExpression('windowName', 'name of window 1')
@@ -141,9 +141,9 @@ async function main() {
       '"Window: " & windowName & ", Position: " & (item 1 of windowPosition) & "," & (item 2 of windowPosition) & ", Size: " & (item 1 of windowSize) & "x" & (item 2 of windowSize)',
     )
     .end()
-    .tell('Calculator')
-    .quit()
-    .end()
+    .tellApp('Calculator', (app) => {
+      app.quit();
+    })
     .returnRaw('info')
     .build();
 
