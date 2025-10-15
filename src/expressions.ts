@@ -28,19 +28,19 @@ export class ExprBuilder {
   }
 
   /**
-   * Greater than or equal: left ≥ right
+   * Greater than or equal: left >= right
    */
   gte(left: string, right: string | number): string {
     const rightValue = typeof right === 'number' ? right.toString() : `"${right}"`;
-    return `${left} ≥ ${rightValue}`;
+    return `${left} >= ${rightValue}`;
   }
 
   /**
-   * Less than or equal: left ≤ right
+   * Less than or equal: left <= right
    */
   lte(left: string, right: string | number): string {
     const rightValue = typeof right === 'number' ? right.toString() : `"${right}"`;
-    return `${left} ≤ ${rightValue}`;
+    return `${left} <= ${rightValue}`;
   }
 
   /**
@@ -59,7 +59,7 @@ export class ExprBuilder {
   }
 
   /**
-   * Inequality comparison: left ≠ right
+   * Inequality comparison: left is not equal to right
    */
   ne(left: string, right: string | number | boolean): string {
     let rightValue: string;
@@ -70,7 +70,7 @@ export class ExprBuilder {
     } else {
       rightValue = right.toString();
     }
-    return `${left} ≠ ${rightValue}`;
+    return `${left} is not equal to ${rightValue}`;
   }
 
   /**
@@ -184,7 +184,7 @@ export class ExprBuilder {
    * Useful for comparing two computed properties
    * Example: expr.compare('length of name1', '>', 'length of name2')
    */
-  compare(left: string, operator: '>' | '<' | '≥' | '≤' | '=' | '≠', right: string): string {
+  compare(left: string, operator: '>' | '<' | '>=' | '<=' | '=' | '!=', right: string): string {
     return `${left} ${operator} ${right}`;
   }
 

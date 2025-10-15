@@ -38,7 +38,7 @@ tell application "Notes"
   set notesList to {}
   set counter to 0
   repeat with aNote in every note
-    if counter ≥ 10 then
+    if counter >= 10 then
       exit repeat
     end if
     set counter to counter + 1

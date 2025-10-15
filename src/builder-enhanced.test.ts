@@ -163,8 +163,8 @@ describe('ExprBuilder - Comparison Operators', () => {
 
   it('should build gte and lte expressions', () => {
     const e = new ExprBuilder();
-    expect(e.gte('x', 5)).toBe('x ≥ 5');
-    expect(e.lte('x', 5)).toBe('x ≤ 5');
+    expect(e.gte('x', 5)).toBe('x >= 5');
+    expect(e.lte('x', 5)).toBe('x <= 5');
   });
 
   it('should build equality expression', () => {
@@ -176,7 +176,7 @@ describe('ExprBuilder - Comparison Operators', () => {
 
   it('should build inequality expression', () => {
     const e = new ExprBuilder();
-    expect(e.ne('status', 'pending')).toBe('status ≠ "pending"');
+    expect(e.ne('status', 'pending')).toBe('status is not equal to "pending"');
   });
 });
 
@@ -607,7 +607,7 @@ describe('Builder - Repeat Convenience Helpers', () => {
       .build();
 
     expect(script).toContain('repeat with item in every note');
-    expect(script).toContain('if not counter ≤ 50 then');
+    expect(script).toContain('if not counter <= 50 then');
     expect(script).toContain('exit repeat');
     expect(script).toContain('set counter to counter + 1');
     expect(script).toContain('process item');
@@ -720,7 +720,7 @@ describe('Builder - Comprehensive Robustness Tests', () => {
       .build();
 
     expect(script).toContain('repeat with item in every note');
-    expect(script).toContain('if not counter ≤ 100 and enabled = true then');
+    expect(script).toContain('if not counter <= 100 and enabled = true then');
     expect(script).toContain('exit repeat');
     expect(script).toContain('end repeat');
   });
