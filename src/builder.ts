@@ -491,6 +491,39 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
+  setEndRecord(
+    listVariable: string,
+    sourceOrExpressions: string | Record<string, string>,
+    propertyMap?: Record<string, string>,
+  ): ScriptBuilder {
+    let recordExpressions: Record<string, string>;
+
+    if (typeof sourceOrExpressions === 'string') {
+      // Form 1: .setEndRecord(list, source, {key: 'property'})
+      // Automatically append "of source" to each property
+      if (!propertyMap) {
+        throw new ScriptBuilderError(
+          'propertyMap is required when sourceOrExpressions is a source object name',
+        );
+      }
+      const sourceObj = sourceOrExpressions;
+      recordExpressions = Object.entries(propertyMap).reduce<Record<string, string>>(
+        (acc, [key, prop]) => {
+          acc[key] = `${prop} of ${sourceObj}`;
+          return acc;
+        },
+        {},
+      );
+    } else {
+      // Form 2: .setEndRecord(list, {key: 'full expression'})
+      recordExpressions = sourceOrExpressions;
+    }
+
+    const recordStr = this.makeRecordFrom(recordExpressions);
+    this.script.push(`${this.getIndentation()}set end of ${listVariable} to ${recordStr}`);
+    return this;
+  }
+
   setProperty(variable: string, property: string, value: AppleScriptValue): ScriptBuilder {
     this.script.push(
       `${this.getIndentation()}set ${property} of ${variable} to ${this.formatValue(value)}`,

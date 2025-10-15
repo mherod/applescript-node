@@ -37,17 +37,12 @@ async function demonstrateNotesAutomation() {
     .set('accountInfo', [])
     .repeatWith('acc', 'every account')
     .try()
-    .setExpression('accName', 'name of acc')
-    .setExpression('accId', 'id of acc')
-    .setExpression('noteCount', 'count of notes in acc')
-    .setExpression('folderCount', 'count of folders in acc')
-    .setExpression('accRecord', {
-      accountName: 'accName',
-      accountId: 'accId',
-      noteCount: 'noteCount',
-      folderCount: 'folderCount',
+    .setEndRecord('accountInfo', {
+      accountName: 'name of acc',
+      accountId: 'id of acc',
+      noteCount: 'count of notes in acc',
+      folderCount: 'count of folders in acc',
     })
-    .setEndRaw('accountInfo', 'accRecord')
     .onError()
     .comment('Skip accounts with errors')
     .end()
@@ -142,29 +137,22 @@ async function demonstrateNotesAutomation() {
       .exitRepeat()
       .end()
       .try()
-      .setExpression('noteName', 'name of aNote')
-      .setExpression('noteId', 'id of aNote')
       .setExpression('notePlaintext', 'plaintext of aNote')
-      .setExpression('noteCreated', 'creation date of aNote as string')
-      .setExpression('noteModified', 'modification date of aNote as string')
-      .setExpression('noteShared', 'shared of aNote')
-      .setExpression('noteProtected', 'password protected of aNote')
       .comment('Truncate plaintext to first 100 characters')
       .if('length of notePlaintext > 100')
       .setExpression('notePreview', 'text 1 thru 100 of notePlaintext & "..."')
       .else()
       .set('notePreview', 'notePlaintext')
       .end()
-      .setExpression('noteInfo', {
-        noteName: 'noteName',
-        noteId: 'noteId',
+      .setEndRecord('notesList', {
+        noteName: 'name of aNote',
+        noteId: 'id of aNote',
         preview: 'notePreview',
-        created: 'noteCreated',
-        modified: 'noteModified',
-        isShared: 'noteShared',
-        isProtected: 'noteProtected',
+        created: 'creation date of aNote as string',
+        modified: 'modification date of aNote as string',
+        isShared: 'shared of aNote',
+        isProtected: 'password protected of aNote',
       })
-      .setEndRaw('notesList', 'noteInfo')
       .onError()
       .comment('Skip notes with errors')
       .end()

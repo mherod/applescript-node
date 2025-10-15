@@ -68,9 +68,6 @@ async function readMessagesConversations() {
     .exitRepeat()
     .end()
     .try()
-    .setExpression('chatId', 'id of aChat')
-    .setExpression('chatName', 'name of aChat')
-    .setExpression('acctId', 'id of account of aChat')
     .comment('Get participants')
     .set('participantList', [])
     .repeatWith('p', 'every participant of aChat')
@@ -81,13 +78,12 @@ async function readMessagesConversations() {
     .comment('Skip participants with errors')
     .end()
     .end()
-    .setExpression('chatInfo', {
-      chatId: 'chatId',
-      chatName: 'chatName',
-      accountId: 'acctId',
+    .setEndRecord('chatList', {
+      chatId: 'id of aChat',
+      chatName: 'name of aChat',
+      accountId: 'id of account of aChat',
       participants: 'participantList',
     })
-    .setEndRaw('chatList', 'chatInfo')
     .onError()
     .comment('Skip chats with errors')
     .end()

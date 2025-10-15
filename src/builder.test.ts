@@ -927,6 +927,71 @@ describe('AppleScriptBuilder', () => {
         );
       });
 
+      it('should support setEndRecord with source object (shorthand)', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('accountInfo', [])
+          .repeatWith('acc', 'every account')
+          .setEndRecord('accountInfo', 'acc', {
+            accountName: 'name',
+            accountId: 'id',
+          })
+          .end()
+          .build();
+
+        expect(script).toBe(
+          'set accountInfo to {}\n' +
+            'repeat with acc in every account\n' +
+            '  set end of accountInfo to {accountName:name of acc, accountId:id of acc}\n' +
+            'end repeat',
+        );
+      });
+
+      it('should support setEndRecord with full expressions', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('notesList', [])
+          .repeatWith('aNote', 'every note')
+          .setEndRecord('notesList', {
+            noteName: 'name of aNote',
+            noteId: 'id of aNote',
+            noteCount: 'count of attachments in aNote',
+          })
+          .end()
+          .build();
+
+        expect(script).toBe(
+          'set notesList to {}\n' +
+            'repeat with aNote in every note\n' +
+            '  set end of notesList to {noteName:name of aNote, noteId:id of aNote, noteCount:count of attachments in aNote}\n' +
+            'end repeat',
+        );
+      });
+
+      it('should throw error when using source form without propertyMap', () => {
+        const builder = new AppleScriptBuilder();
+        expect(() => builder.setEndRecord('list', 'source')).toThrow(
+          'propertyMap is required when sourceOrExpressions is a source object name',
+        );
+      });
+
+      it('should handle complex property expressions with source object', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('results', [])
+          .setEndRecord('results', 'item', {
+            fullName: 'name',
+            itemType: 'class',
+            hasChildren: 'exists children',
+          })
+          .build();
+
+        expect(script).toBe(
+          'set results to {}\n' +
+            'set end of results to {fullName:name of item, itemType:class of item, hasChildren:exists children of item}',
+        );
+      });
+
       it('should work in complex workflow', () => {
         const builder = new AppleScriptBuilder();
         const script = builder

@@ -296,6 +296,72 @@ if (!result.success) {
 }
 ```
 
+### Building Records from Variables (Shorthand Methods)
+
+The library provides several shorthand methods to eliminate repetitive boilerplate when extracting properties and creating records:
+
+#### setExpression with Record Objects
+
+```typescript
+// OLD WAY - using makeRecordFrom
+const script = createScript()
+  .setExpression('accName', 'name of acc')
+  .setExpression('accId', 'id of acc')
+  .setExpression(
+    'record',
+    createScript().makeRecordFrom({
+      accountName: 'accName',
+      accountId: 'accId',
+    }),
+  );
+
+// NEW WAY - Record objects accepted directly
+const script = createScript()
+  .setExpression('accName', 'name of acc')
+  .setExpression('accId', 'id of acc')
+  .setExpression('record', {
+    accountName: 'accName',
+    accountId: 'accId',
+  });
+```
+
+#### setEndRecord for Ultra-Clean Syntax
+
+The `setEndRecord()` method combines property extraction and record creation in one step:
+
+```typescript
+// Form 1: Direct expressions (use full expressions)
+const script = createScript()
+  .set('accountInfo', [])
+  .repeatWith('acc', 'every account')
+  .setEndRecord('accountInfo', {
+    accountName: 'name of acc',
+    accountId: 'id of acc',
+    noteCount: 'count of notes in acc',
+  })
+  .end();
+
+// Form 2: Source object shorthand (automatically appends "of source")
+const script = createScript()
+  .set('accountInfo', [])
+  .repeatWith('acc', 'every account')
+  .setEndRecord('accountInfo', 'acc', {
+    accountName: 'name',
+    accountId: 'id',
+    noteCount: 'count of notes',
+  })
+  .end();
+```
+
+**Implementation Details:**
+
+- `setEndRecord()` reduces boilerplate by ~31% compared to manual temporary variables
+- Form 1 accepts a Record with full expressions as values
+- Form 2 accepts a source object name and automatically constructs "property of source" expressions
+- Both forms generate AppleScript records and append them to lists in a single operation
+- Type-safe with full TypeScript support
+- Validates that propertyMap is provided when using source object form
+
 ## Development Guidelines
 
 ### Adding New Features

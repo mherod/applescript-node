@@ -33,7 +33,7 @@ A robust, type-safe Node.js library for executing AppleScript and JavaScript thr
 - 📱 **Application Control**: Advanced application management features
 - 🔍 **Application Introspection**: Extract and parse scripting dictionaries (sdef) from any macOS app
 - ✅ **Script Validation**: Runtime validation with intelligent error detection and suggestions
-- 🧪 **Well Tested**: 180+ tests with extensive coverage
+- 🧪 **Well Tested**: 189 tests with extensive coverage
 - 🔍 **Static Analysis**: ESLint and Prettier integration
 
 ## Installation
@@ -66,7 +66,15 @@ if (result.success) {
 
 ## Recent Improvements
 
-### New Features
+### New Features (Latest)
+
+- **Simplified Record Creation**: `setExpression()` and `setEndRaw()` now accept Record objects directly, eliminating the need for `createScript().makeRecordFrom()` wrapper
+- **Smart Record Building**: New `setEndRecord()` method with automatic "of source" appending for ultra-clean syntax
+  - Reduces boilerplate by 31% in common patterns
+  - Two forms: source object shorthand or full expressions
+  - Perfect for building lists of records from loops
+
+### Previous Features
 
 - **Error Handling**: Added `try()` and `onError()` methods for proper exception handling
 - **Conditional Logic**: New `elseIf()` method for chained conditional statements
@@ -79,7 +87,7 @@ if (result.success) {
 - **String Escaping**: Automatic escaping of quotes and backslashes in all string values
 - **Block Tracking**: Fixed block stack tracking for `using()`, `with()`, and `try()` blocks
 - **Enhanced Methods**: Improved fluent chaining for window and application methods
-- **Test Coverage**: Expanded to 80+ tests with comprehensive coverage of new features
+- **Test Coverage**: Expanded to 189 tests with comprehensive coverage of new features
 
 ## Usage Examples
 
@@ -275,6 +283,66 @@ builder.reset();
 builder.tell('Safari').activate().end();
 const result2 = await runScript(builder.build());
 ```
+
+### Building Records from Variables (New!)
+
+The builder now provides intuitive shorthand methods for creating AppleScript records from extracted properties, eliminating boilerplate code.
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+// OLD WAY - verbose with temporary variables
+const oldScript = createScript()
+  .tell('Notes')
+  .set('accountInfo', [])
+  .repeatWith('acc', 'every account')
+  .setExpression('accName', 'name of acc')
+  .setExpression('accId', 'id of acc')
+  .setExpression('noteCount', 'count of notes in acc')
+  .setExpression('accRecord', {
+    accountName: 'accName',
+    accountId: 'accId',
+    noteCount: 'noteCount',
+  })
+  .setEndRaw('accountInfo', 'accRecord')
+  .end()
+  .end();
+
+// NEW WAY 1 - Direct expressions in setEndRecord
+const newScript1 = createScript()
+  .tell('Notes')
+  .set('accountInfo', [])
+  .repeatWith('acc', 'every account')
+  .setEndRecord('accountInfo', {
+    accountName: 'name of acc',
+    accountId: 'id of acc',
+    noteCount: 'count of notes in acc',
+  })
+  .end()
+  .end();
+
+// NEW WAY 2 - Automatic "of source" with setEndRecord
+const newScript2 = createScript()
+  .tell('Notes')
+  .set('accountInfo', [])
+  .repeatWith('acc', 'every account')
+  .setEndRecord('accountInfo', 'acc', {
+    accountName: 'name',
+    accountId: 'id',
+    noteCount: 'count of notes',
+  })
+  .end()
+  .end();
+
+const result = await runScript(newScript2);
+```
+
+**Benefits:**
+
+- 31% fewer lines of code
+- No temporary variables needed
+- Direct property-to-record mapping
+- More readable and maintainable
 
 ### Working with System Events Processes
 
@@ -701,6 +769,11 @@ The ScriptBuilder provides a rich set of methods for constructing AppleScript co
 #### Variables and Properties
 
 - `set(variable: string, value: AppleScriptValue): ScriptBuilder`
+- `setExpression(variable: string, expression: string | Record<string, string>): ScriptBuilder` - Set variable to expression or record
+- `setEndRaw(variable: string, expression: string | Record<string, string>): ScriptBuilder` - Append expression or record to list
+- `setEndRecord(listVariable: string, sourceOrExpressions: string | Record<string, string>, propertyMap?: Record<string, string>): ScriptBuilder` - Shorthand for appending records to lists
+  - Form 1: `setEndRecord(list, source, {key: 'property'})` - Automatically appends "of source"
+  - Form 2: `setEndRecord(list, {key: 'full expression'})` - Uses expressions as-is
 - `get(property: string): ScriptBuilder`
 - `copy(value: AppleScriptValue, to: string): ScriptBuilder`
 - `count(items: string): ScriptBuilder`

@@ -239,6 +239,11 @@ export interface ScriptBuilder {
   exists: (item: string) => ScriptBuilder;
   setEnd: (variable: string, value: AppleScriptValue) => ScriptBuilder;
   setEndRaw: (variable: string, expression: string | Record<string, string>) => ScriptBuilder;
+  setEndRecord: (
+    listVariable: string,
+    sourceOrExpressions: string | Record<string, string>,
+    propertyMap?: Record<string, string>,
+  ) => ScriptBuilder;
   setProperty: (variable: string, property: string, value: AppleScriptValue) => ScriptBuilder;
   makeRecordFrom: (variableNames: Record<string, string>) => string;
 

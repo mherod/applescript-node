@@ -330,8 +330,6 @@ osascript -e 'tell app "Notes" to count notes'</code></pre>
     .repeatWith('i', `from 1 to ${createdNoteIds.length}`)
     .try()
     .setExpression('aNote', `note i of folder "${folderName}" of account "${accountName}"`)
-    .setExpression('noteName', 'name of aNote')
-    .setExpression('noteId', 'id of aNote')
     .setExpression('notePlaintext', 'plaintext of aNote')
     .comment('Get first line as preview')
     .if('length of notePlaintext > 80')
@@ -339,12 +337,11 @@ osascript -e 'tell app "Notes" to count notes'</code></pre>
     .else()
     .set('notePreview', 'notePlaintext')
     .end()
-    .setExpression('noteInfo', {
-      title: 'noteName',
-      noteId: 'noteId',
+    .setEndRecord('notesList', 'aNote', {
+      title: 'name',
+      noteId: 'id',
       preview: 'notePreview',
     })
-    .setEndRaw('notesList', 'noteInfo')
     .onError()
     .comment('Skip notes with errors')
     .end()
