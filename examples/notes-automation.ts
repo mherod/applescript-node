@@ -142,34 +142,30 @@ async function demonstrateNotesAutomation() {
         },
       )
       // Use tryCatch convenience helper for automatic block closing
+      // Demonstrates fluent method chaining within callback blocks
       .tryCatch(
-        (tryBlock) => {
-          tryBlock.setExpression('notePlaintext', 'plaintext of aNote');
-          tryBlock.comment('Truncate plaintext to first 100 characters');
-          // Use ifThenElse with ExprBuilder for type-safe conditions
-          tryBlock.ifThenElse(
-            (e) => e.gt(e.length('notePlaintext'), 100),
-            (then_) => {
-              then_.setExpression('notePreview', 'text 1 thru 100 of notePlaintext & "..."');
-            },
-            (else_) => {
-              else_.set('notePreview', 'notePlaintext');
-            },
-          );
-          // Use setEndRecord for clean record creation
-          tryBlock.setEndRecord('notesList', {
-            noteName: 'name of aNote',
-            noteId: 'id of aNote',
-            preview: 'notePreview',
-            created: 'creation date of aNote as string',
-            modified: 'modification date of aNote as string',
-            isShared: 'shared of aNote',
-            isProtected: 'password protected of aNote',
-          });
-        },
-        (catchBlock) => {
-          catchBlock.comment('Skip notes with errors');
-        },
+        (tryBlock) =>
+          tryBlock
+            .setExpression('notePlaintext', 'plaintext of aNote')
+            .comment('Truncate plaintext to first 100 characters')
+            // Use ifThenElse with ExprBuilder for type-safe conditions
+            .ifThenElse(
+              (e) => e.gt(e.length('notePlaintext'), 100),
+              (then_) =>
+                then_.setExpression('notePreview', 'text 1 thru 100 of notePlaintext & "..."'),
+              (else_) => else_.set('notePreview', 'notePlaintext'),
+            )
+            // Use setEndRecord for clean record creation
+            .setEndRecord('notesList', {
+              noteName: 'name of aNote',
+              noteId: 'id of aNote',
+              preview: 'notePreview',
+              created: 'creation date of aNote as string',
+              modified: 'modification date of aNote as string',
+              isShared: 'shared of aNote',
+              isProtected: 'password protected of aNote',
+            }),
+        (catchBlock) => catchBlock.comment('Skip notes with errors'),
       )
       .endrepeat()
       .returnRaw('notesList')
