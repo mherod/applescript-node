@@ -701,6 +701,61 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
+  /**
+   * Intuitive shorthand for picking properties from a source object and building a record.
+   * Automatically detects full expressions vs simple property names:
+   * - Simple properties (no special keywords) get "of source" appended
+   * - Complex expressions (with 'of', 'as', 'where', etc.) are used as-is
+   *
+   * @param listVariable Name of the list to append the record to
+   * @param sourceObject Name of the source object to extract properties from
+   * @param propertyMap Mapping of record keys to property names/expressions
+   *
+   * @example
+   * // Mix simple properties and complex expressions
+   * .pickEndRecord('notesList', 'aNote', {
+   *   noteId: 'id',                              // => id of aNote
+   *   noteName: 'name',                          // => name of aNote
+   *   noteCreated: 'creation date of aNote as string',  // used as-is (has 'as')
+   *   noteModified: 'modification date as string',      // used as-is (has 'as')
+   * })
+   */
+  pickEndRecord(
+    listVariable: string,
+    sourceObject: string,
+    propertyMap: Record<string, string>,
+  ): ScriptBuilder {
+    const recordExpressions = Object.entries(propertyMap).reduce<Record<string, string>>(
+      (acc, [key, prop]) => {
+        // Check if property looks like a full expression (contains AppleScript keywords)
+        // If so, use as-is. Otherwise, append "of source" for shorthand.
+        const isFullExpression =
+          prop.includes(' of ') ||
+          prop.includes(' where ') ||
+          prop.includes(' as ') ||
+          prop.includes(' whose ') ||
+          prop.includes(' thru ') ||
+          prop.includes('every ') ||
+          prop.includes('some ') ||
+          prop.includes('first ') ||
+          prop.includes('last ') ||
+          prop.includes('count ') ||
+          prop.includes('length ') ||
+          prop.includes(' contains ') ||
+          prop.includes(' begins with ') ||
+          prop.includes(' ends with ');
+
+        acc[key] = isFullExpression ? prop : `${prop} of ${sourceObject}`;
+        return acc;
+      },
+      {},
+    );
+
+    const recordStr = this.makeRecordFrom(recordExpressions);
+    this.script.push(`${this.getIndentation()}set end of ${listVariable} to ${recordStr}`);
+    return this;
+  }
+
   setProperty(variable: string, property: string, value: AppleScriptValue): ScriptBuilder {
     this.script.push(
       `${this.getIndentation()}set ${property} of ${variable} to ${this.formatValue(value)}`,

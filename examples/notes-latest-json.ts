@@ -26,15 +26,16 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
         b.increment('counter').tryCatch(
           (tryBlock) =>
             tryBlock
-              // Build record with full expressions
-              .setEndRecord('notesList', {
-                noteId: 'id of aNote',
-                noteName: 'name of aNote',
-                noteContent: 'plaintext of aNote',
-                noteCreated: 'creation date of aNote as string',
+              // Use pickEndRecord for intuitive property picking
+              // Simple properties get "of aNote" automatically, complex expressions used as-is
+              .pickEndRecord('notesList', 'aNote', {
+                noteId: 'id',
+                noteName: 'name',
+                noteContent: 'plaintext',
+                noteCreated: 'creation date of aNote as string', // Full expression (has 'as')
                 noteModified: 'modification date of aNote as string',
-                noteShared: 'shared of aNote',
-                noteProtected: 'password protected of aNote',
+                noteShared: 'shared',
+                noteProtected: 'password protected',
               }),
           (catchBlock) => catchBlock.comment('Skip notes with errors'),
         ),

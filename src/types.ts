@@ -297,6 +297,11 @@ export interface ScriptBuilder {
     sourceOrExpressions: string | Record<string, string>,
     propertyMap?: Record<string, string>,
   ) => ScriptBuilder;
+  pickEndRecord: (
+    listVariable: string,
+    sourceObject: string,
+    propertyMap: Record<string, string>,
+  ) => ScriptBuilder;
   setProperty: (variable: string, property: string, value: AppleScriptValue) => ScriptBuilder;
   makeRecordFrom: (variableNames: Record<string, string>) => string;
 
