@@ -382,6 +382,92 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   /**
+   * Ultra-convenient shorthand for the common "map collection to JSON" pattern.
+   * Replaces verbose manual iteration, property extraction, and JSON conversion.
+   *
+   * This single method handles:
+   * - Creating temporary collection list
+   * - Iterating through items (with optional limit/condition)
+   * - Extracting properties with smart detection (simple vs complex expressions)
+   * - Error handling (skip failed items)
+   * - JSON serialization and return
+   *
+   * @param itemVariable Loop variable name (e.g., 'aNote')
+   * @param collection Collection to iterate (e.g., 'every note')
+   * @param properties Mapping of JSON keys to AppleScript properties
+   * @param options Optional: limit, until/while conditions, error handling
+   *
+   * @example
+   * // Ultra-concise! Replaces ~20 lines of builder code
+   * .tell('Notes')
+   * .mapToJson('aNote', 'every note', {
+   *   id: 'id',
+   *   name: 'name',
+   *   content: 'plaintext',
+   *   created: 'creation date of aNote as string',
+   * }, { limit: 10, skipErrors: true })
+   * .endtell()
+   */
+  mapToJson(
+    itemVariable: string,
+    collection: string,
+    properties: Record<string, string>,
+    options: {
+      limit?: number;
+      until?: string | ((expr: ExprBuilder) => string);
+      while?: string | ((expr: ExprBuilder) => string);
+      skipErrors?: boolean;
+    } = {},
+  ): ScriptBuilder {
+    const listVar = '__collected_items';
+
+    // 1. Initialize collection list
+    this.set(listVar, []);
+
+    // 2. Set up loop with optional limit/condition
+    const buildBody = (b: ScriptBuilder) => {
+      const addRecord = () => b.pickEndRecord(listVar, itemVariable, properties);
+
+      if (options.skipErrors) {
+        b.tryCatch(
+          (tryBlock) => tryBlock.pickEndRecord(listVar, itemVariable, properties),
+          (catchBlock) => catchBlock.comment('Skip items with errors'),
+        );
+      } else {
+        addRecord();
+      }
+    };
+
+    if (options.limit !== undefined) {
+      const limit = options.limit;
+      this.set('__counter', 0);
+      this.forEachUntil(
+        itemVariable,
+        collection,
+        (e) => e.gte('__counter', limit),
+        (b) => {
+          b.increment('__counter');
+          buildBody(b);
+        },
+      );
+    } else if (options.until !== undefined) {
+      this.forEachUntil(itemVariable, collection, options.until, buildBody);
+    } else if (options.while !== undefined) {
+      this.forEachWhile(itemVariable, collection, options.while, buildBody);
+    } else {
+      this.forEach(itemVariable, collection, buildBody);
+    }
+
+    // 3. Return as JSON - map JSON keys to record property keys (not AppleScript expressions)
+    // The record has keys like {id: value, name: value}, so we need to map id→id, name→name, etc.
+    const recordPropertyMap = Object.keys(properties).reduce<Record<string, string>>((acc, key) => {
+      acc[key] = key; // JSON key maps to record property with same name
+      return acc;
+    }, {});
+    return this.returnAsJson(listVar, recordPropertyMap);
+  }
+
+  /**
    * Return a list of records as a JSON string.
    * Converts AppleScript records to JSON format by manually building the JSON string.
    * Handles proper escaping of strings, booleans, numbers, and null values.
@@ -443,7 +529,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     entries.forEach(([jsonKey, appleScriptProp], index) => {
       const comma = index > 0 ? ',' : '';
       this.raw(
-        `    set itemJson to itemJson & "${comma}\\"${jsonKey}\\":" & my valueToJson(|${appleScriptProp}| of rec)`,
+        `    set itemJson to itemJson & "${comma}\\"${jsonKey}\\":" & my valueToJson(${appleScriptProp} of rec)`,
       );
     });
 

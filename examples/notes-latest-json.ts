@@ -12,43 +12,23 @@ interface Note {
 }
 
 async function getLatestNotesAsJson(): Promise<Note[]> {
-  // Fetch latest 10 notes with full content
+  // Ultra-concise! mapToJson handles iteration, property extraction, error handling, and JSON conversion
   const notesScript = createScript()
     .tell('Notes')
-    .set('notesList', [])
-    .set('counter', 0)
-    // Use forEachUntil to stop after 10 notes
-    .forEachUntil(
+    .mapToJson(
       'aNote',
       'every note',
-      (e) => e.gte('counter', 10),
-      (b) =>
-        b.increment('counter').tryCatch(
-          (tryBlock) =>
-            tryBlock
-              // Use pickEndRecord for intuitive property picking
-              // Simple properties get "of aNote" automatically, complex expressions used as-is
-              .pickEndRecord('notesList', 'aNote', {
-                noteId: 'id',
-                noteName: 'name',
-                noteContent: 'plaintext',
-                noteCreated: 'creation date of aNote as string', // Full expression (has 'as')
-                noteModified: 'modification date of aNote as string',
-                noteShared: 'shared',
-                noteProtected: 'password protected',
-              }),
-          (catchBlock) => catchBlock.comment('Skip notes with errors'),
-        ),
+      {
+        id: 'id',
+        name: 'name',
+        content: 'plaintext',
+        created: 'creation date of aNote as string',
+        modified: 'modification date of aNote as string',
+        shared: 'shared',
+        passwordProtected: 'password protected',
+      },
+      { limit: 10, skipErrors: true },
     )
-    .returnAsJson('notesList', {
-      id: 'noteId',
-      name: 'noteName',
-      content: 'noteContent',
-      created: 'noteCreated',
-      modified: 'noteModified',
-      shared: 'noteShared',
-      passwordProtected: 'noteProtected',
-    })
     .endtell();
 
   // Write generated script to output directory

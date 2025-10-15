@@ -163,6 +163,17 @@ export interface ScriptBuilder {
   return: (value: AppleScriptValue) => ScriptBuilder;
   returnRaw: (expression: string) => ScriptBuilder;
   returnAsJson: (listVariable: string, propertyMap: Record<string, string>) => ScriptBuilder;
+  mapToJson: (
+    itemVariable: string,
+    collection: string,
+    properties: Record<string, string>,
+    options?: {
+      limit?: number;
+      until?: string | ((expr: ExprBuilder) => string);
+      while?: string | ((expr: ExprBuilder) => string);
+      skipErrors?: boolean;
+    },
+  ) => ScriptBuilder;
   log: (message: string) => ScriptBuilder;
   comment: (text: string) => ScriptBuilder;
 
