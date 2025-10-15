@@ -38,7 +38,15 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
           (catchBlock) => catchBlock.comment('Skip notes with errors'),
         ),
     )
-    .returnAsJson('notesList')
+    .returnAsJson('notesList', {
+      noteId: 'noteId',
+      noteName: 'noteName',
+      noteContent: 'noteContent',
+      noteCreated: 'noteCreated',
+      noteModified: 'noteModified',
+      noteShared: 'noteShared',
+      noteProtected: 'noteProtected',
+    })
     .endtell();
 
   const result = await runScript(notesScript);

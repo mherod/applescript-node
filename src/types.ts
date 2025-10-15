@@ -162,7 +162,7 @@ export interface ScriptBuilder {
   error: (message: string, number?: number) => ScriptBuilder;
   return: (value: AppleScriptValue) => ScriptBuilder;
   returnRaw: (expression: string) => ScriptBuilder;
-  returnAsJson: (listVariable: string) => ScriptBuilder;
+  returnAsJson: (listVariable: string, propertyMap: Record<string, string>) => ScriptBuilder;
   log: (message: string) => ScriptBuilder;
   comment: (text: string) => ScriptBuilder;
 

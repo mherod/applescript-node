@@ -386,82 +386,76 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * Converts AppleScript records to JSON format by manually building the JSON string.
    * Handles proper escaping of strings, booleans, numbers, and null values.
    * @param listVariable Name of the variable containing a list of records
+   * @param propertyMap Mapping of JSON keys to AppleScript property names (e.g., {id: 'noteId', name: 'noteName'})
    */
-  returnAsJson(listVariable: string): ScriptBuilder {
+  returnAsJson(listVariable: string, propertyMap: Record<string, string>): ScriptBuilder {
     // Prepend handlers to the beginning of the script (they must be at top level)
     const handlers = [
-      ``,
-      `on escapeJsonString(str)`,
-      `  set escapedStr to str`,
+      "",
+      "on escapeJsonString(str)",
+      "  set escapedStr to str",
       `  set escapedStr to my replaceText(escapedStr, "\\\\", "\\\\\\\\")`,
       `  set escapedStr to my replaceText(escapedStr, "\\"", "\\\\\\"") `,
       `  set escapedStr to my replaceText(escapedStr, return, "\\\\n")`,
       `  set escapedStr to my replaceText(escapedStr, linefeed, "\\\\n")`,
       `  set escapedStr to my replaceText(escapedStr, tab, "\\\\t")`,
-      `  return escapedStr`,
-      `end escapeJsonString`,
-      ``,
-      `on replaceText(theText, searchStr, replaceStr)`,
+      "  return escapedStr",
+      "end escapeJsonString",
+      "",
+      "on replaceText(theText, searchStr, replaceStr)",
       `  set AppleScript's text item delimiters to searchStr`,
-      `  set textItems to text items of theText`,
+      "  set textItems to text items of theText",
       `  set AppleScript's text item delimiters to replaceStr`,
-      `  set newText to textItems as text`,
+      "  set newText to textItems as text",
       `  set AppleScript's text item delimiters to ""`,
-      `  return newText`,
-      `end replaceText`,
-      ``,
-      `on valueToJson(val)`,
-      `  if val is missing value then`,
+      "  return newText",
+      "end replaceText",
+      "",
+      "on valueToJson(val)",
+      "  if val is missing value then",
       `    return "null"`,
-      `  else if class of val is boolean then`,
-      `    if val then`,
+      "  else if class of val is boolean then",
+      "    if val then",
       `      return "true"`,
-      `    else`,
+      "    else",
       `      return "false"`,
-      `    end if`,
-      `  else if class of val is integer or class of val is real then`,
-      `    return val as text`,
-      `  else`,
+      "    end if",
+      "  else if class of val is integer or class of val is real then",
+      "    return val as text",
+      "  else",
       `    return "\\"" & my escapeJsonString(val as text) & "\\""`,
-      `  end if`,
-      `end valueToJson`,
-      ``,
+      "  end if",
+      "end valueToJson",
+      "",
     ];
 
     // Insert handlers at the beginning of the script
     this.script.unshift(...handlers);
 
     // Build JSON array from list of records (at current position in script)
-    this.raw(`set jsonParts to {}`);
+    this.raw("set jsonParts to {}");
     this.raw(`repeat with rec in ${listVariable}`);
-    this.raw(`  try`);
+    this.raw("  try");
     this.raw(`    set itemJson to "{"`);
-    this.raw(`    set itemJson to itemJson & "\\"noteId\\":" & my valueToJson(noteId of rec)`);
-    this.raw(`    set itemJson to itemJson & ",\\"noteName\\":" & my valueToJson(noteName of rec)`);
-    this.raw(
-      `    set itemJson to itemJson & ",\\"noteContent\\":" & my valueToJson(noteContent of rec)`,
-    );
-    this.raw(
-      `    set itemJson to itemJson & ",\\"noteCreated\\":" & my valueToJson(noteCreated of rec)`,
-    );
-    this.raw(
-      `    set itemJson to itemJson & ",\\"noteModified\\":" & my valueToJson(noteModified of rec)`,
-    );
-    this.raw(
-      `    set itemJson to itemJson & ",\\"noteShared\\":" & my valueToJson(noteShared of rec)`,
-    );
-    this.raw(
-      `    set itemJson to itemJson & ",\\"noteProtected\\":" & my valueToJson(noteProtected of rec)`,
-    );
+
+    // Generate property access for each key in the property map
+    const entries = Object.entries(propertyMap);
+    entries.forEach(([jsonKey, appleScriptProp], index) => {
+      const comma = index > 0 ? ',' : '';
+      this.raw(
+        `    set itemJson to itemJson & "${comma}\\"${jsonKey}\\":" & my valueToJson(|${appleScriptProp}| of rec)`,
+      );
+    });
+
     this.raw(`    set itemJson to itemJson & "}"`);
-    this.raw(`    set end of jsonParts to itemJson`);
-    this.raw(`  end try`);
-    this.raw(`end repeat`);
-    this.raw(``);
+    this.raw("    set end of jsonParts to itemJson");
+    this.raw("  end try");
+    this.raw("end repeat");
+    this.raw("");
     this.raw(`set AppleScript's text item delimiters to ","`);
     this.raw(`set jsonArray to "[" & (jsonParts as text) & "]"`);
     this.raw(`set AppleScript's text item delimiters to ""`);
-    this.raw(`return jsonArray`);
+    this.raw("return jsonArray");
     return this;
   }
 
