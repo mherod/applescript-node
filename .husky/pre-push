@@ -1,6 +1,22 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+# Load nvm
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+# Use .nvmrc if available
+if [ -f .nvmrc ]; then
+  nvm use
+fi
+
+# Ensure pnpm is available
+if ! command -v pnpm &> /dev/null; then
+  echo "⚠️  pnpm not found. Installing..."
+  npm install -g pnpm
+fi
+
 echo "🧪 Running comprehensive checks before push..."
 
 # Run verify script that includes lint, test, and build
