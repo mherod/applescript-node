@@ -1086,3 +1086,583 @@ describe('Builder - Comprehensive Robustness Tests', () => {
     expect(script).toContain('set x to x + 1');
   });
 });
+
+describe('Builder - pickEndRecord() Smart Property Picking', () => {
+  it('should append "of source" to simple property names', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .pickEndRecord('results', 'aNote', {
+        noteId: 'id',
+        noteName: 'name',
+        noteContent: 'plaintext',
+      })
+      .build();
+
+    expect(script).toContain(
+      'set end of results to {noteId:id of aNote, noteName:name of aNote, noteContent:plaintext of aNote}',
+    );
+  });
+
+  it('should detect and preserve full expressions with "of"', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .pickEndRecord('results', 'aNote', {
+        noteId: 'id',
+        accountId: 'id of account of aNote',
+      })
+      .build();
+
+    expect(script).toContain('noteId:id of aNote');
+    expect(script).toContain('accountId:id of account of aNote');
+    // Should NOT double-append "of aNote"
+    expect(script).not.toContain('id of account of aNote of aNote');
+  });
+
+  it('should detect and preserve expressions with "as" type casting', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .pickEndRecord('results', 'aNote', {
+        noteId: 'id',
+        noteCreated: 'creation date of aNote as string',
+        noteModified: 'modification date as string',
+      })
+      .build();
+
+    expect(script).toContain('noteId:id of aNote');
+    expect(script).toContain('noteCreated:creation date of aNote as string');
+    // "modification date as string" has "as" so should NOT get "of aNote"
+    expect(script).toContain('noteModified:modification date as string');
+  });
+
+  it('should detect expressions with "where" clauses', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .pickEndRecord('results', 'folder', {
+        name: 'name',
+        activeNotes: 'notes where shared = true',
+      })
+      .build();
+
+    expect(script).toContain('name:name of folder');
+    expect(script).toContain('activeNotes:notes where shared = true');
+  });
+
+  it('should detect expressions with "thru" range operators', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .pickEndRecord('results', 'note', {
+        name: 'name',
+        preview: 'text 1 thru 100 of body',
+      })
+      .build();
+
+    expect(script).toContain('name:name of note');
+    expect(script).toContain('preview:text 1 thru 100 of body');
+  });
+
+  it('should detect collection expressions (every, some, first, last)', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .pickEndRecord('results', 'chat', {
+        chatId: 'id',
+        allParticipants: 'every participant',
+        firstParticipant: 'first participant',
+        lastParticipant: 'last participant',
+        activeParticipants: 'some participant where active = true',
+      })
+      .build();
+
+    expect(script).toContain('chatId:id of chat');
+    expect(script).toContain('allParticipants:every participant');
+    expect(script).toContain('firstParticipant:first participant');
+    expect(script).toContain('lastParticipant:last participant');
+    expect(script).toContain('activeParticipants:some participant where active = true');
+  });
+
+  it('should detect function calls (count, length)', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .pickEndRecord('results', 'folder', {
+        name: 'name',
+        noteCount: 'count of notes',
+        nameLength: 'length of name',
+      })
+      .build();
+
+    expect(script).toContain('name:name of folder');
+    expect(script).toContain('noteCount:count of notes');
+    expect(script).toContain('nameLength:length of name');
+  });
+
+  it('should detect string comparison operators (contains, begins with, ends with)', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .pickEndRecord('results', 'note', {
+        name: 'name',
+        hasTest: 'name contains "test"',
+        startsWithA: 'name begins with "A"',
+        endsWithZ: 'name ends with "Z"',
+      })
+      .build();
+
+    expect(script).toContain('name:name of note');
+    expect(script).toContain('hasTest:name contains "test"');
+    expect(script).toContain('startsWithA:name begins with "A"');
+    expect(script).toContain('endsWithZ:name ends with "Z"');
+  });
+
+  it('should handle mixed simple and complex properties in one call', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .pickEndRecord('results', 'aNote', {
+        // Simple properties - will get "of aNote"
+        noteId: 'id',
+        noteName: 'name',
+        noteShared: 'shared',
+        // Complex expressions - used as-is
+        noteCreated: 'creation date of aNote as string',
+        notePreview: 'text 1 thru 50 of body',
+        noteParticipantCount: 'count of participants',
+      })
+      .build();
+
+    const recordLine = script.split('\n').find((line) => line.includes('set end of results'));
+    expect(recordLine).toContain('noteId:id of aNote');
+    expect(recordLine).toContain('noteName:name of aNote');
+    expect(recordLine).toContain('noteShared:shared of aNote');
+    expect(recordLine).toContain('noteCreated:creation date of aNote as string');
+    expect(recordLine).toContain('notePreview:text 1 thru 50 of body');
+    expect(recordLine).toContain('noteParticipantCount:count of participants');
+  });
+
+  it('should work inside repeat loops', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .forEach('aNote', 'every note', (b) => {
+        b.pickEndRecord('results', 'aNote', {
+          id: 'id',
+          name: 'name',
+        });
+      })
+      .build();
+
+    expect(script).toContain('repeat with aNote in every note');
+    expect(script).toContain('set end of results to {id:id of aNote, name:name of aNote}');
+    expect(script).toContain('end repeat');
+  });
+
+  it('should work inside try-catch blocks', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .forEach('aNote', 'every note', (b) => {
+        b.tryCatch(
+          (tryBlock) =>
+            tryBlock.pickEndRecord('results', 'aNote', {
+              id: 'id',
+              name: 'name',
+            }),
+          (catchBlock) => catchBlock.comment('Skip errors'),
+        );
+      })
+      .build();
+
+    expect(script).toContain('try');
+    expect(script).toContain('set end of results to {id:id of aNote, name:name of aNote}');
+    expect(script).toContain('on error');
+    expect(script).toContain('end try');
+  });
+});
+
+describe('Builder - mapToJson() Ultra-Shorthand', () => {
+  it('should generate complete JSON mapping with limit', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson(
+        'aNote',
+        'every note',
+        {
+          id: 'id',
+          name: 'name',
+        },
+        { limit: 10, skipErrors: true },
+      )
+      .endtell()
+      .build();
+
+    // Should have JSON handlers at top
+    expect(script).toContain('on escapeJsonString(str)');
+    expect(script).toContain('on replaceText(theText, searchStr, replaceStr)');
+    expect(script).toContain('on valueToJson(val)');
+
+    // Should have collection logic
+    expect(script).toContain('set __collected_items to {}');
+    expect(script).toContain('set __counter to 0');
+    expect(script).toContain('repeat with aNote in every note');
+    expect(script).toContain('if __counter >= 10 then');
+    expect(script).toContain('exit repeat');
+    expect(script).toContain('set __counter to __counter + 1');
+
+    // Should have error handling
+    expect(script).toContain('try');
+    expect(script).toContain('on error');
+    expect(script).toContain('-- Skip items with errors');
+
+    // Should build records
+    expect(script).toContain(
+      'set end of __collected_items to {id:id of aNote, name:name of aNote}',
+    );
+
+    // Should have JSON conversion
+    expect(script).toContain('set jsonParts to {}');
+    expect(script).toContain('repeat with rec in __collected_items');
+    expect(script).toContain('set itemJson to "{"');
+    expect(script).toContain('\\"id\\":" & my valueToJson(id of rec)');
+    expect(script).toContain(',\\"name\\":" & my valueToJson(name of rec)');
+    expect(script).toContain('return jsonArray');
+  });
+
+  it('should work without limit (collect all items)', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson('aNote', 'every note', {
+        id: 'id',
+        name: 'name',
+      })
+      .endtell()
+      .build();
+
+    expect(script).toContain('set __collected_items to {}');
+    expect(script).toContain('repeat with aNote in every note');
+    // Should NOT have counter logic
+    expect(script).not.toContain('set __counter to 0');
+    expect(script).not.toContain('if __counter >=');
+    expect(script).toContain(
+      'set end of __collected_items to {id:id of aNote, name:name of aNote}',
+    );
+  });
+
+  it('should support until condition with ExprBuilder', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson(
+        'aNote',
+        'every note',
+        {
+          id: 'id',
+          name: 'name',
+        },
+        { until: (e) => e.gt('length of name', 100) },
+      )
+      .endtell()
+      .build();
+
+    expect(script).toContain('repeat with aNote in every note');
+    expect(script).toContain('if length of name > 100 then');
+    expect(script).toContain('exit repeat');
+  });
+
+  it('should support until condition with string', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson(
+        'aNote',
+        'every note',
+        {
+          id: 'id',
+          name: 'name',
+        },
+        { until: 'found = true' },
+      )
+      .endtell()
+      .build();
+
+    expect(script).toContain('repeat with aNote in every note');
+    expect(script).toContain('if found = true then');
+    expect(script).toContain('exit repeat');
+  });
+
+  it('should support while condition with ExprBuilder', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson(
+        'aNote',
+        'every note',
+        {
+          id: 'id',
+          name: 'name',
+        },
+        { while: (e) => e.lt('counter', 50) },
+      )
+      .endtell()
+      .build();
+
+    expect(script).toContain('repeat with aNote in every note');
+    expect(script).toContain('if not counter < 50 then');
+    expect(script).toContain('exit repeat');
+  });
+
+  it('should support while condition with string', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson(
+        'aNote',
+        'every note',
+        {
+          id: 'id',
+          name: 'name',
+        },
+        { while: 'running = true' },
+      )
+      .endtell()
+      .build();
+
+    expect(script).toContain('repeat with aNote in every note');
+    expect(script).toContain('if not running = true then');
+    expect(script).toContain('exit repeat');
+  });
+
+  it('should skip error handling when skipErrors is false', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson(
+        'aNote',
+        'every note',
+        {
+          id: 'id',
+          name: 'name',
+        },
+        { limit: 5, skipErrors: false },
+      )
+      .endtell()
+      .build();
+
+    expect(script).toContain(
+      'set end of __collected_items to {id:id of aNote, name:name of aNote}',
+    );
+    // Should NOT have try-catch around the record building
+    const lines = script.split('\n');
+    const recordLineIndex = lines.findIndex((line) =>
+      line.includes('set end of __collected_items to {id:id of aNote'),
+    );
+    const tryLineIndex = lines.findIndex(
+      (line, index) => index < recordLineIndex && line.trim() === 'try',
+    );
+
+    // If there's a try block, it should be for JSON conversion, not record building
+    if (tryLineIndex !== -1) {
+      // The try block should be far away from the record line (it's for JSON conversion later)
+      expect(Math.abs(recordLineIndex - tryLineIndex)).toBeGreaterThan(3);
+    }
+  });
+
+  it('should handle complex properties with smart expression detection', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson(
+        'aNote',
+        'every note',
+        {
+          id: 'id',
+          name: 'name',
+          created: 'creation date of aNote as string',
+          preview: 'text 1 thru 100 of body',
+          participantCount: 'count of participants',
+        },
+        { limit: 10 },
+      )
+      .endtell()
+      .build();
+
+    // Check that pickEndRecord properly detected expression types
+    const recordLine = script
+      .split('\n')
+      .find((line) => line.includes('set end of __collected_items to {id:'));
+    expect(recordLine).toContain('id:id of aNote');
+    expect(recordLine).toContain('name:name of aNote');
+    expect(recordLine).toContain('created:creation date of aNote as string');
+    expect(recordLine).toContain('preview:text 1 thru 100 of body');
+    expect(recordLine).toContain('participantCount:count of participants');
+  });
+
+  it('should properly map JSON keys to record property keys', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson(
+        'aNote',
+        'every note',
+        {
+          noteId: 'id',
+          noteName: 'name',
+          noteContent: 'plaintext',
+        },
+        { limit: 5 },
+      )
+      .endtell()
+      .build();
+
+    // Record should have keys matching the JSON keys
+    expect(script).toContain(
+      'set end of __collected_items to {noteId:id of aNote, noteName:name of aNote, noteContent:plaintext of aNote}',
+    );
+
+    // JSON conversion should access these same keys
+    expect(script).toContain('\\"noteId\\":" & my valueToJson(noteId of rec)');
+    expect(script).toContain(',\\"noteName\\":" & my valueToJson(noteName of rec)');
+    expect(script).toContain(',\\"noteContent\\":" & my valueToJson(noteContent of rec)');
+  });
+
+  it('should work with different collection expressions', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Finder')
+      .mapToJson(
+        'aFile',
+        'files of folder "Documents"',
+        {
+          fileName: 'name',
+          fileSize: 'size',
+        },
+        { limit: 20 },
+      )
+      .endtell()
+      .build();
+
+    expect(script).toContain('repeat with aFile in files of folder "Documents"');
+    expect(script).toContain(
+      'set end of __collected_items to {fileName:name of aFile, fileSize:size of aFile}',
+    );
+  });
+
+  it('should handle empty property maps', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson('aNote', 'every note', {}, { limit: 5 })
+      .endtell()
+      .build();
+
+    // Should still generate valid script with empty records
+    expect(script).toContain('set __collected_items to {}');
+    expect(script).toContain('repeat with aNote in every note');
+    expect(script).toContain('set end of __collected_items to {}');
+  });
+
+  it('should combine limit with skipErrors', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson(
+        'aNote',
+        'every note',
+        {
+          id: 'id',
+          name: 'name',
+        },
+        { limit: 10, skipErrors: true },
+      )
+      .endtell()
+      .build();
+
+    // Should have both counter and error handling
+    expect(script).toContain('set __counter to 0');
+    expect(script).toContain('if __counter >= 10 then');
+    expect(script).toContain('set __counter to __counter + 1');
+    expect(script).toContain('try');
+    expect(script).toContain('on error');
+    expect(script).toContain('-- Skip items with errors');
+  });
+
+  it('should work without any options (defaults)', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson('aNote', 'every note', {
+        id: 'id',
+        name: 'name',
+      })
+      .endtell()
+      .build();
+
+    // Should work with defaults: no limit, no conditions, no error skipping
+    expect(script).toContain('repeat with aNote in every note');
+    expect(script).toContain(
+      'set end of __collected_items to {id:id of aNote, name:name of aNote}',
+    );
+    expect(script).not.toContain('if __counter >=');
+    expect(script).not.toContain('if not');
+    // Should not have try-catch in the collection loop
+    expect(script).toContain('return jsonArray');
+  });
+
+  it('should properly nest inside tell blocks', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .set('accountName', 'Work')
+      .mapToJson(
+        'aNote',
+        'notes of account accountName',
+        {
+          id: 'id',
+          name: 'name',
+        },
+        { limit: 5 },
+      )
+      .endtell()
+      .build();
+
+    expect(script).toContain('tell application "Notes"');
+    expect(script).toContain('set accountName to "Work"');
+    expect(script).toContain('repeat with aNote in notes of account accountName');
+    expect(script).toContain('end tell');
+  });
+
+  it('should generate valid JSON structure', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .mapToJson(
+        'aNote',
+        'every note',
+        {
+          id: 'id',
+          name: 'name',
+          shared: 'shared',
+        },
+        { limit: 2 },
+      )
+      .endtell()
+      .build();
+
+    // Verify JSON structure building
+    expect(script).toContain('set jsonParts to {}');
+    expect(script).toContain('set itemJson to "{"');
+    expect(script).toContain('\\"id\\":" & my valueToJson(id of rec)');
+    expect(script).toContain(',\\"name\\":" & my valueToJson(name of rec)');
+    expect(script).toContain(',\\"shared\\":" & my valueToJson(shared of rec)');
+    expect(script).toContain('set itemJson to itemJson & "}"');
+    expect(script).toContain('set end of jsonParts to itemJson');
+    expect(script).toContain('set jsonArray to "[" & (jsonParts as text) & "]"');
+    expect(script).toContain('return jsonArray');
+  });
+});
