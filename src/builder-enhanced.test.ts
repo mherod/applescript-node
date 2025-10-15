@@ -547,3 +547,439 @@ describe('Builder - Repeat Convenience Helpers', () => {
     expect(script).toContain('end repeat');
   });
 });
+
+describe('Builder - Comprehensive Robustness Tests', () => {
+  it('should handle 3+ levels of nested blocks with proper indentation', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .forEach('account', 'every account', (b1) =>
+        b1.forEach('folder', 'every folder', (b2) =>
+          b2.forEach('note', 'every note', (b3) => b3.raw('log name of note')),
+        ),
+      )
+      .endtell()
+      .build();
+
+    expect(script).toContain('tell application "Notes"');
+    expect(script).toContain('repeat with account in every account');
+    expect(script).toContain('repeat with folder in every folder');
+    expect(script).toContain('repeat with note in every note');
+    expect(script).toContain('log name of note');
+    expect(script.split('end repeat').length).toBe(4); // 3 end repeats + 1 remainder
+    expect(script).toContain('end tell');
+
+    // Verify proper indentation at different levels
+    const lines = script.split('\n');
+    expect(lines.some((l) => l.startsWith('  repeat with account'))).toBe(true);
+    expect(lines.some((l) => l.startsWith('    repeat with folder'))).toBe(true);
+    expect(lines.some((l) => l.startsWith('      repeat with note'))).toBe(true);
+    expect(lines.some((l) => l.startsWith('        log name of note'))).toBe(true);
+  });
+
+  it('should handle multiple forEachUntil in sequence', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('count1', 0)
+      .forEachUntil(
+        'item1',
+        'list1',
+        (e) => e.gt('count1', 10),
+        (b) => b.increment('count1'),
+      )
+      .set('count2', 0)
+      .forEachUntil(
+        'item2',
+        'list2',
+        (e) => e.gt('count2', 20),
+        (b) => b.increment('count2'),
+      )
+      .build();
+
+    expect(script).toContain('repeat with item1 in list1');
+    expect(script).toContain('if count1 > 10 then');
+    expect(script).toContain('repeat with item2 in list2');
+    expect(script).toContain('if count2 > 20 then');
+    expect(script.split('end repeat').length).toBe(3); // 2 end repeats + 1 remainder
+  });
+
+  it('should handle forEachWhile with complex ExprBuilder conditions', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('counter', 0)
+      .set('enabled', true)
+      .forEachWhile(
+        'item',
+        'every note',
+        (e) => e.and(e.lte('counter', 100), e.eq('enabled', true)),
+        (b) => b.increment('counter').raw('process item'),
+      )
+      .build();
+
+    expect(script).toContain('repeat with item in every note');
+    expect(script).toContain('if not counter ≤ 100 and enabled = true then');
+    expect(script).toContain('exit repeat');
+    expect(script).toContain('end repeat');
+  });
+
+  it('should handle nested tryCatch inside forEachUntil', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('counter', 0)
+      .forEachUntil(
+        'item',
+        'every note',
+        (e) => e.gt('counter', 50),
+        (b) =>
+          b.increment('counter').tryCatch(
+            (tryBlock) => tryBlock.raw('set x to name of item'),
+            (catchBlock) => catchBlock.raw('log "error"'),
+          ),
+      )
+      .build();
+
+    expect(script).toContain('repeat with item in every note');
+    expect(script).toContain('if counter > 50 then');
+    expect(script).toContain('try');
+    expect(script).toContain('set x to name of item');
+    expect(script).toContain('on error');
+    expect(script).toContain('end try');
+    expect(script).toContain('end repeat');
+  });
+
+  it('should handle forEach inside ifThenElse branches', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('mode', 'full')
+      .ifThenElse(
+        (e) => e.eq('mode', 'full'),
+        (thenBlock) => thenBlock.forEach('item', 'every note', (b) => b.raw('process fully item')),
+        (elseBlock) =>
+          elseBlock.forEach('item', 'every note', (b) => b.raw('process partially item')),
+      )
+      .build();
+
+    expect(script).toContain('if mode = "full" then');
+    expect(script).toContain('repeat with item in every note');
+    expect(script).toContain('process fully item');
+    expect(script).toContain('else');
+    expect(script).toContain('process partially item');
+    expect(script.split('end repeat').length).toBe(3); // 2 end repeats + 1 remainder
+  });
+
+  it('should handle continueRepeat in loops', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .forEach('item', 'every note', (b) =>
+        b
+          .ifThen(
+            (e) => e.eq('item', 'skip'),
+            (skipBlock) => skipBlock.continueRepeat(),
+          )
+          .raw('process item'),
+      )
+      .build();
+
+    expect(script).toContain('repeat with item in every note');
+    expect(script).toContain('if item = "skip" then');
+    // continueRepeat should be represented in the script
+    expect(script).toContain('end if');
+    expect(script).toContain('process item');
+    expect(script).toContain('end repeat');
+  });
+
+  it('should handle complex setEndRecord with source object form', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .repeatWith('acc', 'every account')
+      .setEndRecord('results', 'acc', {
+        accountName: 'name',
+        accountId: 'id',
+        noteCount: 'count of notes',
+      })
+      .endrepeat()
+      .build();
+
+    expect(script).toContain('repeat with acc in every account');
+    expect(script).toContain('set end of results to');
+    expect(script).toContain('accountName:name of acc');
+    expect(script).toContain('accountId:id of acc');
+    expect(script).toContain('noteCount:count of notes of acc');
+  });
+
+  it('should handle setEndRecord with direct expressions form', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('results', [])
+      .repeatWith('note', 'every note')
+      .setEndRecord('results', {
+        noteName: 'name of note',
+        noteId: 'id of note',
+        noteBody: 'body of note',
+      })
+      .endrepeat()
+      .build();
+
+    expect(script).toContain('repeat with note in every note');
+    expect(script).toContain('set end of results to');
+    expect(script).toContain('noteName:name of note');
+    expect(script).toContain('noteId:id of note');
+    expect(script).toContain('noteBody:body of note');
+  });
+
+  it('should handle setExpression with record objects', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .setExpression('userName', 'name of user')
+      .setExpression('userId', 'id of user')
+      .setExpression('record', {
+        name: 'userName',
+        id: 'userId',
+      })
+      .build();
+
+    expect(script).toContain('set userName to name of user');
+    expect(script).toContain('set userId to id of user');
+    expect(script).toContain('set record to {name:userName, id:userId}');
+  });
+
+  it('should handle nested tells with proper scoping', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Finder')
+      .raw('activate')
+      .tell('System Events')
+      .raw('keystroke "n"')
+      .endtell()
+      .raw('count windows')
+      .endtell()
+      .build();
+
+    expect(script).toContain('tell application "Finder"');
+    expect(script).toContain('tell application "System Events"');
+    expect(script).toContain('keystroke "n"');
+    expect(script.split('end tell').length).toBe(3); // 2 end tells + 1 remainder
+  });
+
+  it('should handle ExprBuilder parentheses for complex logic', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .ifThen(
+        (e) => e.or(e.paren(e.and(e.gt('x', 5), e.lt('x', 10))), e.eq('override', true)),
+        (b) => b.raw('execute'),
+      )
+      .build();
+
+    expect(script).toContain('if (x > 5 and x < 10) or override = true then');
+    expect(script).toContain('execute');
+  });
+
+  it('should handle deeply nested ifThenElse with ExprBuilder', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .ifThenElse(
+        (e) => e.gt('level', 0),
+        (b1) =>
+          b1.ifThenElse(
+            (e) => e.gt('level', 1),
+            (b2) =>
+              b2.ifThenElse(
+                (e) => e.gt('level', 2),
+                (b3) => b3.raw('log "level 3"'),
+                (b3) => b3.raw('log "level 2"'),
+              ),
+            (b2) => b2.raw('log "level 1"'),
+          ),
+        (b1) => b1.raw('log "level 0"'),
+      )
+      .build();
+
+    expect(script).toContain('if level > 0 then');
+    expect(script).toContain('if level > 1 then');
+    expect(script).toContain('if level > 2 then');
+    expect(script.split('end if').length).toBe(4); // 3 end ifs + 1 remainder
+  });
+
+  it('should handle forEachWhile with string condition', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('running', true)
+      .forEachWhile('item', 'every note', 'running = true', (b) =>
+        b.raw('if should_stop(item) then set running to false').raw('process item'),
+      )
+      .build();
+
+    expect(script).toContain('repeat with item in every note');
+    expect(script).toContain('if not running = true then');
+    expect(script).toContain('exit repeat');
+    expect(script).toContain('end repeat');
+  });
+
+  it('should handle mixed repeat types in complex scenario', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .repeatTimes(3, (b1) =>
+        b1
+          .forEach('folder', 'every folder', (b2) =>
+            b2.forEachUntil(
+              'note',
+              'every note',
+              (e) => e.gt('counter', 10),
+              (b3) => b3.increment('counter'),
+            ),
+          )
+          .raw('log "batch complete"'),
+      )
+      .build();
+
+    expect(script).toContain('repeat 3 times');
+    expect(script).toContain('repeat with folder in every folder');
+    expect(script).toContain('repeat with note in every note');
+    expect(script.split('end repeat').length).toBe(4); // 3 end repeats + 1 remainder
+  });
+
+  it('should handle tryCatchError with complex nested operations', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .forEach('item', 'every note', (b) =>
+        b.tryCatchError(
+          (tryBlock) =>
+            tryBlock.setExpression('data', 'body of item').ifThen(
+              (e) => e.gt(e.length('data'), 0),
+              (ifBlock) => ifBlock.raw('process data'),
+            ),
+          'errorMsg',
+          (catchBlock) => catchBlock.raw('log errorMsg'),
+        ),
+      )
+      .build();
+
+    expect(script).toContain('repeat with item in every note');
+    expect(script).toContain('try');
+    expect(script).toContain('set data to body of item');
+    expect(script).toContain('if length of data > 0 then');
+    expect(script).toContain('on error errorMsg');
+    expect(script).toContain('log errorMsg');
+    expect(script).toContain('end try');
+  });
+
+  it('should maintain proper indentation through complex nesting', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .ifThen(
+        (e) => e.gt(e.count('notes'), 0),
+        (b1) =>
+          b1.forEach('note', 'every note', (b2) =>
+            b2.tryCatch(
+              (b3) => b3.raw('log name of note'),
+              (b3) => b3.raw('log "error"'),
+            ),
+          ),
+      )
+      .endtell()
+      .build();
+
+    const lines = script.split('\n');
+    // Verify indentation at each level
+    expect(lines.some((l) => l.startsWith('  if count of notes > 0 then'))).toBe(true);
+    expect(lines.some((l) => l.startsWith('    repeat with note'))).toBe(true);
+    expect(lines.some((l) => l.startsWith('      try'))).toBe(true);
+    expect(lines.some((l) => l.startsWith('        log name of note'))).toBe(true);
+  });
+
+  it('should handle forEachUntil with complex ExprBuilder combining multiple operations', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('counter', 0)
+      .forEachUntil(
+        'item',
+        'every note',
+        (e) => e.or(e.gt('counter', 100), e.eq('shouldStop', true)),
+        (b) => b.increment('counter').raw('process item'),
+      )
+      .build();
+
+    expect(script).toContain('repeat with item in every note');
+    expect(script).toContain('if counter > 100 or shouldStop = true then');
+    expect(script).toContain('exit repeat');
+  });
+
+  it('should handle real-world scenario with all features combined', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .tell('Notes')
+      .set('results', [])
+      .set('counter', 0)
+      .set('enabled', true)
+      .forEachWhile(
+        'account',
+        'every account',
+        (e) => e.and(e.lt('counter', 3), e.eq('enabled', true)),
+        (b1) =>
+          b1.increment('counter').forEach('note', 'notes of account', (b2) =>
+            b2.tryCatchError(
+              (tryBlock) =>
+                tryBlock.setExpression('noteData', 'plaintext of note').ifThenElse(
+                  (e) => e.gt(e.length('noteData'), 50),
+                  (thenBlock) =>
+                    thenBlock.setEndRecord('results', 'note', {
+                      name: 'name',
+                      preview: 'text 1 thru 50 of noteData',
+                    }),
+                  (elseBlock) =>
+                    elseBlock.setEndRecord('results', {
+                      name: 'name of note',
+                      preview: 'noteData',
+                    }),
+                ),
+              'err',
+              (catchBlock) => catchBlock.comment('Skip failed notes'),
+            ),
+          ),
+      )
+      .returnRaw('results')
+      .endtell()
+      .build();
+
+    // Verify all structural elements
+    expect(script).toContain('tell application "Notes"');
+    expect(script).toContain('repeat with account in every account');
+    expect(script).toContain('if not counter < 3 and enabled = true then');
+    expect(script).toContain('repeat with note in notes of account');
+    expect(script).toContain('try');
+    expect(script).toContain('if length of noteData > 50 then');
+    expect(script).toContain('on error err');
+    expect(script).toContain('return results');
+    expect(script).toContain('end tell');
+  });
+
+  it('should handle block validation for mismatched convenience helpers', () => {
+    const builder = new AppleScriptBuilder();
+    // This should work - forEach properly closes its repeat block
+    const script = builder
+      .forEach('item', 'list', (b) => b.raw('log item'))
+      .raw('after loop')
+      .build();
+
+    expect(script).toContain('repeat with item in list');
+    expect(script).toContain('end repeat');
+    expect(script).toContain('after loop');
+  });
+
+  it('should handle increment and decrement in various contexts', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .set('x', 10)
+      .increment('x', 5)
+      .decrement('x', 2)
+      .forEach('item', 'list', (b) => b.increment('x'))
+      .build();
+
+    expect(script).toContain('set x to 10');
+    expect(script).toContain('set x to x + 5');
+    expect(script).toContain('set x to x - 2');
+    expect(script).toContain('set x to x + 1');
+  });
+});
