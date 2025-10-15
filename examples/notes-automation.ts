@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import CliTable3 from 'cli-table3';
 import chalk from 'chalk';
 import { createScript, runScript, ScriptValidator } from '../src/index.js';

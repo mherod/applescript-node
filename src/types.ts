@@ -1,3 +1,5 @@
+import type { ExprBuilder } from './expressions.js';
+
 // Configuration options for script execution
 export interface OsaScriptOptions {
   // The scripting language to use
@@ -140,7 +142,7 @@ export interface ScriptBuilder {
   endignoring: () => ScriptBuilder;
   endusing: () => ScriptBuilder;
   endwith: () => ScriptBuilder;
-  if: (condition: string | ((expr: any) => string)) => ScriptBuilder;
+  if: (condition: string | ((expr: ExprBuilder) => string)) => ScriptBuilder;
   then: () => ScriptBuilder;
   else: () => ScriptBuilder;
   elseIf: (condition: string) => ScriptBuilder;
@@ -165,11 +167,11 @@ export interface ScriptBuilder {
 
   // Convenience helpers for cleaner API
   ifThen: (
-    condition: string | ((expr: any) => string),
+    condition: string | ((expr: ExprBuilder) => string),
     thenBlock: (builder: ScriptBuilder) => void,
   ) => ScriptBuilder;
   ifThenElse: (
-    condition: string | ((expr: any) => string),
+    condition: string | ((expr: ExprBuilder) => string),
     thenBlock: (builder: ScriptBuilder) => void,
     elseBlock: (builder: ScriptBuilder) => void,
   ) => ScriptBuilder;
@@ -190,13 +192,13 @@ export interface ScriptBuilder {
   forEachWhile: (
     variable: string,
     list: string,
-    condition: string | ((expr: any) => string),
+    condition: string | ((expr: ExprBuilder) => string),
     block: (builder: ScriptBuilder) => void,
   ) => ScriptBuilder;
   forEachUntil: (
     variable: string,
     list: string,
-    condition: string | ((expr: any) => string),
+    condition: string | ((expr: ExprBuilder) => string),
     block: (builder: ScriptBuilder) => void,
   ) => ScriptBuilder;
   repeatTimes: (times: number, block: (builder: ScriptBuilder) => void) => ScriptBuilder;
