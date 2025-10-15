@@ -16,7 +16,8 @@
     "baseUrl": ".",
     "paths": {
       "applescript-node": ["./src/index.ts"]
-    }
+    },
+    "strictNullChecks": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "examples", "**/*.test.ts"]
