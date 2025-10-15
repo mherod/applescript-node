@@ -875,6 +875,58 @@ describe('AppleScriptBuilder', () => {
         expect(script).toBe('set chatInfo to {id:chatId, name:chatName, count:messageCount}');
       });
 
+      it('should accept Record directly in setExpression', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .setExpression('chatInfo', {
+            id: 'chatId',
+            name: 'chatName',
+            count: 'messageCount',
+          })
+          .build();
+
+        expect(script).toBe('set chatInfo to {id:chatId, name:chatName, count:messageCount}');
+      });
+
+      it('should accept Record directly in setEndRaw', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('results', [])
+          .setEndRaw('results', {
+            itemId: 'id',
+            itemValue: 'value',
+          })
+          .build();
+
+        expect(script).toBe(
+          'set results to {}\nset end of results to {itemId:id, itemValue:value}',
+        );
+      });
+
+      it('should simplify record creation in loops', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('accountInfo', [])
+          .repeatWith('acc', 'every account')
+          .setExpression('accName', 'name of acc')
+          .setExpression('accId', 'id of acc')
+          .setEndRaw('accountInfo', {
+            accountName: 'accName',
+            accountId: 'accId',
+          })
+          .end()
+          .build();
+
+        expect(script).toBe(
+          'set accountInfo to {}\n' +
+            'repeat with acc in every account\n' +
+            '  set accName to name of acc\n' +
+            '  set accId to id of acc\n' +
+            '  set end of accountInfo to {accountName:accName, accountId:accId}\n' +
+            'end repeat',
+        );
+      });
+
       it('should work in complex workflow', () => {
         const builder = new AppleScriptBuilder();
         const script = builder

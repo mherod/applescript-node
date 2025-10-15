@@ -81,15 +81,12 @@ async function readMessagesConversations() {
     .comment('Skip participants with errors')
     .end()
     .end()
-    .setExpression(
-      'chatInfo',
-      createScript().makeRecordFrom({
-        chatId: 'chatId',
-        chatName: 'chatName',
-        accountId: 'acctId',
-        participants: 'participantList',
-      }),
-    )
+    .setExpression('chatInfo', {
+      chatId: 'chatId',
+      chatName: 'chatName',
+      accountId: 'acctId',
+      participants: 'participantList',
+    })
     .setEndRaw('chatList', 'chatInfo')
     .onError()
     .comment('Skip chats with errors')

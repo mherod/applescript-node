@@ -229,7 +229,7 @@ export interface ScriptBuilder {
 
   // Variables and properties
   set: (variable: string, value: AppleScriptValue) => ScriptBuilder;
-  setExpression: (variable: string, expression: string) => ScriptBuilder;
+  setExpression: (variable: string, expression: string | Record<string, string>) => ScriptBuilder;
   increment: (variable: string, by?: number) => ScriptBuilder;
   decrement: (variable: string, by?: number) => ScriptBuilder;
   get: (property: string) => ScriptBuilder;
@@ -238,7 +238,7 @@ export interface ScriptBuilder {
   setCountOf: (variable: string, items: string) => ScriptBuilder;
   exists: (item: string) => ScriptBuilder;
   setEnd: (variable: string, value: AppleScriptValue) => ScriptBuilder;
-  setEndRaw: (variable: string, expression: string) => ScriptBuilder;
+  setEndRaw: (variable: string, expression: string | Record<string, string>) => ScriptBuilder;
   setProperty: (variable: string, property: string, value: AppleScriptValue) => ScriptBuilder;
   makeRecordFrom: (variableNames: Record<string, string>) => string;
 

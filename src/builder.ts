@@ -437,8 +437,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  setExpression(variable: string, expression: string): ScriptBuilder {
-    this.script.push(`${this.getIndentation()}set ${variable} to ${expression}`);
+  setExpression(variable: string, expression: string | Record<string, string>): ScriptBuilder {
+    const expr = typeof expression === 'string' ? expression : this.makeRecordFrom(expression);
+    this.script.push(`${this.getIndentation()}set ${variable} to ${expr}`);
     return this;
   }
 
@@ -484,8 +485,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  setEndRaw(variable: string, expression: string): ScriptBuilder {
-    this.script.push(`${this.getIndentation()}set end of ${variable} to ${expression}`);
+  setEndRaw(variable: string, expression: string | Record<string, string>): ScriptBuilder {
+    const expr = typeof expression === 'string' ? expression : this.makeRecordFrom(expression);
+    this.script.push(`${this.getIndentation()}set end of ${variable} to ${expr}`);
     return this;
   }
 

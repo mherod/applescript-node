@@ -339,14 +339,11 @@ osascript -e 'tell app "Notes" to count notes'</code></pre>
     .else()
     .set('notePreview', 'notePlaintext')
     .end()
-    .setExpression(
-      'noteInfo',
-      createScript().makeRecordFrom({
-        title: 'noteName',
-        noteId: 'noteId',
-        preview: 'notePreview',
-      }),
-    )
+    .setExpression('noteInfo', {
+      title: 'noteName',
+      noteId: 'noteId',
+      preview: 'notePreview',
+    })
     .setEndRaw('notesList', 'noteInfo')
     .onError()
     .comment('Skip notes with errors')

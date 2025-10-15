@@ -41,15 +41,12 @@ async function demonstrateNotesAutomation() {
     .setExpression('accId', 'id of acc')
     .setExpression('noteCount', 'count of notes in acc')
     .setExpression('folderCount', 'count of folders in acc')
-    .setExpression(
-      'accRecord',
-      createScript().makeRecordFrom({
-        accountName: 'accName',
-        accountId: 'accId',
-        noteCount: 'noteCount',
-        folderCount: 'folderCount',
-      }),
-    )
+    .setExpression('accRecord', {
+      accountName: 'accName',
+      accountId: 'accId',
+      noteCount: 'noteCount',
+      folderCount: 'folderCount',
+    })
     .setEndRaw('accountInfo', 'accRecord')
     .onError()
     .comment('Skip accounts with errors')
@@ -158,18 +155,15 @@ async function demonstrateNotesAutomation() {
       .else()
       .set('notePreview', 'notePlaintext')
       .end()
-      .setExpression(
-        'noteInfo',
-        createScript().makeRecordFrom({
-          noteName: 'noteName',
-          noteId: 'noteId',
-          preview: 'notePreview',
-          created: 'noteCreated',
-          modified: 'noteModified',
-          isShared: 'noteShared',
-          isProtected: 'noteProtected',
-        }),
-      )
+      .setExpression('noteInfo', {
+        noteName: 'noteName',
+        noteId: 'noteId',
+        preview: 'notePreview',
+        created: 'noteCreated',
+        modified: 'noteModified',
+        isShared: 'noteShared',
+        isProtected: 'noteProtected',
+      })
       .setEndRaw('notesList', 'noteInfo')
       .onError()
       .comment('Skip notes with errors')
