@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import chalk from 'chalk';
 import CliTable3 from 'cli-table3';
-import { createScript, runScript } from '../src/index.js';
+import { createScript, ExprBuilder, runScript } from '../src/index.js';
 
 interface Contact {
   id: string;
@@ -41,14 +41,20 @@ async function searchContacts(
               .ifThenElse(
                 (e) => e.gt(e.count('emails of aPerson'), 0),
                 (then_) =>
-                  then_.setExpression('personEmail', 'value of item 1 of emails of aPerson'),
+                  then_.setExpression(
+                    'personEmail',
+                    new ExprBuilder().valueOfItem(1, 'emails of aPerson'),
+                  ),
                 (else_) => else_.set('personEmail', 'missing value'),
               )
-              // Handle optional phone field
+              // Handle optional phone field using ExprBuilder
               .ifThenElse(
                 (e) => e.gt(e.count('phones of aPerson'), 0),
                 (then_) =>
-                  then_.setExpression('personPhone', 'value of item 1 of phones of aPerson'),
+                  then_.setExpression(
+                    'personPhone',
+                    new ExprBuilder().valueOfItem(1, 'phones of aPerson'),
+                  ),
                 (else_) => else_.set('personPhone', 'missing value'),
               )
               // Build contact record
@@ -83,7 +89,7 @@ async function searchContacts(
 
   const result = await runScript(searchScript);
 
-  if (!result.success || !result.output) {
+  if (!(result.success && result.output)) {
     console.error(chalk.red('Search failed:'), result.error);
     return [];
   }
@@ -170,7 +176,10 @@ async function demonstrateContactSearch() {
               .ifThenElse(
                 (e) => e.gt(e.count('emails of aPerson'), 0),
                 (then_) =>
-                  then_.setExpression('personEmail', 'value of item 1 of emails of aPerson'),
+                  then_.setExpression(
+                    'personEmail',
+                    new ExprBuilder().valueOfItem(1, 'emails of aPerson'),
+                  ),
                 (else_) => else_.set('personEmail', 'missing value'),
               )
               .setEndRecord('results', {

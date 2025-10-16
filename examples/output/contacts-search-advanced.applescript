@@ -45,7 +45,7 @@ tell application "Contacts"
     set counter to counter + 1
     try
       if count of emails of aPerson > 0 then
-        set personEmail to value of item 1 of emails of aPerson
+        set personEmail to {}
       else
         set personEmail to "missing value"
       end if

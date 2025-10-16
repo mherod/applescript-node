@@ -292,6 +292,24 @@ export class ExprBuilder {
   concat(...parts: string[]): string {
     return parts.join(' & ');
   }
+
+  /**
+   * Property of item accessor: property of item N of collection
+   * Example: expr.propertyOfItem('value', 1, 'emails of aPerson') => "value of item 1 of emails of aPerson"
+   * Example: expr.propertyOfItem('name', 1, 'contacts') => "name of item 1 of contacts"
+   */
+  propertyOfItem(property: string, index: number | string, collection: string): string {
+    return `${property} of item ${index} of ${collection}`;
+  }
+
+  /**
+   * Value of item accessor (common shorthand for propertyOfItem('value', ...))
+   * Example: expr.valueOfItem(1, 'emails of aPerson') => "value of item 1 of emails of aPerson"
+   * Example: expr.valueOfItem(1, 'phones of contact') => "value of item 1 of phones of contact"
+   */
+  valueOfItem(index: number | string, collection: string): string {
+    return this.propertyOfItem('value', index, collection);
+  }
 }
 
 /**

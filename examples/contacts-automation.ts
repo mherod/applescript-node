@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import chalk from 'chalk';
 import CliTable3 from 'cli-table3';
-import { createScript, runScript, ScriptValidator } from '../src/index.js';
+import { createScript, ExprBuilder, runScript, ScriptValidator } from '../src/index.js';
 
 async function demonstrateContactsAutomation() {
   console.log(chalk.bold.blue('📇 Contacts.app - Automation Demo\n'));
@@ -72,21 +72,30 @@ async function demonstrateContactsAutomation() {
                 .ifThenElse(
                   (e) => e.gt(e.count('emails of aPerson'), 0),
                   (then_) =>
-                    then_.setExpression('personEmail', 'value of item 1 of emails of aPerson'),
+                    then_.setExpression(
+                      'personEmail',
+                      new ExprBuilder().valueOfItem(1, 'emails of aPerson'),
+                    ),
                   (else_) => else_.set('personEmail', 'missing value'),
                 )
-                // Handle optional phone field
+                // Handle optional phone field using ExprBuilder
                 .ifThenElse(
                   (e) => e.gt(e.count('phones of aPerson'), 0),
                   (then_) =>
-                    then_.setExpression('personPhone', 'value of item 1 of phones of aPerson'),
+                    then_.setExpression(
+                      'personPhone',
+                      new ExprBuilder().valueOfItem(1, 'phones of aPerson'),
+                    ),
                   (else_) => else_.set('personPhone', 'missing value'),
                 )
-                // Handle optional birthday field
+                // Handle optional birthday field using ExprBuilder
                 .ifThenElse(
                   (e) => e.exists('birth date of aPerson'),
                   (then_) =>
-                    then_.setExpression('personBirthday', 'birth date of aPerson as string'),
+                    then_.setExpression(
+                      'personBirthday',
+                      new ExprBuilder().asType('birth date of aPerson', 'string'),
+                    ),
                   (else_) => else_.set('personBirthday', 'missing value'),
                 )
                 // Build contact record (mix of properties and variables)
