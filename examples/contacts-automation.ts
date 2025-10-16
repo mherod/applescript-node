@@ -65,49 +65,45 @@ async function demonstrateContactsAutomation() {
         'every person',
         (e) => e.gt('counter', contactsToFetch),
         (b) =>
-          b
-            .increment('counter')
-            // Use tryCatch with fluent chaining in callback
-            .tryCatch(
-              (tryBlock) =>
-                tryBlock
-                  .setExpression('personFirstName', 'first name of aPerson')
-                  .setExpression('personLastName', 'last name of aPerson')
-                  .setExpression('personOrganization', 'organization of aPerson')
-                  .setExpression('personJobTitle', 'job title of aPerson')
-                  .setExpression('personCompany', 'company of aPerson')
-                  .ifThenElse(
-                    (e) => e.gt(e.count('emails of aPerson'), 0),
-                    (then_) =>
-                      then_.setExpression('personEmail', 'value of item 1 of emails of aPerson'),
-                    (else_) => else_.setExpression('personEmail', '"missing value"'),
-                  )
-                  .ifThenElse(
-                    (e) => e.gt(e.count('phones of aPerson'), 0),
-                    (then_) =>
-                      then_.setExpression('personPhone', 'value of item 1 of phones of aPerson'),
-                    (else_) => else_.setExpression('personPhone', '"missing value"'),
-                  )
-                  .ifThenElse(
-                    (e) => e.exists('birth date of aPerson'),
-                    (then_) =>
-                      then_.setExpression('personBirthday', 'birth date of aPerson as string'),
-                    (else_) => else_.setExpression('personBirthday', '"missing value"'),
-                  )
-                  .setEndRecord('contactsList', {
-                    id: 'id of aPerson',
-                    name: 'name of aPerson',
-                    firstName: 'personFirstName',
-                    lastName: 'personLastName',
-                    organization: 'personOrganization',
-                    jobTitle: 'personJobTitle',
-                    email: 'personEmail',
-                    phone: 'personPhone',
-                    birthday: 'personBirthday',
-                    isCompany: 'personCompany',
-                  }),
-              (catchBlock) => catchBlock.comment('Skip contacts with errors'),
-            ),
+          b.increment('counter').tryCatch(
+            (tryBlock) =>
+              tryBlock
+                // Handle optional email field
+                .ifThenElse(
+                  (e) => e.gt(e.count('emails of aPerson'), 0),
+                  (then_) =>
+                    then_.setExpression('personEmail', 'value of item 1 of emails of aPerson'),
+                  (else_) => else_.set('personEmail', 'missing value'),
+                )
+                // Handle optional phone field
+                .ifThenElse(
+                  (e) => e.gt(e.count('phones of aPerson'), 0),
+                  (then_) =>
+                    then_.setExpression('personPhone', 'value of item 1 of phones of aPerson'),
+                  (else_) => else_.set('personPhone', 'missing value'),
+                )
+                // Handle optional birthday field
+                .ifThenElse(
+                  (e) => e.exists('birth date of aPerson'),
+                  (then_) =>
+                    then_.setExpression('personBirthday', 'birth date of aPerson as string'),
+                  (else_) => else_.set('personBirthday', 'missing value'),
+                )
+                // Build contact record (mix of properties and variables)
+                .setEndRecord('contactsList', {
+                  id: 'id of aPerson',
+                  name: 'name of aPerson',
+                  firstName: 'first name of aPerson',
+                  lastName: 'last name of aPerson',
+                  organization: 'organization of aPerson',
+                  jobTitle: 'job title of aPerson',
+                  email: 'personEmail',
+                  phone: 'personPhone',
+                  birthday: 'personBirthday',
+                  isCompany: 'company of aPerson',
+                }),
+            (catchBlock) => catchBlock.comment('Skip contacts with errors'),
+          ),
       )
       .returnRaw('contactsList')
       .endtell();

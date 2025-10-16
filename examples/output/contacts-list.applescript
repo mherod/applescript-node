@@ -7,11 +7,6 @@ tell application "Contacts"
     end if
     set counter to counter + 1
     try
-      set personFirstName to first name of aPerson
-      set personLastName to last name of aPerson
-      set personOrganization to organization of aPerson
-      set personJobTitle to job title of aPerson
-      set personCompany to company of aPerson
       if count of emails of aPerson > 0 then
         set personEmail to value of item 1 of emails of aPerson
       else
@@ -27,7 +22,7 @@ tell application "Contacts"
       else
         set personBirthday to "missing value"
       end if
-      set end of contactsList to {id:id of aPerson, name:name of aPerson, firstName:personFirstName, lastName:personLastName, organization:personOrganization, jobTitle:personJobTitle, email:personEmail, phone:personPhone, birthday:personBirthday, isCompany:personCompany}
+      set end of contactsList to {id:id of aPerson, name:name of aPerson, firstName:first name of aPerson, lastName:last name of aPerson, organization:organization of aPerson, jobTitle:job title of aPerson, email:personEmail, phone:personPhone, birthday:personBirthday, isCompany:company of aPerson}
     on error
       -- Skip contacts with errors
     end try
