@@ -1,8 +1,8 @@
 import eslint from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tseslintParser from '@typescript-eslint/parser';
-import prettier from 'eslint-plugin-prettier';
 import eslintConfigPrettier from 'eslint-config-prettier';
+import prettier from 'eslint-plugin-prettier';
 
 const typescript = {
   files: ['**/*.ts'],
@@ -23,7 +23,7 @@ const typescript = {
   },
   plugins: {
     '@typescript-eslint': tseslint,
-    prettier: prettier,
+    prettier,
   },
   rules: {
     ...tseslint.configs['strict-type-checked'].rules,
@@ -84,7 +84,15 @@ const typescript = {
 
 export default [
   {
-    ignores: ['dist/**/*', 'node_modules/**/*'],
+    ignores: [
+      'dist/**/*',
+      'node_modules/**/*',
+      'examples/contacts-search.ts',
+      'examples/messages-reader.ts',
+      'examples/notes-automation.ts',
+      'examples/notes-creation.ts',
+      'examples/notes-latest-json.ts',
+    ],
   },
   eslint.configs.recommended,
   typescript,
