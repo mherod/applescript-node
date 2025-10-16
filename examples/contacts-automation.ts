@@ -105,7 +105,19 @@ async function demonstrateContactsAutomation() {
             (catchBlock) => catchBlock.comment('Skip contacts with errors'),
           ),
       )
-      .returnRaw('contactsList')
+      // Return contacts as JSON for clean parsing
+      .returnAsJson('contactsList', {
+        id: 'id',
+        name: 'name',
+        firstName: 'firstName',
+        lastName: 'lastName',
+        organization: 'organization',
+        jobTitle: 'jobTitle',
+        email: 'email',
+        phone: 'phone',
+        birthday: 'birthday',
+        isCompany: 'isCompany',
+      })
       .endtell();
 
     // Write generated script to output directory
@@ -123,6 +135,20 @@ async function demonstrateContactsAutomation() {
       const output = String(contactsResult.output);
 
       if (output && output !== '') {
+        // Parse JSON output directly from AppleScript
+        const contacts = JSON.parse(output) as Array<{
+          id: string;
+          name: string;
+          firstName: string;
+          lastName: string;
+          organization: string;
+          jobTitle: string;
+          email: string;
+          phone: string;
+          birthday: string;
+          isCompany: boolean;
+        }>;
+
         console.log(chalk.bold('\n📋 Contacts:\n'));
 
         const contactsTable = new CliTable3({
@@ -138,42 +164,30 @@ async function demonstrateContactsAutomation() {
           style: { head: [], border: [] },
         });
 
-        const contactRecords = output.split('id:').slice(1);
         let companyCount = 0;
         let emailCount = 0;
         let phoneCount = 0;
         let birthdayCount = 0;
 
-        contactRecords.forEach((record, index) => {
-          const nameMatch = /name:"?([^",}]+)"?/.exec(record);
-          const emailMatch = /email:"?([^",}]+)"?/.exec(record);
-          const phoneMatch = /phone:"?([^",}]+)"?/.exec(record);
-          const organizationMatch = /organization:"?([^",}]+)"?/.exec(record);
-          const companyMatch = /isCompany:(true|false)/.exec(record);
-          const birthdayMatch = /birthday:/.exec(record);
+        contacts.forEach((contact, index) => {
+          const name = contact.name || 'Untitled';
+          const email = contact.email !== 'missing value' ? contact.email : '';
+          const phone = contact.phone !== 'missing value' ? contact.phone : '';
+          const organization = contact.organization !== 'missing value' ? contact.organization : '';
+          const isCompany = contact.isCompany;
 
-          if (nameMatch) {
-            const name = nameMatch[1].trim().replace(/^"|"$/g, '');
-            const email = emailMatch ? emailMatch[1].trim().replace(/^"|"$/g, '') : '';
-            const phone = phoneMatch ? phoneMatch[1].trim().replace(/^"|"$/g, '') : '';
-            const organization = organizationMatch
-              ? organizationMatch[1].trim().replace(/^"|"$/g, '')
-              : '';
-            const isCompany = companyMatch ? companyMatch[1] === 'true' : false;
+          if (isCompany) companyCount++;
+          if (email) emailCount++;
+          if (phone) phoneCount++;
+          if (contact.birthday !== 'missing value') birthdayCount++;
 
-            if (isCompany) companyCount++;
-            if (email) emailCount++;
-            if (phone) phoneCount++;
-            if (birthdayMatch) birthdayCount++;
-
-            contactsTable.push([
-              chalk.gray((index + 1).toString()),
-              chalk.white(name || 'Untitled'),
-              email ? chalk.blue(email) : chalk.gray('-'),
-              phone ? chalk.green(phone) : chalk.gray('-'),
-              organization ? chalk.yellow(organization) : chalk.gray('-'),
-            ]);
-          }
+          contactsTable.push([
+            chalk.gray((index + 1).toString()),
+            chalk.white(name),
+            email ? chalk.blue(email) : chalk.gray('-'),
+            phone ? chalk.green(phone) : chalk.gray('-'),
+            organization ? chalk.yellow(organization) : chalk.gray('-'),
+          ]);
         });
 
         console.log(contactsTable.toString());
@@ -186,7 +200,7 @@ async function demonstrateContactsAutomation() {
           colWidths: [25, 10, 15],
         });
 
-        const displayedContacts = contactRecords.length;
+        const displayedContacts = contacts.length;
         statsTable.push(
           [chalk.white('Total Contacts in App'), chalk.yellow(totalContacts), chalk.gray('100%')],
           [
