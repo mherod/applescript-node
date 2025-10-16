@@ -4,49 +4,87 @@
  * You can write: `if(expr => expr.gt('counter', 10))`
  *
  * This enables:
- * - Type checking and autocomplete
+ * - Type checking and autocomplete for variables in scope
  * - Prevention of common syntax errors
  * - Composable expressions
  * - Self-documenting code
+ *
+ * @template TScope - Union of variable names available in the current scope.
+ *   When used within loop callbacks like `forEach`, this will include loop variables
+ *   like 'aPerson', 'aNote', etc., enabling autocomplete for them.
+ *
+ * @example
+ * // Basic usage with scoped variable
+ * .forEach('aPerson', 'every person', (b) => {
+ *   b.ifThen(
+ *     (e) => e.gt(e.count(e.property('aPerson', 'emails')), 0),
+ *     //                             ^^^^^^^^ 'aPerson' gets autocomplete!
+ *     (then_) => then_.setExpression('email', (e) =>
+ *       e.valueOfItem(1, e.property('aPerson', 'emails'))
+ *     )
+ *   );
+ * })
+ *
+ * @example
+ * // Nested loops with multiple scoped variables
+ * .forEach('anAccount', 'every account', (outer) => {
+ *   outer.forEach('aNote', 'notes of anAccount', (inner) => {
+ *     // Both 'anAccount' and 'aNote' are in scope here
+ *     inner.setExpression('accountName', (e) => e.property('anAccount', 'name'));
+ *     inner.setExpression('noteName', (e) => e.property('aNote', 'name'));
+ *   });
+ * })
  */
 
-export class ExprBuilder {
+export class ExprBuilder<TScope extends string = never> {
   /**
    * Greater than comparison: left > right
+   * @param left - Variable or expression. Scoped variables (from loops) get autocomplete.
+   *   The type `TScope | (string & Record<never, never>)` provides autocomplete for scoped
+   *   variables while still accepting any string expression.
+   * @param right - Value to compare against (string or number)
+   * @returns AppleScript expression: "left > right"
+   * @example
+   * e.gt('counter', 10)  // => "counter > 10"
+   * e.gt('aPerson', 5)   // => "aPerson > 5" (with autocomplete for 'aPerson' if in scope)
    */
-  gt(left: string, right: string | number): string {
+  gt(left: TScope | (string & Record<never, never>), right: string | number): string {
     const rightValue = typeof right === 'number' ? right.toString() : `"${right}"`;
     return `${left} > ${rightValue}`;
   }
 
   /**
    * Less than comparison: left < right
+   * @param left - Variable or expression (scoped variables get autocomplete)
    */
-  lt(left: string, right: string | number): string {
+  lt(left: TScope | (string & Record<never, never>), right: string | number): string {
     const rightValue = typeof right === 'number' ? right.toString() : `"${right}"`;
     return `${left} < ${rightValue}`;
   }
 
   /**
    * Greater than or equal: left >= right
+   * @param left - Variable or expression (scoped variables get autocomplete)
    */
-  gte(left: string, right: string | number): string {
+  gte(left: TScope | (string & Record<never, never>), right: string | number): string {
     const rightValue = typeof right === 'number' ? right.toString() : `"${right}"`;
     return `${left} >= ${rightValue}`;
   }
 
   /**
    * Less than or equal: left <= right
+   * @param left - Variable or expression (scoped variables get autocomplete)
    */
-  lte(left: string, right: string | number): string {
+  lte(left: TScope | (string & Record<never, never>), right: string | number): string {
     const rightValue = typeof right === 'number' ? right.toString() : `"${right}"`;
     return `${left} <= ${rightValue}`;
   }
 
   /**
    * Equality comparison: left = right
+   * @param left - Variable or expression (scoped variables get autocomplete)
    */
-  eq(left: string, right: string | number | boolean): string {
+  eq(left: TScope | (string & Record<never, never>), right: string | number | boolean): string {
     let rightValue: string;
     if (typeof right === 'string') {
       rightValue = `"${right}"`;
@@ -60,8 +98,9 @@ export class ExprBuilder {
 
   /**
    * Inequality comparison: left is not equal to right
+   * @param left - Variable or expression (scoped variables get autocomplete)
    */
-  ne(left: string, right: string | number | boolean): string {
+  ne(left: TScope | (string & Record<never, never>), right: string | number | boolean): string {
     let rightValue: string;
     if (typeof right === 'string') {
       rightValue = `"${right}"`;
@@ -107,9 +146,15 @@ export class ExprBuilder {
 
   /**
    * Property access: prop of obj
-   * Example: expr.property('aNote', 'name')
+   * @param obj - Variable name. Scoped variables (from loops) get autocomplete.
+   *   The type allows both scoped variables and arbitrary string expressions.
+   * @param prop - Property name to access
+   * @returns AppleScript expression: "prop of obj"
+   * @example
+   * e.property('aNote', 'name')      // => "name of aNote"
+   * e.property('aPerson', 'emails')  // => "emails of aPerson" (with autocomplete for 'aPerson')
    */
-  property(obj: string, prop: string): string {
+  property(obj: TScope | (string & Record<never, never>), prop: string): string {
     return `${prop} of ${obj}`;
   }
 
@@ -201,8 +246,9 @@ export class ExprBuilder {
    * Nested property accessor: chains multiple properties
    * Example: expr.nestedProperty('aChat', 'account', 'id') => "id of account of aChat"
    * Example: expr.nestedProperty('note', 'folder', 'name') => "name of folder of note"
+   * @param obj - Variable name (scoped variables get autocomplete)
    */
-  nestedProperty(obj: string, ...properties: string[]): string {
+  nestedProperty(obj: TScope | (string & Record<never, never>), ...properties: string[]): string {
     if (properties.length === 0) {
       return obj;
     }
@@ -313,9 +359,24 @@ export class ExprBuilder {
 }
 
 /**
- * Factory function for creating an ExprBuilder
- * Usage: if(e => e.gt('counter', 10))
+ * Factory function for creating an ExprBuilder with type-tracked scope.
+ * This is typically not needed as callbacks receive an ExprBuilder instance automatically.
+ *
+ * @template TScope - Union of variable names available in the current scope.
+ *   TypeScript will infer this from loop contexts automatically.
+ * @returns ExprBuilder instance with scope tracking
+ *
+ * @example
+ * // Usually you don't need to call this - use callbacks instead:
+ * .forEach('aPerson', 'every person', (b) => {
+ *   b.ifThen((e) => e.gt('counter', 10), ...) // 'e' provided automatically
+ * })
+ *
+ * @example
+ * // Manual usage (rare):
+ * const e = expr<'myVar' | 'anotherVar'>();
+ * e.property('myVar', 'name'); // 'myVar' gets autocomplete
  */
-export function expr(): ExprBuilder {
-  return new ExprBuilder();
+export function expr<TScope extends string = never>(): ExprBuilder<TScope> {
+  return new ExprBuilder<TScope>();
 }

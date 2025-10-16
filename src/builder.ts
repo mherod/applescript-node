@@ -501,7 +501,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     if (options.limit !== undefined) {
       const limit = options.limit;
       this.set('__counter', 0);
-      this.forEachUntil(
+      this.forEachUntil<string>(
         itemVariable,
         collection,
         (e) => e.gte('__counter', limit),
@@ -511,11 +511,11 @@ export class AppleScriptBuilder implements ScriptBuilder {
         },
       );
     } else if (options.until !== undefined) {
-      this.forEachUntil(itemVariable, collection, options.until, buildBody);
+      this.forEachUntil<string>(itemVariable, collection, options.until, buildBody);
     } else if (options.while !== undefined) {
-      this.forEachWhile(itemVariable, collection, options.while, buildBody);
+      this.forEachWhile<string>(itemVariable, collection, options.while, buildBody);
     } else {
-      this.forEach(itemVariable, collection, buildBody);
+      this.forEach<string>(itemVariable, collection, buildBody);
     }
 
     // 3. Return as JSON - map JSON keys to record property keys (not AppleScript expressions)
@@ -778,15 +778,15 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   // Variables and properties
-  set(variable: string, value: AppleScriptValue): ScriptBuilder {
+  set<TNewVar extends string>(variable: TNewVar, value: AppleScriptValue): ScriptBuilder<TNewVar> {
     this.script.push(`${this.getIndentation()}set ${variable} to ${this.formatValue(value)}`);
-    return this;
+    return this as ScriptBuilder<TNewVar>;
   }
 
-  setExpression(
-    variable: string,
+  setExpression<TNewVar extends string>(
+    variable: TNewVar,
     expression: string | Record<string, string> | ((expr: ExprBuilder) => string),
-  ): ScriptBuilder {
+  ): ScriptBuilder<TNewVar> {
     let expr: string;
     if (typeof expression === 'function') {
       expr = expression(new ExprBuilder());
@@ -796,7 +796,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
       expr = this.makeRecordFrom(expression);
     }
     this.script.push(`${this.getIndentation()}set ${variable} to ${expr}`);
-    return this;
+    return this as ScriptBuilder<TNewVar>;
   }
 
   increment(variable: string, by = 1): ScriptBuilder {
@@ -814,9 +814,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  copy(value: AppleScriptValue, to: string): ScriptBuilder {
+  copy<TNewVar extends string>(value: AppleScriptValue, to: TNewVar): ScriptBuilder<TNewVar> {
     this.script.push(`${this.getIndentation()}copy ${this.formatValue(value)} to ${to}`);
-    return this;
+    return this as ScriptBuilder<TNewVar>;
   }
 
   count(items: string): ScriptBuilder {
@@ -824,9 +824,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  setCountOf(variable: string, items: string): ScriptBuilder {
+  setCountOf<TNewVar extends string>(variable: TNewVar, items: string): ScriptBuilder<TNewVar> {
     this.script.push(`${this.getIndentation()}set ${variable} to count of (${items})`);
-    return this;
+    return this as ScriptBuilder<TNewVar>;
   }
 
   exists(item: string): ScriptBuilder {
@@ -1302,9 +1302,13 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * @param list Expression for the list to iterate (e.g., 'every note')
    * @param block Callback that builds the loop body
    */
-  forEach(variable: string, list: string, block: (builder: ScriptBuilder) => void): ScriptBuilder {
+  forEach<TNewVar extends string>(
+    variable: TNewVar,
+    list: string,
+    block: (builder: ScriptBuilder<TNewVar>) => void,
+  ): ScriptBuilder {
     this.repeatWith(variable, list);
-    block(this);
+    block(this as ScriptBuilder<TNewVar>);
     return this.endrepeat();
   }
 
@@ -1316,18 +1320,18 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * @param condition Condition to check before each iteration (continues while true)
    * @param block Callback that builds the loop body
    */
-  forEachWhile(
-    variable: string,
+  forEachWhile<TNewVar extends string>(
+    variable: TNewVar,
     list: string,
-    condition: string | ((expr: ExprBuilder) => string),
-    block: (builder: ScriptBuilder) => void,
+    condition: string | ((expr: ExprBuilder<TNewVar>) => string),
+    block: (builder: ScriptBuilder<TNewVar>) => void,
   ): ScriptBuilder {
     this.repeatWith(variable, list);
     this.ifThen(
       typeof condition === 'function' ? (e) => e.not(condition(e)) : (e) => e.not(condition),
       (b) => b.exitRepeat(),
     );
-    block(this);
+    block(this as ScriptBuilder<TNewVar>);
     return this.endrepeat();
   }
 
@@ -1339,15 +1343,15 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * @param condition Condition to check before each iteration (exits when true)
    * @param block Callback that builds the loop body
    */
-  forEachUntil(
-    variable: string,
+  forEachUntil<TNewVar extends string>(
+    variable: TNewVar,
     list: string,
-    condition: string | ((expr: ExprBuilder) => string),
-    block: (builder: ScriptBuilder) => void,
+    condition: string | ((expr: ExprBuilder<TNewVar>) => string),
+    block: (builder: ScriptBuilder<TNewVar>) => void,
   ): ScriptBuilder {
     this.repeatWith(variable, list);
     this.ifThen(condition, (b) => b.exitRepeat());
-    block(this);
+    block(this as ScriptBuilder<TNewVar>);
     return this.endrepeat();
   }
 

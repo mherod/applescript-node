@@ -127,154 +127,288 @@ export interface ApplicationDictionary {
   suites: Suite[];
 }
 
-export interface ScriptBuilder {
+/**
+ * ScriptBuilder with generic type tracking for variable scope.
+ *
+ * The generic type parameter `TScope` tracks variables that are in scope at any point
+ * in the script. Loop methods like `forEach`, `forEachWhile`, and `forEachUntil` extend
+ * the scope by adding their loop variable, enabling TypeScript autocomplete for those
+ * variables within the loop callback.
+ *
+ * @template TScope - Union of variable names available in the current scope.
+ *   Starts as `never` and is extended by loop methods.
+ *
+ * @example
+ * // Basic loop - 'aPerson' is added to scope
+ * createScript()
+ *   .forEach('aPerson', 'every person', (b) => {
+ *     // Within this callback, TScope = 'aPerson'
+ *     b.setExpression('name', (e) => e.property('aPerson', 'name'));
+ *     //                                        ^^^^^^^^ gets autocomplete!
+ *   })
+ *
+ * @example
+ * // Nested loops - both variables in scope
+ * createScript()
+ *   .forEach('anAccount', 'every account', (outer) => {
+ *     // TScope = 'anAccount'
+ *     outer.forEach('aNote', 'notes', (inner) => {
+ *       // TScope = 'anAccount' | 'aNote'
+ *       inner.setExpression('acc', (e) => e.property('anAccount', 'name'));
+ *       inner.setExpression('note', (e) => e.property('aNote', 'name'));
+ *     });
+ *   })
+ */
+export interface ScriptBuilder<TScope extends string = never> {
   // Core language constructs
-  tell: (target: string) => ScriptBuilder;
-  tellProcess: (processName: string) => ScriptBuilder;
-  end: () => ScriptBuilder;
+  tell: (target: string) => ScriptBuilder<TScope>;
+  tellProcess: (processName: string) => ScriptBuilder<TScope>;
+  end: () => ScriptBuilder<TScope>;
   // Explicit block endings for clarity
-  endif: () => ScriptBuilder;
-  endrepeat: () => ScriptBuilder;
-  endtry: () => ScriptBuilder;
-  endtell: () => ScriptBuilder;
-  endon: () => ScriptBuilder;
-  endconsidering: () => ScriptBuilder;
-  endignoring: () => ScriptBuilder;
-  endusing: () => ScriptBuilder;
-  endwith: () => ScriptBuilder;
-  if: (condition: string | ((expr: ExprBuilder) => string)) => ScriptBuilder;
-  then: () => ScriptBuilder;
-  else: () => ScriptBuilder;
-  elseIf: (condition: string) => ScriptBuilder;
-  repeat: (times?: number) => ScriptBuilder;
-  repeatWith: (variable: string, list: string) => ScriptBuilder;
-  repeatUntil: (condition: string) => ScriptBuilder;
-  repeatWhile: (condition: string) => ScriptBuilder;
-  exitRepeat: () => ScriptBuilder;
-  continueRepeat: () => ScriptBuilder;
-  on: (handlerName: string, parameters?: string[]) => ScriptBuilder;
-  considering: (attributes: string[]) => ScriptBuilder;
-  ignoring: (attributes: string[]) => ScriptBuilder;
-  using: (terms: string[]) => ScriptBuilder;
-  with: (timeout?: number, transaction?: boolean) => ScriptBuilder;
-  try: () => ScriptBuilder;
-  onError: (variableName?: string) => ScriptBuilder;
-  error: (message: string, number?: number) => ScriptBuilder;
-  return: (value: AppleScriptValue) => ScriptBuilder;
-  returnRaw: (expression: string) => ScriptBuilder;
+  endif: () => ScriptBuilder<TScope>;
+  endrepeat: () => ScriptBuilder<TScope>;
+  endtry: () => ScriptBuilder<TScope>;
+  endtell: () => ScriptBuilder<TScope>;
+  endon: () => ScriptBuilder<TScope>;
+  endconsidering: () => ScriptBuilder<TScope>;
+  endignoring: () => ScriptBuilder<TScope>;
+  endusing: () => ScriptBuilder<TScope>;
+  endwith: () => ScriptBuilder<TScope>;
+  if: (condition: string | ((expr: ExprBuilder<TScope>) => string)) => ScriptBuilder<TScope>;
+  then: () => ScriptBuilder<TScope>;
+  else: () => ScriptBuilder<TScope>;
+  elseIf: (condition: string) => ScriptBuilder<TScope>;
+  repeat: (times?: number) => ScriptBuilder<TScope>;
+  repeatWith: <TNewVar extends string>(
+    variable: TNewVar,
+    list: string,
+  ) => ScriptBuilder<TScope | TNewVar>;
+  repeatUntil: (condition: string) => ScriptBuilder<TScope>;
+  repeatWhile: (condition: string) => ScriptBuilder<TScope>;
+  exitRepeat: () => ScriptBuilder<TScope>;
+  continueRepeat: () => ScriptBuilder<TScope>;
+  on: (handlerName: string, parameters?: string[]) => ScriptBuilder<TScope>;
+  considering: (attributes: string[]) => ScriptBuilder<TScope>;
+  ignoring: (attributes: string[]) => ScriptBuilder<TScope>;
+  using: (terms: string[]) => ScriptBuilder<TScope>;
+  with: (timeout?: number, transaction?: boolean) => ScriptBuilder<TScope>;
+  try: () => ScriptBuilder<TScope>;
+  onError: (variableName?: string) => ScriptBuilder<TScope>;
+  error: (message: string, number?: number) => ScriptBuilder<TScope>;
+  return: (value: AppleScriptValue) => ScriptBuilder<TScope>;
+  returnRaw: (expression: string) => ScriptBuilder<TScope>;
   buildJsonObject: (variableMap: Record<string, string>) => string;
-  returnJsonObject: (variableMap: Record<string, string>) => ScriptBuilder;
-  returnAsJson: (listVariable: string, propertyMap: Record<string, string>) => ScriptBuilder;
+  returnJsonObject: (variableMap: Record<string, string>) => ScriptBuilder<TScope>;
+  returnAsJson: (
+    listVariable: string,
+    propertyMap: Record<string, string>,
+  ) => ScriptBuilder<TScope>;
   mapToJson: (
     itemVariable: string,
     collection: string,
     properties: Record<string, string>,
     options?: {
       limit?: number;
-      until?: string | ((expr: ExprBuilder) => string);
-      while?: string | ((expr: ExprBuilder) => string);
+      until?: string | ((expr: ExprBuilder<TScope>) => string);
+      while?: string | ((expr: ExprBuilder<TScope>) => string);
       skipErrors?: boolean;
     },
-  ) => ScriptBuilder;
-  log: (message: string) => ScriptBuilder;
-  comment: (text: string) => ScriptBuilder;
+  ) => ScriptBuilder<TScope>;
+  log: (message: string) => ScriptBuilder<TScope>;
+  comment: (text: string) => ScriptBuilder<TScope>;
 
   // Convenience helpers for cleaner API
-  tellApp: (appName: string, block: (builder: ScriptBuilder) => void) => ScriptBuilder;
+  tellApp: (
+    appName: string,
+    block: (builder: ScriptBuilder<TScope>) => void,
+  ) => ScriptBuilder<TScope>;
   ifThen: (
-    condition: string | ((expr: ExprBuilder) => string),
-    thenBlock: (builder: ScriptBuilder) => void,
-  ) => ScriptBuilder;
+    condition: string | ((expr: ExprBuilder<TScope>) => string),
+    thenBlock: (builder: ScriptBuilder<TScope>) => void,
+  ) => ScriptBuilder<TScope>;
   ifThenElse: (
-    condition: string | ((expr: ExprBuilder) => string),
-    thenBlock: (builder: ScriptBuilder) => void,
-    elseBlock: (builder: ScriptBuilder) => void,
-  ) => ScriptBuilder;
+    condition: string | ((expr: ExprBuilder<TScope>) => string),
+    thenBlock: (builder: ScriptBuilder<TScope>) => void,
+    elseBlock: (builder: ScriptBuilder<TScope>) => void,
+  ) => ScriptBuilder<TScope>;
   tryCatch: (
-    tryBlock: (builder: ScriptBuilder) => void,
-    catchBlock: (builder: ScriptBuilder) => void,
-  ) => ScriptBuilder;
+    tryBlock: (builder: ScriptBuilder<TScope>) => void,
+    catchBlock: (builder: ScriptBuilder<TScope>) => void,
+  ) => ScriptBuilder<TScope>;
   tryCatchError: (
-    tryBlock: (builder: ScriptBuilder) => void,
+    tryBlock: (builder: ScriptBuilder<TScope>) => void,
     errorVarName: string,
-    catchBlock: (builder: ScriptBuilder) => void,
-  ) => ScriptBuilder;
-  forEach: (
-    variable: string,
+    catchBlock: (builder: ScriptBuilder<TScope>) => void,
+  ) => ScriptBuilder<TScope>;
+  /**
+   * Iterate over a list with a loop variable, executing a block for each item.
+   *
+   * This is a generic method that extends the type scope. The loop variable `TNewVar`
+   * is added to the scope within the callback, enabling TypeScript autocomplete.
+   *
+   * @template TNewVar - The name of the loop variable (inferred from first parameter)
+   * @param variable - Loop variable name (will be added to scope)
+   * @param list - AppleScript list expression to iterate over
+   * @param block - Callback that receives a builder with extended scope (TScope | TNewVar)
+   * @returns Builder instance for method chaining
+   *
+   * @example
+   * .forEach('aPerson', 'every person', (b) => {
+   *   // 'aPerson' is now in scope
+   *   b.setExpression('name', (e) => e.property('aPerson', 'name'));
+   *   b.setExpression('email', (e) => e.valueOfItem(1, e.property('aPerson', 'emails')));
+   * })
+   *
+   * @example
+   * // Nested loops with multiple scoped variables
+   * .forEach('anAccount', 'every account', (outer) => {
+   *   outer.forEach('aNote', 'notes of anAccount', (inner) => {
+   *     // Both 'anAccount' and 'aNote' are in scope
+   *     inner.setExpression('accountName', (e) => e.property('anAccount', 'name'));
+   *     inner.setExpression('noteName', (e) => e.property('aNote', 'name'));
+   *   });
+   * })
+   */
+  forEach: <TNewVar extends string>(
+    variable: TNewVar,
     list: string,
-    block: (builder: ScriptBuilder) => void,
-  ) => ScriptBuilder;
-  forEachWhile: (
-    variable: string,
+    block: (builder: ScriptBuilder<TScope | TNewVar>) => void,
+  ) => ScriptBuilder<TScope>;
+  /**
+   * Iterate over a list while a condition is true.
+   *
+   * This is a generic method that extends the type scope. The loop variable is added
+   * to the scope, and the condition callback also receives the extended scope.
+   *
+   * @template TNewVar - The name of the loop variable (inferred from first parameter)
+   * @param variable - Loop variable name (will be added to scope)
+   * @param list - AppleScript list expression to iterate over
+   * @param condition - Condition to check before each iteration (string or callback with scoped ExprBuilder)
+   * @param block - Callback that receives a builder with extended scope
+   * @returns Builder instance for method chaining
+   *
+   * @example
+   * .forEachWhile(
+   *   'aPerson',
+   *   'matchingPeople',
+   *   (e) => e.exists(e.property('aPerson', 'email')),  // 'aPerson' in scope
+   *   (b) => {
+   *     b.setExpression('email', (e) =>
+   *       e.valueOfItem(1, e.property('aPerson', 'emails'))  // 'aPerson' in scope
+   *     );
+   *   }
+   * )
+   */
+  forEachWhile: <TNewVar extends string>(
+    variable: TNewVar,
     list: string,
-    condition: string | ((expr: ExprBuilder) => string),
-    block: (builder: ScriptBuilder) => void,
-  ) => ScriptBuilder;
-  forEachUntil: (
-    variable: string,
+    condition: string | ((expr: ExprBuilder<TScope | TNewVar>) => string),
+    block: (builder: ScriptBuilder<TScope | TNewVar>) => void,
+  ) => ScriptBuilder<TScope>;
+  /**
+   * Iterate over a list until a condition becomes true (then exit loop).
+   *
+   * This is a generic method that extends the type scope. The loop variable is added
+   * to the scope, and both the condition callback and block callback receive the extended scope.
+   *
+   * @template TNewVar - The name of the loop variable (inferred from first parameter)
+   * @param variable - Loop variable name (will be added to scope)
+   * @param list - AppleScript list expression to iterate over
+   * @param condition - Exit condition (loop stops when this becomes true)
+   * @param block - Callback that receives a builder with extended scope
+   * @returns Builder instance for method chaining
+   *
+   * @example
+   * .set('counter', 0)
+   * .forEachUntil(
+   *   'aPerson',
+   *   'matchingPeople',
+   *   (e) => e.gte('counter', 50),  // Exit when counter >= 50
+   *   (b) => {
+   *     b.increment('counter');
+   *     b.ifThen(
+   *       (e) => e.gt(e.count(e.property('aPerson', 'emails')), 0),  // 'aPerson' in scope
+   *       (then_) => then_.setExpression('email', (e) =>
+   *         e.valueOfItem(1, e.property('aPerson', 'emails'))
+   *       )
+   *     );
+   *   }
+   * )
+   */
+  forEachUntil: <TNewVar extends string>(
+    variable: TNewVar,
     list: string,
-    condition: string | ((expr: ExprBuilder) => string),
-    block: (builder: ScriptBuilder) => void,
-  ) => ScriptBuilder;
-  repeatTimes: (times: number, block: (builder: ScriptBuilder) => void) => ScriptBuilder;
-  repeatWhileBlock: (condition: string, block: (builder: ScriptBuilder) => void) => ScriptBuilder;
-  repeatUntilBlock: (condition: string, block: (builder: ScriptBuilder) => void) => ScriptBuilder;
+    condition: string | ((expr: ExprBuilder<TScope | TNewVar>) => string),
+    block: (builder: ScriptBuilder<TScope | TNewVar>) => void,
+  ) => ScriptBuilder<TScope>;
+  repeatTimes: (
+    times: number,
+    block: (builder: ScriptBuilder<TScope>) => void,
+  ) => ScriptBuilder<TScope>;
+  repeatWhileBlock: (
+    condition: string,
+    block: (builder: ScriptBuilder<TScope>) => void,
+  ) => ScriptBuilder<TScope>;
+  repeatUntilBlock: (
+    condition: string,
+    block: (builder: ScriptBuilder<TScope>) => void,
+  ) => ScriptBuilder<TScope>;
 
   // Enhanced Application control
-  activate: () => ScriptBuilder;
-  quit: () => ScriptBuilder;
-  reopen: () => ScriptBuilder;
-  launch: () => ScriptBuilder;
-  running: () => ScriptBuilder;
-  getRunningApplications: () => ScriptBuilder;
-  getFrontmostApplication: () => ScriptBuilder;
-  activateApplication: (appName: string) => ScriptBuilder;
-  hideApplication: (appName: string) => ScriptBuilder;
-  unhideApplication: (appName: string) => ScriptBuilder;
-  quitApplication: (appName: string) => ScriptBuilder;
-  isApplicationRunning: (appName: string) => ScriptBuilder;
-  getApplicationInfo: (appName: string) => ScriptBuilder;
+  activate: () => ScriptBuilder<TScope>;
+  quit: () => ScriptBuilder<TScope>;
+  reopen: () => ScriptBuilder<TScope>;
+  launch: () => ScriptBuilder<TScope>;
+  running: () => ScriptBuilder<TScope>;
+  getRunningApplications: () => ScriptBuilder<TScope>;
+  getFrontmostApplication: () => ScriptBuilder<TScope>;
+  activateApplication: (appName: string) => ScriptBuilder<TScope>;
+  hideApplication: (appName: string) => ScriptBuilder<TScope>;
+  unhideApplication: (appName: string) => ScriptBuilder<TScope>;
+  quitApplication: (appName: string) => ScriptBuilder<TScope>;
+  isApplicationRunning: (appName: string) => ScriptBuilder<TScope>;
+  getApplicationInfo: (appName: string) => ScriptBuilder<TScope>;
 
   // Enhanced Window management
-  closeWindow: (window?: string) => ScriptBuilder;
-  closeAllWindows: () => ScriptBuilder;
-  minimizeWindow: (window?: string) => ScriptBuilder;
-  zoomWindow: (window?: string) => ScriptBuilder;
-  getWindowInfo: (appName: string, windowName?: string) => ScriptBuilder;
-  getAllWindows: (appName: string) => ScriptBuilder;
-  getFrontmostWindow: (appName: string) => ScriptBuilder;
+  closeWindow: (window?: string) => ScriptBuilder<TScope>;
+  closeAllWindows: () => ScriptBuilder<TScope>;
+  minimizeWindow: (window?: string) => ScriptBuilder<TScope>;
+  zoomWindow: (window?: string) => ScriptBuilder<TScope>;
+  getWindowInfo: (appName: string, windowName?: string) => ScriptBuilder<TScope>;
+  getAllWindows: (appName: string) => ScriptBuilder<TScope>;
+  getFrontmostWindow: (appName: string) => ScriptBuilder<TScope>;
   setWindowBounds: (
     appName: string,
     windowName: string,
     bounds: { x: number; y: number; width: number; height: number },
-  ) => ScriptBuilder;
-  moveWindow: (appName: string, windowName: string, x: number, y: number) => ScriptBuilder;
+  ) => ScriptBuilder<TScope>;
+  moveWindow: (appName: string, windowName: string, x: number, y: number) => ScriptBuilder<TScope>;
   resizeWindow: (
     appName: string,
     windowName: string,
     width: number,
     height: number,
-  ) => ScriptBuilder;
-  arrangeWindows: (arrangement: 'cascade' | 'tile' | 'stack') => ScriptBuilder;
-  focusWindow: (appName: string, windowName: string) => ScriptBuilder;
-  switchToWindow: (appName: string, windowName: string) => ScriptBuilder;
+  ) => ScriptBuilder<TScope>;
+  arrangeWindows: (arrangement: 'cascade' | 'tile' | 'stack') => ScriptBuilder<TScope>;
+  focusWindow: (appName: string, windowName: string) => ScriptBuilder<TScope>;
+  switchToWindow: (appName: string, windowName: string) => ScriptBuilder<TScope>;
 
   // Enhanced UI interaction
-  click: (target: string) => ScriptBuilder;
-  keystroke: (text: string, modifiers?: string[]) => ScriptBuilder;
-  keystrokes: (text: string, delayBetween?: number) => ScriptBuilder;
-  delay: (seconds: number) => ScriptBuilder;
+  click: (target: string) => ScriptBuilder<TScope>;
+  keystroke: (text: string, modifiers?: string[]) => ScriptBuilder<TScope>;
+  keystrokes: (text: string, delayBetween?: number) => ScriptBuilder<TScope>;
+  delay: (seconds: number) => ScriptBuilder<TScope>;
   pressKey: (
     key: string,
     modifiers?: Array<'command' | 'option' | 'control' | 'shift'>,
-  ) => ScriptBuilder;
+  ) => ScriptBuilder<TScope>;
   pressKeyCode: (
     keyCode: number,
     modifiers?: Array<'command' | 'option' | 'control' | 'shift'>,
-  ) => ScriptBuilder;
-  typeText: (text: string) => ScriptBuilder;
-  clickButton: (buttonName: string) => ScriptBuilder;
-  clickMenuItem: (menuName: string, itemName: string) => ScriptBuilder;
+  ) => ScriptBuilder<TScope>;
+  typeText: (text: string) => ScriptBuilder<TScope>;
+  clickButton: (buttonName: string) => ScriptBuilder<TScope>;
+  clickMenuItem: (menuName: string, itemName: string) => ScriptBuilder<TScope>;
 
   // Dialog and alerts
   displayDialog: (
@@ -285,7 +419,7 @@ export interface ScriptBuilder {
       withIcon?: 'stop' | 'note' | 'caution';
       givingUpAfter?: number;
     },
-  ) => ScriptBuilder;
+  ) => ScriptBuilder<TScope>;
   displayNotification: (
     text: string,
     options?: {
@@ -293,64 +427,127 @@ export interface ScriptBuilder {
       subtitle?: string;
       sound?: string;
     },
-  ) => ScriptBuilder;
+  ) => ScriptBuilder<TScope>;
 
   // Variables and properties
-  set: (variable: string, value: AppleScriptValue) => ScriptBuilder;
-  setExpression: (
-    variable: string,
-    expression: string | Record<string, string> | ((expr: ExprBuilder) => string),
-  ) => ScriptBuilder;
-  increment: (variable: string, by?: number) => ScriptBuilder;
-  decrement: (variable: string, by?: number) => ScriptBuilder;
-  get: (property: string) => ScriptBuilder;
-  copy: (value: AppleScriptValue, to: string) => ScriptBuilder;
-  count: (items: string) => ScriptBuilder;
-  setCountOf: (variable: string, items: string) => ScriptBuilder;
-  exists: (item: string) => ScriptBuilder;
-  setEnd: (variable: string, value: AppleScriptValue) => ScriptBuilder;
+  /**
+   * Set a variable to a value and add it to the tracked scope.
+   *
+   * @template TNewVar - The variable name (inferred from first parameter)
+   * @param variable - Variable name to set (will be added to scope)
+   * @param value - Value to assign
+   * @returns Builder with extended scope including the new variable
+   *
+   * @example
+   * createScript()
+   *   .set('counter', 0)
+   *   .set('results', [])
+   *   .forEachUntil('aNote', 'every note',
+   *     (e) => e.gte('counter', 50),  // 'counter' is in scope!
+   *     (b) => {
+   *       b.increment('counter');
+   *       b.setEndRecord('results', {...});  // 'results' is in scope!
+   *     }
+   *   )
+   */
+  set: <TNewVar extends string>(
+    variable: TNewVar,
+    value: AppleScriptValue,
+  ) => ScriptBuilder<TScope | TNewVar>;
+  /**
+   * Set a variable to an expression and add it to the tracked scope.
+   *
+   * @template TNewVar - The variable name (inferred from first parameter)
+   * @param variable - Variable name to set (will be added to scope)
+   * @param expression - Expression (string, record, or callback)
+   * @returns Builder with extended scope including the new variable
+   *
+   * @example
+   * .setExpression('personEmail', (e) =>
+   *   e.valueOfItem(1, e.property('aPerson', 'emails'))
+   * )
+   * // Later 'personEmail' is in scope
+   */
+  setExpression: <TNewVar extends string>(
+    variable: TNewVar,
+    expression: string | Record<string, string> | ((expr: ExprBuilder<TScope>) => string),
+  ) => ScriptBuilder<TScope | TNewVar>;
+  increment: (variable: string, by?: number) => ScriptBuilder<TScope>;
+  decrement: (variable: string, by?: number) => ScriptBuilder<TScope>;
+  get: (property: string) => ScriptBuilder<TScope>;
+  /**
+   * Copy a value to a variable and add it to the tracked scope.
+   *
+   * @template TNewVar - The variable name (inferred from second parameter)
+   * @param value - Value to copy
+   * @param to - Variable name (will be added to scope)
+   * @returns Builder with extended scope including the new variable
+   */
+  copy: <TNewVar extends string>(
+    value: AppleScriptValue,
+    to: TNewVar,
+  ) => ScriptBuilder<TScope | TNewVar>;
+  count: (items: string) => ScriptBuilder<TScope>;
+  /**
+   * Set a variable to the count of items and add it to the tracked scope.
+   *
+   * @template TNewVar - The variable name (inferred from first parameter)
+   * @param variable - Variable name to set (will be added to scope)
+   * @param items - Items to count
+   * @returns Builder with extended scope including the new variable
+   */
+  setCountOf: <TNewVar extends string>(
+    variable: TNewVar,
+    items: string,
+  ) => ScriptBuilder<TScope | TNewVar>;
+  exists: (item: string) => ScriptBuilder<TScope>;
+  setEnd: (variable: string, value: AppleScriptValue) => ScriptBuilder<TScope>;
   setEndRaw: (
     variable: string,
-    expression: string | Record<string, string> | ((expr: ExprBuilder) => string),
-  ) => ScriptBuilder;
+    expression: string | Record<string, string> | ((expr: ExprBuilder<TScope>) => string),
+  ) => ScriptBuilder<TScope>;
   setEndRecord: (
     listVariable: string,
     sourceOrExpressions: string | Record<string, string>,
     propertyMap?: Record<string, string>,
-  ) => ScriptBuilder;
+  ) => ScriptBuilder<TScope>;
   pickEndRecord: (
     listVariable: string,
     sourceObject: string,
     propertyMap: Record<string, string>,
-  ) => ScriptBuilder;
-  setProperty: (variable: string, property: string, value: AppleScriptValue) => ScriptBuilder;
+  ) => ScriptBuilder<TScope>;
+  setProperty: (
+    variable: string,
+    property: string,
+    value: AppleScriptValue,
+  ) => ScriptBuilder<TScope>;
   makeRecordFrom: (variableNames: Record<string, string>) => string;
 
   // List operations
-  first: (items: string) => ScriptBuilder;
-  last: (items: string) => ScriptBuilder;
-  rest: (items: string) => ScriptBuilder;
-  reverse: (items: string) => ScriptBuilder;
-  some: (items: string, test: string) => ScriptBuilder;
-  every: (items: string, test: string) => ScriptBuilder;
+  first: (items: string) => ScriptBuilder<TScope>;
+  last: (items: string) => ScriptBuilder<TScope>;
+  rest: (items: string) => ScriptBuilder<TScope>;
+  reverse: (items: string) => ScriptBuilder<TScope>;
+  some: (items: string, test: string) => ScriptBuilder<TScope>;
+  every: (items: string, test: string) => ScriptBuilder<TScope>;
   whose: (items: string, condition: string) => string;
-  getEvery: (itemType: string, location?: string) => ScriptBuilder;
-  getEveryWhere: (itemType: string, condition: string, location?: string) => ScriptBuilder;
+  getEvery: (itemType: string, location?: string) => ScriptBuilder<TScope>;
+  getEveryWhere: (itemType: string, condition: string, location?: string) => ScriptBuilder<TScope>;
 
   // Text operations
-  offset: (text: string, in_: string) => ScriptBuilder;
-  contains: (text: string, in_: string) => ScriptBuilder;
-  beginsWith: (text: string, with_: string) => ScriptBuilder;
-  endsWith: (text: string, with_: string) => ScriptBuilder;
+  offset: (text: string, in_: string) => ScriptBuilder<TScope>;
+  contains: (text: string, in_: string) => ScriptBuilder<TScope>;
+  beginsWith: (text: string, with_: string) => ScriptBuilder<TScope>;
+  endsWith: (text: string, with_: string) => ScriptBuilder<TScope>;
 
   // System operations
-  path: (to: string) => ScriptBuilder;
-  info: (for_: string) => ScriptBuilder;
-  do: (script: string) => ScriptBuilder;
-  doShellScript: (command: string, administrator?: boolean) => ScriptBuilder;
+  path: (to: string) => ScriptBuilder<TScope>;
+  info: (for_: string) => ScriptBuilder<TScope>;
+  do: (script: string) => ScriptBuilder<TScope>;
+  doShellScript: (command: string, administrator?: boolean) => ScriptBuilder<TScope>;
 
   // Raw script and building
-  raw: (script: string) => ScriptBuilder;
+  raw: (script: string) => ScriptBuilder<TScope>;
   build: () => string;
-  reset: () => ScriptBuilder;
+  reset: () => ScriptBuilder<TScope>;
 }
