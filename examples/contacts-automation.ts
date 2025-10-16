@@ -70,28 +70,28 @@ async function demonstrateContactsAutomation() {
               tryBlock
                 // Handle optional email field
                 .ifThenElse(
-                  (e) => e.gt(e.count('emails of aPerson'), 0),
+                  (e) => e.gt(e.count(e.property('aPerson', 'emails')), 0),
                   (then_) =>
                     then_.setExpression('personEmail', (e) =>
-                      e.valueOfItem(1, 'emails of aPerson'),
+                      e.valueOfItem(1, e.property('aPerson', 'emails')),
                     ),
                   (else_) => else_.set('personEmail', 'missing value'),
                 )
                 // Handle optional phone field using ExprBuilder
                 .ifThenElse(
-                  (e) => e.gt(e.count('phones of aPerson'), 0),
+                  (e) => e.gt(e.count(e.property('aPerson', 'phones')), 0),
                   (then_) =>
                     then_.setExpression('personPhone', (e) =>
-                      e.valueOfItem(1, 'phones of aPerson'),
+                      e.valueOfItem(1, e.property('aPerson', 'phones')),
                     ),
                   (else_) => else_.set('personPhone', 'missing value'),
                 )
                 // Handle optional birthday field using ExprBuilder
                 .ifThenElse(
-                  (e) => e.exists('birth date of aPerson'),
+                  (e) => e.exists(e.property('aPerson', 'birth date')),
                   (then_) =>
                     then_.setExpression('personBirthday', (e) =>
-                      e.asType('birth date of aPerson', 'string'),
+                      e.asType(e.property('aPerson', 'birth date'), 'string'),
                     ),
                   (else_) => else_.set('personBirthday', 'missing value'),
                 )
