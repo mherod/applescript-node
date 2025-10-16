@@ -137,24 +137,13 @@ async function demonstrateContactsAutomation() {
 
     const contactsResult = await runScript(contactsScript);
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime safety check for script execution
     if (contactsResult.success && contactsResult.output) {
-      const output = String(contactsResult.output);
+      // The output is automatically parsed from JSON by runScript
+      const contacts = contactsResult.output;
 
-      if (output && output !== '') {
-        // Parse JSON output directly from AppleScript
-        const contacts = JSON.parse(output) as Array<{
-          id: string;
-          name: string;
-          firstName: string;
-          lastName: string;
-          organization: string;
-          jobTitle: string;
-          email: string;
-          phone: string;
-          birthday: string;
-          isCompany: boolean;
-        }>;
-
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime safety check for empty arrays
+      if (contacts && contacts.length > 0) {
         console.log(chalk.bold('\n📋 Contacts:\n'));
 
         const contactsTable = new CliTable3({

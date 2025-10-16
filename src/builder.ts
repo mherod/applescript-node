@@ -1,5 +1,5 @@
 import { ExprBuilder } from './expressions.js';
-import type { AppleScriptValue, ScriptBuilder } from './types.js';
+import type { AppleScriptValue, JsonObjectShape, ScriptBuilder } from './types.js';
 
 type BlockType =
   | 'tell'
@@ -436,9 +436,12 @@ export class AppleScriptBuilder implements ScriptBuilder {
    *   position: 'winPosition'
    * })
    */
-  returnJsonObject(variableMap: Record<string, string>): ScriptBuilder {
+  returnJsonObject<TProperties extends Record<string, string>>(
+    variableMap: TProperties,
+  ): ScriptBuilder<never, JsonObjectShape<TProperties>> {
     const jsonExpr = this.buildJsonObject(variableMap);
-    return this.returnRaw(jsonExpr);
+    this.returnRaw(jsonExpr);
+    return this as ScriptBuilder<never, JsonObjectShape<TProperties>>;
   }
 
   /**
@@ -468,17 +471,17 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * }, { limit: 10, skipErrors: true })
    * .endtell()
    */
-  mapToJson(
+  mapToJson<TProperties extends Record<string, string>>(
     itemVariable: string,
     collection: string,
-    properties: Record<string, string>,
+    properties: TProperties,
     options: {
       limit?: number;
       until?: string | ((expr: ExprBuilder) => string);
       while?: string | ((expr: ExprBuilder) => string);
       skipErrors?: boolean;
     } = {},
-  ): ScriptBuilder {
+  ): ScriptBuilder<never, Array<JsonObjectShape<TProperties>>> {
     const listVar = '__collected_items';
 
     // 1. Initialize collection list
@@ -534,7 +537,10 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * @param listVariable Name of the variable containing a list of records
    * @param propertyMap Mapping of JSON keys to AppleScript property names (e.g., {id: 'noteId', name: 'noteName'})
    */
-  returnAsJson(listVariable: string, propertyMap: Record<string, string>): ScriptBuilder {
+  returnAsJson<TProperties extends Record<string, string>>(
+    listVariable: string,
+    propertyMap: TProperties,
+  ): ScriptBuilder<never, Array<JsonObjectShape<TProperties>>> {
     // Prepend handlers to the beginning of the script (they must be at top level)
     const handlers = [
       '',
@@ -602,7 +608,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     this.raw(`set jsonArray to "[" & (jsonParts as text) & "]"`);
     this.raw(`set AppleScript's text item delimiters to ""`);
     this.raw('return jsonArray');
-    return this;
+    return this as ScriptBuilder<never, Array<JsonObjectShape<TProperties>>>;
   }
 
   log(message: string): ScriptBuilder {
@@ -1222,7 +1228,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    */
   tellApp(appName: string, block: (builder: ScriptBuilder) => void): ScriptBuilder {
     this.tell(appName);
-    block(this);
+    block(this as ScriptBuilder);
     return this.end();
   }
 
@@ -1237,7 +1243,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     thenBlock: (builder: ScriptBuilder) => void,
   ): ScriptBuilder {
     this.if(condition).then();
-    thenBlock(this);
+    thenBlock(this as ScriptBuilder);
     return this.endif();
   }
 
@@ -1254,9 +1260,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
     elseBlock: (builder: ScriptBuilder) => void,
   ): ScriptBuilder {
     this.if(condition).then();
-    thenBlock(this);
+    thenBlock(this as ScriptBuilder);
     this.else();
-    elseBlock(this);
+    elseBlock(this as ScriptBuilder);
     return this.endif();
   }
 
@@ -1271,9 +1277,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
     catchBlock: (builder: ScriptBuilder) => void,
   ): ScriptBuilder {
     this.try();
-    tryBlock(this);
+    tryBlock(this as ScriptBuilder);
     this.onError();
-    catchBlock(this);
+    catchBlock(this as ScriptBuilder);
     return this.endtry();
   }
 
@@ -1289,9 +1295,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
     catchBlock: (builder: ScriptBuilder) => void,
   ): ScriptBuilder {
     this.try();
-    tryBlock(this);
+    tryBlock(this as ScriptBuilder);
     this.onError(errorVarName);
-    catchBlock(this);
+    catchBlock(this as ScriptBuilder);
     return this.endtry();
   }
 
@@ -1362,7 +1368,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    */
   repeatTimes(times: number, block: (builder: ScriptBuilder) => void): ScriptBuilder {
     this.repeat(times);
-    block(this);
+    block(this as ScriptBuilder);
     return this.endrepeat();
   }
 
@@ -1373,7 +1379,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    */
   repeatWhileBlock(condition: string, block: (builder: ScriptBuilder) => void): ScriptBuilder {
     this.repeatWhile(condition);
-    block(this);
+    block(this as ScriptBuilder);
     return this.endrepeat();
   }
 
@@ -1384,7 +1390,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    */
   repeatUntilBlock(condition: string, block: (builder: ScriptBuilder) => void): ScriptBuilder {
     this.repeatUntil(condition);
-    block(this);
+    block(this as ScriptBuilder);
     return this.endrepeat();
   }
 
