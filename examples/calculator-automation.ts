@@ -134,16 +134,22 @@ async function main() {
     .delay(0.5)
     .tellProcess('Calculator')
     .setExpression('winName', 'name of window 1')
-    .setExpression('winPosition', 'position of window 1 as text')
-    .setExpression('winSize', 'size of window 1 as text')
+    .setExpression('positionList', 'position of window 1')
+    .setExpression('sizeList', 'size of window 1')
+    .setExpression('positionX', 'item 1 of positionList')
+    .setExpression('positionY', 'item 2 of positionList')
+    .setExpression('sizeWidth', 'item 1 of sizeList')
+    .setExpression('sizeHeight', 'item 2 of sizeList')
     .end()
     .tellApp('Calculator', (app) => {
       app.quit();
     })
     .returnJsonObject({
       name: 'winName',
-      position: 'winPosition',
-      size: 'winSize',
+      positionX: 'positionX',
+      positionY: 'positionY',
+      sizeWidth: 'sizeWidth',
+      sizeHeight: 'sizeHeight',
     })
     .build();
 
@@ -153,13 +159,15 @@ async function main() {
   if (windowInfo.success) {
     const data = JSON.parse(windowInfo.output) as {
       name: string;
-      position: string;
-      size: string;
+      positionX: number;
+      positionY: number;
+      sizeWidth: number;
+      sizeHeight: number;
     };
     console.log('  Window data (JSON):', data);
     console.log(`  - Name: ${data.name}`);
-    console.log(`  - Position: ${data.position}`);
-    console.log(`  - Size: ${data.size}\n`);
+    console.log(`  - Position: (${data.positionX}, ${data.positionY})`);
+    console.log(`  - Size: ${data.sizeWidth} × ${data.sizeHeight}\n`);
   } else {
     console.error(`  Error: ${windowInfo.error}\n`);
   }
