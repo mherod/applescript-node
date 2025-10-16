@@ -783,8 +783,18 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  setExpression(variable: string, expression: string | Record<string, string>): ScriptBuilder {
-    const expr = typeof expression === 'string' ? expression : this.makeRecordFrom(expression);
+  setExpression(
+    variable: string,
+    expression: string | Record<string, string> | ((expr: ExprBuilder) => string),
+  ): ScriptBuilder {
+    let expr: string;
+    if (typeof expression === 'function') {
+      expr = expression(new ExprBuilder());
+    } else if (typeof expression === 'string') {
+      expr = expression;
+    } else {
+      expr = this.makeRecordFrom(expression);
+    }
     this.script.push(`${this.getIndentation()}set ${variable} to ${expr}`);
     return this;
   }
@@ -831,8 +841,18 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  setEndRaw(variable: string, expression: string | Record<string, string>): ScriptBuilder {
-    const expr = typeof expression === 'string' ? expression : this.makeRecordFrom(expression);
+  setEndRaw(
+    variable: string,
+    expression: string | Record<string, string> | ((expr: ExprBuilder) => string),
+  ): ScriptBuilder {
+    let expr: string;
+    if (typeof expression === 'function') {
+      expr = expression(new ExprBuilder());
+    } else if (typeof expression === 'string') {
+      expr = expression;
+    } else {
+      expr = this.makeRecordFrom(expression);
+    }
     this.script.push(`${this.getIndentation()}set end of ${variable} to ${expr}`);
     return this;
   }

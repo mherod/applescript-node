@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import chalk from 'chalk';
 import CliTable3 from 'cli-table3';
-import { createScript, ExprBuilder, runScript } from '../src/index.js';
+import { createScript, runScript } from '../src/index.js';
 
 interface Contact {
   id: string;
@@ -41,20 +41,14 @@ async function searchContacts(
               .ifThenElse(
                 (e) => e.gt(e.count('emails of aPerson'), 0),
                 (then_) =>
-                  then_.setExpression(
-                    'personEmail',
-                    new ExprBuilder().valueOfItem(1, 'emails of aPerson'),
-                  ),
+                  then_.setExpression('personEmail', (e) => e.valueOfItem(1, 'emails of aPerson')),
                 (else_) => else_.set('personEmail', 'missing value'),
               )
               // Handle optional phone field using ExprBuilder
               .ifThenElse(
                 (e) => e.gt(e.count('phones of aPerson'), 0),
                 (then_) =>
-                  then_.setExpression(
-                    'personPhone',
-                    new ExprBuilder().valueOfItem(1, 'phones of aPerson'),
-                  ),
+                  then_.setExpression('personPhone', (e) => e.valueOfItem(1, 'phones of aPerson')),
                 (else_) => else_.set('personPhone', 'missing value'),
               )
               // Build contact record
@@ -176,10 +170,7 @@ async function demonstrateContactSearch() {
               .ifThenElse(
                 (e) => e.gt(e.count('emails of aPerson'), 0),
                 (then_) =>
-                  then_.setExpression(
-                    'personEmail',
-                    new ExprBuilder().valueOfItem(1, 'emails of aPerson'),
-                  ),
+                  then_.setExpression('personEmail', (e) => e.valueOfItem(1, 'emails of aPerson')),
                 (else_) => else_.set('personEmail', 'missing value'),
               )
               .setEndRecord('results', {
