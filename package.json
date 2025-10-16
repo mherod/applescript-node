@@ -39,6 +39,7 @@
     "example:notes-create": "tsx --tsconfig examples/tsconfig.json examples/notes-creation.ts",
     "example:notes-json": "tsx --tsconfig examples/tsconfig.json examples/notes-latest-json.ts",
     "example:contacts": "tsx --tsconfig examples/tsconfig.json examples/contacts-automation.ts",
+    "example:contacts-search": "tsx --tsconfig examples/tsconfig.json examples/contacts-search.ts",
     "example:sdef": "tsx --tsconfig examples/tsconfig.json examples/sdef-introspection.ts",
     "example:validation": "tsx --tsconfig examples/tsconfig.json examples/script-validation.ts",
     "examples": "pnpm run example:basic && pnpm run example:languages && pnpm run example:compile && pnpm run example:builder && pnpm run example:decompile && pnpm run example:list-apps && pnpm run example:windows && pnpm run example:sdef && pnpm run example:validation",
