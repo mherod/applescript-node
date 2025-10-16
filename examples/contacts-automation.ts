@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import chalk from 'chalk';
 import CliTable3 from 'cli-table3';
 import { createScript, runScript, ScriptValidator } from '../src/index.js';
@@ -110,6 +111,9 @@ async function demonstrateContactsAutomation() {
       )
       .returnRaw('contactsList')
       .endtell();
+
+    // Write generated script to output directory
+    writeFileSync('examples/output/contacts-list.applescript', contactsScript.build());
 
     console.log(chalk.gray('Validating script...'));
     const contactsValidation = validator.validate(contactsScript.build());
@@ -233,6 +237,9 @@ async function demonstrateContactsAutomation() {
       'make new person with properties {first name:"John", last name:"Doe", organization:"ACME Corp"}',
     )
     .end();
+
+  // Write generated script to output directory
+  writeFileSync('examples/output/contacts-create.applescript', createContactScript.build());
 
   console.log(chalk.gray('\nScript to create a contact:'));
   console.log(chalk.dim(createContactScript.build()));
