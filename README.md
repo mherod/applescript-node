@@ -12,7 +12,7 @@ A robust, type-safe Node.js library for executing AppleScript and JavaScript thr
 ## Requirements
 
 - macOS (10.10 or later)
-- Node.js (18.0.0 or later)
+- Node.js (20.0.0 or later)
 - TypeScript 5.0+ (for development)
 
 ## Features
@@ -33,7 +33,7 @@ A robust, type-safe Node.js library for executing AppleScript and JavaScript thr
 - 📱 **Application Control**: Advanced application management features
 - 🔍 **Application Introspection**: Extract and parse scripting dictionaries (sdef) from any macOS app
 - ✅ **Script Validation**: Runtime validation with intelligent error detection and suggestions
-- 🧪 **Well Tested**: 366 tests with extensive coverage
+- 🧪 **Well Tested**: 386 tests with extensive coverage
 - 🔍 **Static Analysis**: ESLint and Prettier integration
 
 ## Installation
@@ -132,7 +132,7 @@ if (result.success) {
 - **String Escaping**: Automatic escaping of quotes and backslashes in all string values
 - **Block Tracking**: Fixed block stack tracking for `using()`, `with()`, and `try()` blocks
 - **Enhanced Methods**: Improved fluent chaining for window and application methods
-- **Test Coverage**: Expanded to 189 tests with comprehensive coverage of new features
+- **Test Coverage**: Expanded to 386 tests with comprehensive coverage of new features
 
 ## Usage Examples
 

@@ -59,27 +59,27 @@ Features demonstrated:
     .tell('Notes')
     .raw(
       `tell account "${accountName}"
-        tell folder "${folderName}"
-          make new note with properties {body:"${plainTextContent.replace(/\n/g, '\\n')}"}
-        end tell
-      end tell`,
+  tell folder "${folderName}"
+    make new note with properties {body:"${plainTextContent.replace(/\n/g, '\\n')}"}
+  end tell
+end tell`,
     )
     .delay(0.5)
     .setExpression('latestNote', `note 1 of folder "${folderName}" of account "${accountName}"`)
-    .setExpression('noteId', 'id of latestNote')
-    .setExpression('noteName', 'name of latestNote')
-    .returnRaw('{noteId:noteId, noteName:noteName}')
+    .returnJsonObject({
+      noteId: 'id of latestNote',
+      noteName: 'name of latestNote',
+    })
     .end();
 
   console.log(chalk.gray('Creating plain text note...'));
   const plainTextValidation = validator.validate(plainTextScript.build());
   if (plainTextValidation.valid) {
     const plainTextResult = await runScript(plainTextScript);
-    if (plainTextResult.success) {
-      const idMatch = /noteId:([^,}]+)/.exec(String(plainTextResult.output));
-      if (idMatch) createdNoteIds.push(idMatch[1].trim());
-
-      console.log(chalk.green('✓ Plain text note created successfully\n'));
+    if (plainTextResult.success && plainTextResult.output) {
+      const result = plainTextResult.output as { noteId: string; noteName: string };
+      createdNoteIds.push(result.noteId);
+      console.log(chalk.green(`✓ Plain text note created successfully: "${result.noteName}"\n`));
     } else {
       console.log(chalk.red(`✗ Failed: ${plainTextResult.error}\n`));
     }
@@ -120,25 +120,25 @@ Features demonstrated:
     .tell('Notes')
     .raw(
       `tell account "${accountName}"
-        tell folder "${folderName}"
-          make new note with properties {body:"${htmlContent.replace(/"/g, '\\"')}"}
-        end tell
-      end tell`,
+  tell folder "${folderName}"
+    make new note with properties {body:"${htmlContent.replace(/"/g, '\\"')}"}
+  end tell
+end tell`,
     )
     .delay(0.5)
     .setExpression('latestNote', `note 1 of folder "${folderName}" of account "${accountName}"`)
-    .setExpression('noteId', 'id of latestNote')
-    .setExpression('noteName', 'name of latestNote')
-    .returnRaw('{noteId:noteId, noteName:noteName}')
+    .returnJsonObject({
+      noteId: 'id of latestNote',
+      noteName: 'name of latestNote',
+    })
     .end();
 
   console.log(chalk.gray('Creating HTML formatted note...'));
   const htmlResult = await runScript(htmlScript);
-  if (htmlResult.success) {
-    const idMatch = /noteId:([^,}]+)/.exec(String(htmlResult.output));
-    if (idMatch) createdNoteIds.push(idMatch[1].trim());
-
-    console.log(chalk.green('✓ HTML formatted note created successfully\n'));
+  if (htmlResult.success && htmlResult.output) {
+    const result = htmlResult.output as { noteId: string; noteName: string };
+    createdNoteIds.push(result.noteId);
+    console.log(chalk.green(`✓ HTML formatted note created successfully: "${result.noteName}"\n`));
   } else {
     console.log(chalk.red(`✗ Failed: ${htmlResult.error}\n`));
   }
@@ -172,25 +172,25 @@ Features demonstrated:
     .tell('Notes')
     .raw(
       `tell account "${accountName}"
-        tell folder "${folderName}"
-          make new note with properties {body:"${checklistContent.replace(/"/g, '\\"')}"}
-        end tell
-      end tell`,
+  tell folder "${folderName}"
+    make new note with properties {body:"${checklistContent.replace(/"/g, '\\"')}"}
+  end tell
+end tell`,
     )
     .delay(0.5)
     .setExpression('latestNote', `note 1 of folder "${folderName}" of account "${accountName}"`)
-    .setExpression('noteId', 'id of latestNote')
-    .setExpression('noteName', 'name of latestNote')
-    .returnRaw('{noteId:noteId, noteName:noteName}')
+    .returnJsonObject({
+      noteId: 'id of latestNote',
+      noteName: 'name of latestNote',
+    })
     .end();
 
   console.log(chalk.gray('Creating checklist note...'));
   const checklistResult = await runScript(checklistScript);
-  if (checklistResult.success) {
-    const idMatch = /noteId:([^,}]+)/.exec(String(checklistResult.output));
-    if (idMatch) createdNoteIds.push(idMatch[1].trim());
-
-    console.log(chalk.green('✓ Checklist note created successfully\n'));
+  if (checklistResult.success && checklistResult.output) {
+    const result = checklistResult.output as { noteId: string; noteName: string };
+    createdNoteIds.push(result.noteId);
+    console.log(chalk.green(`✓ Checklist note created successfully: "${result.noteName}"\n`));
   } else {
     console.log(chalk.red(`✗ Failed: ${checklistResult.error}\n`));
   }
@@ -238,25 +238,25 @@ Features demonstrated:
     .tell('Notes')
     .raw(
       `tell account "${accountName}"
-        tell folder "${folderName}"
-          make new note with properties {body:"${tableContent.replace(/"/g, '\\"')}"}
-        end tell
-      end tell`,
+  tell folder "${folderName}"
+    make new note with properties {body:"${tableContent.replace(/"/g, '\\"')}"}
+  end tell
+end tell`,
     )
     .delay(0.5)
     .setExpression('latestNote', `note 1 of folder "${folderName}" of account "${accountName}"`)
-    .setExpression('noteId', 'id of latestNote')
-    .setExpression('noteName', 'name of latestNote')
-    .returnRaw('{noteId:noteId, noteName:noteName}')
+    .returnJsonObject({
+      noteId: 'id of latestNote',
+      noteName: 'name of latestNote',
+    })
     .end();
 
   console.log(chalk.gray('Creating table note...'));
   const tableResult = await runScript(tableScript);
-  if (tableResult.success) {
-    const idMatch = /noteId:([^,}]+)/.exec(String(tableResult.output));
-    if (idMatch) createdNoteIds.push(idMatch[1].trim());
-
-    console.log(chalk.green('✓ Table note created successfully\n'));
+  if (tableResult.success && tableResult.output) {
+    const result = tableResult.output as { noteId: string; noteName: string };
+    createdNoteIds.push(result.noteId);
+    console.log(chalk.green(`✓ Table note created successfully: "${result.noteName}"\n`));
   } else {
     console.log(chalk.red(`✗ Failed: ${tableResult.error}\n`));
   }
@@ -298,90 +298,151 @@ osascript -e 'tell app "Notes" to count notes'</code></pre>
     .tell('Notes')
     .raw(
       `tell account "${accountName}"
-        tell folder "${folderName}"
-          make new note with properties {body:"${codeContent.replace(/"/g, '\\"')}"}
-        end tell
-      end tell`,
+  tell folder "${folderName}"
+    make new note with properties {body:"${codeContent.replace(/"/g, '\\"')}"}
+  end tell
+end tell`,
     )
     .delay(0.5)
     .setExpression('latestNote', `note 1 of folder "${folderName}" of account "${accountName}"`)
-    .setExpression('noteId', 'id of latestNote')
-    .setExpression('noteName', 'name of latestNote')
-    .returnRaw('{noteId:noteId, noteName:noteName}')
+    .returnJsonObject({
+      noteId: 'id of latestNote',
+      noteName: 'name of latestNote',
+    })
     .end();
 
   console.log(chalk.gray('Creating code snippet note...'));
   const codeResult = await runScript(codeScript);
-  if (codeResult.success) {
-    const idMatch = /noteId:([^,}]+)/.exec(String(codeResult.output));
-    if (idMatch) createdNoteIds.push(idMatch[1].trim());
-
-    console.log(chalk.green('✓ Code snippet note created successfully\n'));
+  if (codeResult.success && codeResult.output) {
+    const result = codeResult.output as { noteId: string; noteName: string };
+    createdNoteIds.push(result.noteId);
+    console.log(chalk.green(`✓ Code snippet note created successfully: "${result.noteName}"\n`));
   } else {
     console.log(chalk.red(`✗ Failed: ${codeResult.error}\n`));
   }
 
-  // Verify created notes
+  // Verify created notes using modern mapToJson approach
   console.log(chalk.bold.cyan('\n🔍 Verifying Created Notes\n'));
 
   const verifyScript = createScript()
     .tell('Notes')
-    .set('notesList', [])
-    .repeatWith('i', `from 1 to ${createdNoteIds.length}`)
-    .try()
-    .setExpression('aNote', `note i of folder "${folderName}" of account "${accountName}"`)
-    .setExpression('notePlaintext', 'plaintext of aNote')
-    .comment('Get first line as preview')
-    .if('length of notePlaintext > 80')
-    .setExpression('notePreview', 'text 1 thru 80 of notePlaintext & "..."')
-    .else()
-    .set('notePreview', 'notePlaintext')
-    .end()
-    .setEndRecord('notesList', 'aNote', {
-      title: 'name',
-      noteId: 'id',
-      preview: 'notePreview',
-    })
-    .onError()
-    .comment('Skip notes with errors')
-    .end()
-    .end()
-    .returnRaw('notesList')
-    .end();
+    .mapToJson(
+      'aNote',
+      `every note of folder "${folderName}" of account "${accountName}"`,
+      {
+        title: 'name',
+        noteId: 'id',
+        content: 'plaintext',
+        created: {
+          property: 'creation date',
+          ifExists: true,
+          asType: 'string',
+        },
+        modified: {
+          property: 'modification date',
+          ifExists: true,
+          asType: 'string',
+        },
+        shared: {
+          property: 'shared',
+          ifExists: true,
+          default: 'false',
+        },
+        passwordProtected: {
+          property: 'password protected',
+          ifExists: true,
+          default: 'false',
+        },
+      },
+      { limit: 10, skipErrors: true },
+    )
+    .endtell();
 
   const verifyResult = await runScript(verifyScript);
 
   if (verifyResult.success && verifyResult.output) {
-    const output = String(verifyResult.output);
-    const noteRecords = output.split('title:').slice(1);
+    // The output is automatically parsed from JSON by runScript
+    const notes = verifyResult.output as unknown as Array<{
+      title: string;
+      noteId: string;
+      content: string;
+      created: string;
+      modified: string;
+      shared: string;
+      passwordProtected: string;
+    }>;
 
-    const notesTable = new CliTable3({
-      head: [chalk.cyan('#'), chalk.cyan('Title'), chalk.cyan('Preview')],
-      colWidths: [5, 35, 60],
-      wordWrap: true,
-      style: { head: [], border: [] },
-    });
+    if (notes && notes.length > 0) {
+      console.log(chalk.bold('\n📋 Created Notes:\n'));
 
-    noteRecords.forEach((record, index) => {
-      const titleMatch = /^([^,]+)/.exec(record);
-      const previewMatch = /preview:"?([^",}]+)"?/.exec(record);
+      const notesTable = new CliTable3({
+        head: [
+          chalk.cyan('#'),
+          chalk.cyan('Title'),
+          chalk.cyan('Content Preview'),
+          chalk.cyan('Created'),
+        ],
+        colWidths: [5, 25, 50, 20],
+        wordWrap: true,
+        style: { head: [], border: [] },
+      });
 
-      if (titleMatch) {
-        const title = titleMatch[1].trim().replace(/^"|"$/g, '');
-        const preview = previewMatch
-          ? previewMatch[1].trim().replace(/\\n/g, ' ').replace(/^"|"$/g, '')
-          : '';
+      notes.forEach((note, index) => {
+        const title = note.title || 'Untitled';
+        const content = note.content || '';
+        const preview = content.length > 80 ? content.substring(0, 77) + '...' : content;
+        const created =
+          note.created !== 'missing value'
+            ? new Date(note.created).toLocaleDateString()
+            : 'Unknown';
 
         notesTable.push([
           chalk.yellow((index + 1).toString()),
           chalk.white(title),
           chalk.gray(preview),
+          chalk.blue(created),
         ]);
-      }
-    });
+      });
 
-    console.log(notesTable.toString());
-    console.log(chalk.green(`\n✓ Successfully verified ${noteRecords.length} notes\n`));
+      console.log(notesTable.toString());
+
+      // Show additional statistics
+      const statsTable = new CliTable3({
+        head: [chalk.cyan('Metric'), chalk.cyan('Count'), chalk.cyan('Percentage')],
+        style: { head: [], border: [] },
+        colWidths: [25, 10, 15],
+      });
+
+      const totalNotes = notes.length;
+      const sharedNotes = notes.filter((n) => n.shared === 'true').length;
+      const protectedNotes = notes.filter((n) => n.passwordProtected === 'true').length;
+      const notesWithContent = notes.filter((n) => n.content && n.content.trim().length > 0).length;
+
+      statsTable.push(
+        [chalk.white('Total Notes'), chalk.yellow(totalNotes), chalk.gray('100%')],
+        [
+          chalk.white('Shared Notes'),
+          chalk.blue(sharedNotes),
+          chalk.gray(`${Math.round((sharedNotes / totalNotes) * 100)}%`),
+        ],
+        [
+          chalk.white('Password Protected'),
+          chalk.red(protectedNotes),
+          chalk.gray(`${Math.round((protectedNotes / totalNotes) * 100)}%`),
+        ],
+        [
+          chalk.white('With Content'),
+          chalk.green(notesWithContent),
+          chalk.gray(`${Math.round((notesWithContent / totalNotes) * 100)}%`),
+        ],
+      );
+
+      console.log(chalk.bold('\n📊 Note Statistics:\n'));
+      console.log(statsTable.toString());
+      console.log(chalk.green(`\n✓ Successfully verified ${totalNotes} notes\n`));
+    } else {
+      console.log(chalk.yellow('\nNo notes found in the folder\n'));
+    }
   }
 
   // Summary
@@ -432,7 +493,14 @@ end tell`;
   console.log(chalk.gray('• Notes are created in the default folder by default'));
   console.log(chalk.gray('• Note titles are auto-generated from the first line'));
   console.log(chalk.gray('• Validation ensures scripts are correct before execution'));
-  console.log(chalk.gray('• New notes appear at the top of the folder (note 1)\n'));
+  console.log(chalk.gray('• New notes appear at the top of the folder (note 1)'));
+  console.log(
+    chalk.gray('• mapToJson() provides clean JSON output with PropertyExtractor support'),
+  );
+  console.log(chalk.gray('• returnJsonObject() simplifies structured data return'));
+  console.log(
+    chalk.gray('• PropertyExtractor handles optional fields with ifExists and type conversion\n'),
+  );
 
   // Close Notes.app
   console.log(chalk.yellow('Closing Notes.app...'));
