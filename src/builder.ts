@@ -533,7 +533,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
           const propExpr =
             typeof propDef.property === 'function'
               ? propDef.property(new ExprBuilder())
-              : propDef.property;
+              : `${propDef.property} of ${itemVariable}`; // Append "of itemVariable" for string properties
           const defaultVal = propDef.default
             ? typeof propDef.default === 'function'
               ? propDef.default(new ExprBuilder())

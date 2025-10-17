@@ -87,7 +87,7 @@ export async function getAll(): Promise<WindowInfo[]> {
   }
 
   // Parse JSON output
-  const windows = JSON.parse(result.output) as unknown[];
+  const windows = JSON.parse(result.output ?? '[]') as unknown[];
 
   return windows.map((win: unknown) => {
     const w = win as Record<string, unknown>;

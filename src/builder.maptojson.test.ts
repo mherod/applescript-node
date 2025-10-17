@@ -88,8 +88,8 @@ describe('AppleScriptBuilder - Enhanced mapToJson()', () => {
 
       const script = builder.build();
 
-      expect(script).toContain('if count of emails > 0 then');
-      expect(script).toContain('set __temp_email to value of item 1 of emails');
+      expect(script).toContain('if count of emails of aPerson > 0 then');
+      expect(script).toContain('set __temp_email to value of item 1 of emails of aPerson');
     });
 
     it('should handle firstOf with custom default value', () => {
@@ -119,8 +119,8 @@ describe('AppleScriptBuilder - Enhanced mapToJson()', () => {
 
       const script = builder.build();
 
-      expect(script).toContain('if exists birth date then');
-      expect(script).toContain('set __temp_birthday to birth date as string');
+      expect(script).toContain('if exists birth date of aPerson then');
+      expect(script).toContain('set __temp_birthday to birth date of aPerson as string');
       expect(script).toContain('set __temp_birthday to missing value');
     });
 
@@ -135,8 +135,8 @@ describe('AppleScriptBuilder - Enhanced mapToJson()', () => {
 
       const script = builder.build();
 
-      expect(script).toContain('if exists creation date then');
-      expect(script).toContain('set __temp_created to creation date');
+      expect(script).toContain('if exists creation date of aNote then');
+      expect(script).toContain('set __temp_created to creation date of aNote');
       expect(script).not.toContain('as string');
     });
 
@@ -196,12 +196,12 @@ describe('AppleScriptBuilder - Enhanced mapToJson()', () => {
       expect(script).toContain('organization:organization of aPerson');
 
       // firstOf transformation
-      expect(script).toContain('if count of emails > 0 then');
-      expect(script).toContain('set __temp_email to value of item 1 of emails');
+      expect(script).toContain('if count of emails of aPerson > 0 then');
+      expect(script).toContain('set __temp_email to value of item 1 of emails of aPerson');
 
       // ifExists transformation
-      expect(script).toContain('if exists birth date then');
-      expect(script).toContain('set __temp_birthday to birth date as string');
+      expect(script).toContain('if exists birth date of aPerson then');
+      expect(script).toContain('set __temp_birthday to birth date of aPerson as string');
 
       // Record uses temp variables for transformed fields (no "of aPerson" suffix)
       expect(script).toContain('email:__temp_email,');
@@ -244,12 +244,12 @@ describe('AppleScriptBuilder - Enhanced mapToJson()', () => {
       // firstOf transformations
       expect(script).toContain('if count of emails of aPerson > 0 then');
       expect(script).toContain('set __temp_email to value of item 1 of emails of aPerson');
-      expect(script).toContain('if count of phones > 0 then');
-      expect(script).toContain('set __temp_phone to value of item 1 of phones');
+      expect(script).toContain('if count of phones of aPerson > 0 then');
+      expect(script).toContain('set __temp_phone to value of item 1 of phones of aPerson');
 
       // ifExists transformation
-      expect(script).toContain('if exists birth date then');
-      expect(script).toContain('set __temp_birthday to birth date as string');
+      expect(script).toContain('if exists birth date of aPerson then');
+      expect(script).toContain('set __temp_birthday to birth date of aPerson as string');
 
       // JSON conversion
       expect(script).toContain('return jsonArray');
@@ -373,8 +373,8 @@ describe('AppleScriptBuilder - Enhanced mapToJson()', () => {
       // Error handling
       expect(script).toContain('try');
       // Transformations still work
-      expect(script).toContain('if count of emails > 0 then');
-      expect(script).toContain('if exists birth date then');
+      expect(script).toContain('if count of emails of aPerson > 0 then');
+      expect(script).toContain('if exists birth date of aPerson then');
     });
 
     it('should work with complex collection expressions', () => {

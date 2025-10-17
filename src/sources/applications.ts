@@ -67,7 +67,7 @@ export async function getAll(includeBackgroundApps = false): Promise<Application
   }
 
   // Parse JSON output
-  return JSON.parse(result.output) as ApplicationInfo[];
+  return JSON.parse(result.output ?? '[]') as ApplicationInfo[];
 }
 
 /**
@@ -100,7 +100,7 @@ export async function getFrontmost(): Promise<ApplicationInfo> {
   }
 
   // Parse JSON output
-  return JSON.parse(result.output) as ApplicationInfo;
+  return JSON.parse(result.output ?? '{}') as ApplicationInfo;
 }
 
 /**

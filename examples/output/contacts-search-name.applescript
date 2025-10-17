@@ -35,32 +35,31 @@ on valueToJson(val)
 end valueToJson
 
 tell application "Contacts"
-  set matchingPeople to every person whose name contains "Smith"
-  set results to {}
-  set counter to 0
-  repeat with aPerson in matchingPeople
-    if counter >= 20 then
+  set __collected_items to {}
+  set __counter to 0
+  repeat with aPerson in every person whose name contains "Smith"
+    if __counter >= 20 then
       exit repeat
     end if
-    set counter to counter + 1
+    set __counter to __counter + 1
+    if count of emails of aPerson > 0 then
+      set __temp_email to value of item 1 of emails of aPerson
+    else
+      set __temp_email to missing value
+    end if
+    if count of phones of aPerson > 0 then
+      set __temp_phone to value of item 1 of phones of aPerson
+    else
+      set __temp_phone to missing value
+    end if
     try
-      if count of emails of aPerson > 0 then
-        set personEmail to value of item 1 of emails of aPerson
-      else
-        set personEmail to "missing value"
-      end if
-      if count of phones of aPerson > 0 then
-        set personPhone to value of item 1 of phones of aPerson
-      else
-        set personPhone to "missing value"
-      end if
-      set end of results to {id:id of aPerson, name:name of aPerson, firstName:first name of aPerson, lastName:last name of aPerson, organization:organization of aPerson, email:personEmail, phone:personPhone}
+      set end of __collected_items to {id:id of aPerson, name:name of aPerson, firstName:first name, lastName:last name, organization:organization of aPerson, email:__temp_email, phone:__temp_phone}
     on error
-      -- Skip contacts with errors
+      -- Skip items with errors
     end try
   end repeat
   set jsonParts to {}
-  repeat with rec in results
+  repeat with rec in __collected_items
     try
       set itemJson to "{"
       set itemJson to itemJson & "\"id\":" & my valueToJson(id of rec)

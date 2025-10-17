@@ -80,7 +80,7 @@ export async function getInfo(): Promise<SystemInfo> {
     throw new Error(`Failed to get system info: ${result.error}`);
   }
 
-  return JSON.parse(result.output) as SystemInfo;
+  return JSON.parse(result.output ?? '{}') as SystemInfo;
 }
 
 /**
@@ -136,7 +136,7 @@ export async function getVolumes(): Promise<VolumeInfo[]> {
   }
 
   // Parse JSON output
-  return JSON.parse(result.output) as VolumeInfo[];
+  return JSON.parse(result.output ?? '[]') as VolumeInfo[];
 }
 
 /**
@@ -173,7 +173,7 @@ export async function getDisplays(): Promise<DisplayInfo[]> {
 
   // Parse resolution from system_profiler output
   // Format: "Resolution: 2560 x 1600 (2x)"
-  const lines = result.output.split('\n');
+  const lines = (result.output ?? '').split('\n');
   const displays: DisplayInfo[] = lines
     .map((line, idx) => {
       const match = /Resolution:\s+(\d+)\s+x\s+(\d+)/.exec(line);
@@ -231,7 +231,7 @@ export async function getClipboard(): Promise<string> {
     return '';
   }
 
-  return result.output || '';
+  return result.output ?? '';
 }
 
 /**
@@ -302,7 +302,7 @@ export async function getPath(
     throw new Error(`Failed to get path for ${folder}: ${result.error}`);
   }
 
-  return result.output.trim();
+  return (result.output ?? '').trim();
 }
 
 /**
@@ -321,7 +321,7 @@ export async function isDarkMode(): Promise<boolean> {
 
   const result = await ScriptExecutor.execute(script);
 
-  return result.success && result.output.trim() === 'true';
+  return result.success && (result.output ?? '').trim() === 'true';
 }
 
 /**
@@ -342,7 +342,7 @@ export async function getUptime(): Promise<number> {
     throw new Error(`Failed to get uptime: ${result.error}`);
   }
 
-  const bootTime = Number.parseInt(result.output.trim(), 10);
+  const bootTime = Number.parseInt((result.output ?? '0').trim(), 10);
   const now = Math.floor(Date.now() / 1000);
 
   return now - bootTime;
