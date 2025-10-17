@@ -51,16 +51,38 @@ yarn add applescript-node
 
 ## Quick Start
 
+### High-Level API (Recommended)
+
+The easiest way to get started is with our high-level data source APIs:
+
 ```typescript
-import { runScript } from 'applescript-node';
+import { sources } from 'applescript-node';
 
-// Execute a simple script
-const result = await runScript('tell application "Finder" to get name of every disk');
+// Get system information
+const info = await sources.system.getInfo();
+console.log(`Computer: ${info.computerName}, OS: ${info.osVersion}`);
 
+// Get all open windows
+const windows = await sources.windows.getAll();
+console.log(`Found ${windows.length} open windows`);
+
+// Get running applications
+const apps = await sources.applications.getAll();
+apps.forEach((app) => console.log(`- ${app.name} (${app.windowCount} windows)`));
+```
+
+### Builder API (Advanced)
+
+For custom scripts, use the fluent builder with callback syntax:
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+const script = createScript().tellApp('Finder', (finder) => finder.get('name of every disk'));
+
+const result = await runScript(script);
 if (result.success) {
   console.log('Disks:', result.output);
-} else {
-  console.error('Error:', result.error);
 }
 ```
 
@@ -107,72 +129,104 @@ if (result.success) {
 
 ### Using the Fluent Builder
 
+Callback-style syntax provides clean scoping for complex scripts:
+
 ```typescript
 import { createScript, runScript } from 'applescript-node';
 
 // Create a new text file and write some text
-const script = createScript()
-  .tell('System Events')
-  // Press Cmd+N for new document
-  .keystroke('n', ['command'])
-  // Wait for window to open
-  .delay(1)
-  // Type some text
-  .keystroke('Hello from applescript-node!')
-  // Press Cmd+S to save
-  .keystroke('s', ['command'])
-  .delay(0.5)
-  // Type filename
-  .keystroke('example.txt')
-  // Press return to save
-  .keystroke('\r')
-  .end();
+const script = createScript().tellApp('System Events', (app) =>
+  app
+    // Press Cmd+N for new document
+    .keystroke('n', ['command'])
+    // Wait for window to open
+    .delay(1)
+    // Type some text
+    .keystroke('Hello from applescript-node!')
+    // Press Cmd+S to save
+    .keystroke('s', ['command'])
+    .delay(0.5)
+    // Type filename
+    .keystroke('example.txt')
+    // Press return to save
+    .keystroke('\r'),
+);
 
 const result = await runScript(script);
 ```
 
 ### Window Management
 
+High-level API for easy window queries:
+
+```typescript
+import { sources } from 'applescript-node';
+
+// Get all windows across all applications
+const allWindows = await sources.windows.getAll();
+console.log(`Found ${allWindows.length} open windows`);
+
+// Get windows for a specific app
+const safariWindows = await sources.windows.getByApp('Safari');
+safariWindows.forEach((win) => {
+  console.log(`- ${win.name}: ${win.bounds.width}x${win.bounds.height}`);
+});
+
+// Get the currently focused window
+const frontmost = await sources.windows.getFrontmost();
+if (frontmost) {
+  console.log(`Active: ${frontmost.name} (${frontmost.app})`);
+}
+
+// Get window counts by app
+const counts = await sources.windows.getCountByApp();
+console.log('Windows per app:', counts);
+```
+
+For custom window operations, use the builder API:
+
 ```typescript
 import { createScript, runScript } from 'applescript-node';
 
-const script = createScript()
-  .tell('Finder')
-  // Get window info
-  .raw('tell window "Downloads" to return {name, bounds}')
-  .end();
+const script = createScript().tellApp('Finder', (finder) =>
+  finder.moveWindow('Downloads', 100, 100).resizeWindow('Downloads', 800, 600),
+);
 
-const result = await runScript(script);
-
-// Move and resize window
-const moveAndResize = createScript()
-  .tell('Finder')
-  .moveWindow('Downloads', 100, 100)
-  .resizeWindow('Downloads', 800, 600)
-  .end();
-
-await runScript(moveAndResize);
+await runScript(script);
 ```
 
 ### Application Management
 
+High-level API for application queries and control:
+
 ```typescript
-import { createScript, runScript } from 'applescript-node';
+import { sources } from 'applescript-node';
 
-// List all running applications
-const script = createScript().tell('System Events').get('name of every process').end();
+// Get all running applications
+const apps = await sources.applications.getAll();
+console.log('Running Applications:');
+apps.forEach((app) => {
+  console.log(`- ${app.name} (PID: ${app.pid}, Windows: ${app.windowCount})`);
+});
 
-const result = await runScript(script);
+// Get the frontmost (active) application
+const frontmost = await sources.applications.getFrontmost();
+console.log(`Active app: ${frontmost.name}`);
 
-if (result.success) {
-  console.log('Running Applications:');
-  console.log(
-    result.output
-      .split(',')
-      .map((app) => `- ${app.trim()}`)
-      .join('\n'),
-  );
+// Check if an app is running
+const isRunning = await sources.applications.isRunning('Safari');
+console.log(`Safari running: ${isRunning}`);
+
+// Get specific app info
+const safari = await sources.applications.getByName('Safari');
+if (safari) {
+  console.log(`Safari bundle ID: ${safari.bundleId}`);
 }
+
+// Control applications
+await sources.applications.activate('Finder');
+await sources.applications.hide('Safari');
+await sources.applications.quit('TextEdit');
 ```
 
 ### Script Compilation
@@ -219,66 +273,120 @@ if (result.success) {
 
 ### Error Handling with Try-Catch
 
+Callback-style `tryCatch` helper automatically manages block scoping:
+
 ```typescript
 import { createScript, runScript } from 'applescript-node';
 
-const script = createScript()
-  .try()
-  .tell('Finder')
-  .raw('get name of window "NonExistentWindow"')
-  .end()
-  .onError('errorMessage')
-  .displayDialog('An error occurred')
-  .raw('log errorMessage')
-  .end();
+const script = createScript().tryCatchError(
+  (try_) =>
+    try_.tellApp('Finder', (finder) => finder.raw('get name of window "NonExistentWindow"')),
+  'errorMessage',
+  (catch_) => catch_.displayDialog('An error occurred').raw('log errorMessage'),
+);
 
 await runScript(script);
 ```
 
-### Conditional Logic with elseIf
+For simpler cases without error capture:
+
+```typescript
+const script = createScript().tryCatch(
+  (try_) => try_.tellApp('Notes', (notes) => notes.raw('get name of first note')),
+  (catch_) => catch_.displayDialog('Could not access notes'),
+);
+```
+
+### Conditional Logic with ifThenElse
+
+Callback-style helpers with ExprBuilder for type-safe conditions:
 
 ```typescript
 import { createScript, runScript } from 'applescript-node';
 
 const script = createScript()
   .set('temperature', 75)
-  .if('temperature > 80')
-  .then()
-  .displayDialog('Hot!')
-  .elseIf('temperature > 60')
-  .then()
-  .displayDialog('Warm')
-  .else()
-  .displayDialog('Cold')
-  .end();
+  .ifThenElse(
+    (e) => e.gt('temperature', 80),
+    (then_) => then_.displayDialog('Hot!'),
+    (else_) =>
+      else_.ifThenElse(
+        (e) => e.gt('temperature', 60),
+        (then_) => then_.displayDialog('Warm'),
+        (else_) => else_.displayDialog('Cold'),
+      ),
+  );
 
 await runScript(script);
 ```
 
+For simple if-then cases:
+
+```typescript
+const script = createScript()
+  .set('counter', 10)
+  .ifThen(
+    (e) => e.gt('counter', 5),
+    (then_) => then_.displayDialog('Counter is greater than 5'),
+  );
+```
+
+String-based conditions are also supported:
+
+```typescript
+const script = createScript().ifThenElse(
+  'temperature > 80',
+  (then_) => then_.displayDialog('Hot!'),
+  (else_) => else_.displayDialog('Not hot'),
+);
+```
+
 ### Loop Control
+
+Callback-style `forEach` with conditional exit:
 
 ```typescript
 import { createScript, runScript } from 'applescript-node';
 
-// Exit loop early
+// Exit loop early with ExprBuilder
 const exitScript = createScript()
-  .repeat(10)
-  .set('counter', 'counter + 1')
-  .if('counter = 5')
-  .then()
-  .exitRepeat()
-  .end()
-  .end();
+  .set('counter', 0)
+  .repeat(10, (loop) =>
+    loop.set('counter', 'counter + 1').ifThen(
+      (e) => e.eq('counter', 5),
+      (then_) => then_.exitRepeat(),
+    ),
+  );
 
-// Skip iteration
-const continueScript = createScript()
-  .repeatWith('i', '{1, 2, 3, 4, 5}')
-  .if('i = 3')
-  .then()
-  .continueRepeat()
-  .end()
-  .raw('log i')
-  .end();
+// Iterate with forEach callback
+const script = createScript()
+  .set('results', [])
+  .forEach('i', '{1, 2, 3, 4, 5}', (loop) =>
+    loop.ifThenElse(
+      (e) => e.eq('i', 3),
+      (then_) => then_.continueRepeat(),
+      (else_) => else_.setEndRaw('results', 'i'),
+    ),
+  );
+
+await runScript(script);
+```
+
+Using `forEachUntil` for conditional iteration:
+
+```typescript
+const script = createScript()
+  .set('found', 'false')
+  .forEachUntil(
+    'item',
+    'every file of desktop',
+    (e) => e.eq('found', 'true'),
+    (loop) =>
+      loop.ifThen(
+        (e) => e.contains('name of item', '"important"'),
+        (then_) => then_.set('found', 'true'),
+      ),
+  );
 ```
 
 ### Reusing Builder with reset()
@@ -288,14 +396,21 @@ import { createScript, runScript } from 'applescript-node';
 
 const builder = createScript();
 
-// First script
-builder.tell('Finder').activate().end();
+// First script with explicit ending
+builder.tellApp('Finder', (app) => app.activate());
 const result1 = await runScript(builder.build());
 
 // Reset and create a new script
 builder.reset();
-builder.tell('Safari').activate().end();
+builder.tellApp('Safari', (app) => app.activate());
 const result2 = await runScript(builder.build());
+```
+
+Explicit block endings for manual block management:
+
+```typescript
+// Using explicit endtell() for clarity
+const script = createScript().tell('Finder').activate().endtell(); // Explicit ending - more readable than .end()
 ```
 
 ### Building Records from Variables (New!)
