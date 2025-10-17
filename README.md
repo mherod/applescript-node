@@ -33,7 +33,7 @@ A robust, type-safe Node.js library for executing AppleScript and JavaScript thr
 - 📱 **Application Control**: Advanced application management features
 - 🔍 **Application Introspection**: Extract and parse scripting dictionaries (sdef) from any macOS app
 - ✅ **Script Validation**: Runtime validation with intelligent error detection and suggestions
-- 🧪 **Well Tested**: 293 tests with extensive coverage
+- 🧪 **Well Tested**: 366 tests with extensive coverage
 - 🔍 **Static Analysis**: ESLint and Prettier integration
 
 ## Installation
@@ -90,6 +90,12 @@ if (result.success) {
 
 ### New Features (Latest)
 
+- **Conditional Assignment with setIfExists**: New `setIfExists()` and `setEndIfExists()` methods for clean optional property handling
+  - Simplifies "check if exists, convert type, or use default" pattern
+  - More semantic and readable than `setTernary` for existence checks
+  - Built-in type conversion support via `asType` parameter
+  - Reduces boilerplate when handling optional fields
+  - Perfect for extracting data from macOS applications with optional properties
 - **Ultra-Shorthand Collection Mapping**: New `mapToJson()` method for one-line collection-to-JSON conversion
   - Reduces ~30 lines of code to a single method call
   - Handles initialization, iteration, property extraction, error handling, and JSON conversion
@@ -340,6 +346,135 @@ const script = createScript().ifThenElse(
   (else_) => else_.displayDialog('Not hot'),
 );
 ```
+
+### Conditional Assignment with setIfExists
+
+The `setIfExists()` and `setEndIfExists()` methods simplify the common pattern of checking if a property exists, optionally converting its type, and using a default value if it doesn't exist.
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+// Common pattern: handle optional properties with type conversion
+const script = createScript()
+  .tell('Contacts')
+  .repeatWith('aPerson', 'every person')
+  // Check if birth date exists, convert to string, or use default
+  .setIfExists(
+    'personBirthday',
+    (e) => e.property('aPerson', 'birth date'),
+    'missing value',
+    'string',
+  )
+  .end()
+  .end();
+
+await runScript(script);
+```
+
+**Comparison - Old vs New Approach:**
+
+```typescript
+// OLD WAY: Using setTernary (verbose - 6 lines)
+const oldScript = createScript()
+  .tell('Contacts')
+  .repeatWith('aPerson', 'every person')
+  .setTernary(
+    'personBirthday',
+    (e) => e.exists(e.property('aPerson', 'birth date')),
+    (e) => e.asType(e.property('aPerson', 'birth date'), 'string'),
+    'missing value',
+  )
+  .end()
+  .end();
+
+// NEW WAY: Using setIfExists (concise - 5 lines, clearer intent)
+const newScript = createScript()
+  .tell('Contacts')
+  .repeatWith('aPerson', 'every person')
+  .setIfExists(
+    'personBirthday',
+    (e) => e.property('aPerson', 'birth date'),
+    'missing value',
+    'string',
+  )
+  .end()
+  .end();
+```
+
+**Appending to Lists with setEndIfExists:**
+
+```typescript
+// Build a list with conditional values
+const script = createScript()
+  .tell('Notes')
+  .set('datesList', [])
+  .repeatWith('aNote', 'every note')
+  // Append to list only if property exists, with type conversion
+  .setEndIfExists(
+    'datesList',
+    (e) => e.property('aNote', 'creation date'),
+    'missing value',
+    'string',
+  )
+  .end()
+  .end();
+```
+
+**Handling Multiple Optional Fields:**
+
+```typescript
+const script = createScript()
+  .tell('Contacts')
+  .set('contactsList', [])
+  .repeatWith('aPerson', 'every person')
+  // Handle multiple optional fields
+  .setIfExists('personEmail', (e) => e.property('aPerson', 'email'), 'missing value')
+  .setIfExists('personPhone', (e) => e.property('aPerson', 'phone'), 'missing value')
+  .setIfExists(
+    'personBirthday',
+    (e) => e.property('aPerson', 'birth date'),
+    'missing value',
+    'string',
+  )
+  // Build record from the variables
+  .setEndRecord('contactsList', {
+    name: 'name of aPerson',
+    email: 'personEmail',
+    phone: 'personPhone',
+    birthday: 'personBirthday',
+  })
+  .end()
+  .end();
+```
+
+**Method Signatures:**
+
+```typescript
+// Set variable if property exists, with optional type conversion
+setIfExists(
+  variable: string,
+  property: string | ((e: ExprBuilder) => string),
+  defaultValue?: string | ((e: ExprBuilder) => string),
+  asType?: string,
+): ScriptBuilder;
+
+// Append to list if property exists, with optional type conversion
+setEndIfExists(
+  listVariable: string,
+  property: string | ((e: ExprBuilder) => string),
+  defaultValue?: string | ((e: ExprBuilder) => string),
+  asType?: string,
+): ScriptBuilder;
+```
+
+**Benefits:**
+
+- More readable and self-documenting than `setTernary`
+- Built-in type conversion support via `asType` parameter
+- Consistent default value handling
+- Type-safe with ExprBuilder support
+- Integrates seamlessly with other builder methods
+- Generates proper if-then-else blocks under the hood
 
 ### Loop Control
 
@@ -954,15 +1089,18 @@ pnpm test
 The project includes several example scripts demonstrating various features:
 
 ```bash
-pnpm run example:basic     # Basic script execution
-pnpm run example:builder   # Fluent builder API
-pnpm run example:compile   # Script compilation
-pnpm run example:languages # Language information
-pnpm run example:list-apps  # List running applications
-pnpm run example:windows    # Window management
-pnpm run example:sdef       # Application introspection with sdef
-pnpm run example:validation # Script validation with sdef
-pnpm run example:messages   # Messages app automation
+pnpm run example:basic             # Basic script execution
+pnpm run example:builder           # Fluent builder API
+pnpm run example:compile           # Script compilation
+pnpm run example:languages         # Language information
+pnpm run example:list-apps         # List running applications
+pnpm run example:windows           # Window management
+pnpm run example:sdef              # Application introspection with sdef
+pnpm run example:validation        # Script validation with sdef
+pnpm run example:messages          # Messages app automation
+pnpm run example:ternary           # Ternary-style conditional assignment
+pnpm run example:if-exists         # If-exists pattern for optional properties
+pnpm run example:first-or-default  # First-or-default pattern demo
 ```
 
 ## API Reference
@@ -1075,6 +1213,11 @@ The ScriptBuilder provides a rich set of methods for constructing AppleScript co
   - Detects simple properties vs complex expressions based on AppleScript keywords
   - Simple properties automatically get "of source" appended
   - Complex expressions (with "of", "as", "where", etc.) used as-is
+- `setIfExists(variable: string, property: string | ExprBuilder, defaultValue?: string | ExprBuilder, asType?: string): ScriptBuilder` - Set variable if property exists, with optional type conversion
+  - Checks if property exists, converts to type (if specified), or uses default value
+  - More semantic than `setTernary` for existence checks
+- `setEndIfExists(listVariable: string, property: string | ExprBuilder, defaultValue?: string | ExprBuilder, asType?: string): ScriptBuilder` - Append to list if property exists, with optional type conversion
+  - Same as `setIfExists` but appends to list instead of setting variable
 - `get(property: string): ScriptBuilder`
 - `copy(value: AppleScriptValue, to: string): ScriptBuilder`
 - `count(items: string): ScriptBuilder`

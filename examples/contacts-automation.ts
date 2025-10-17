@@ -68,32 +68,16 @@ async function demonstrateContactsAutomation() {
           b.increment('counter').tryCatch(
             (tryBlock) =>
               tryBlock
-                // Handle optional email field
-                .ifThenElse(
-                  (e) => e.gt(e.count(e.property('aPerson', 'emails')), 0),
-                  (then_) =>
-                    then_.setExpression('personEmail', (e) =>
-                      e.valueOfItem(1, e.property('aPerson', 'emails')),
-                    ),
-                  (else_) => else_.set('personEmail', 'missing value'),
-                )
-                // Handle optional phone field using ExprBuilder
-                .ifThenElse(
-                  (e) => e.gt(e.count(e.property('aPerson', 'phones')), 0),
-                  (then_) =>
-                    then_.setExpression('personPhone', (e) =>
-                      e.valueOfItem(1, e.property('aPerson', 'phones')),
-                    ),
-                  (else_) => else_.set('personPhone', 'missing value'),
-                )
-                // Handle optional birthday field using ExprBuilder
-                .ifThenElse(
-                  (e) => e.exists(e.property('aPerson', 'birth date')),
-                  (then_) =>
-                    then_.setExpression('personBirthday', (e) =>
-                      e.asType(e.property('aPerson', 'birth date'), 'string'),
-                    ),
-                  (else_) => else_.set('personBirthday', 'missing value'),
+                // Handle optional email field using first-or-default pattern
+                .setFirstOf('personEmail', (e) => e.property('aPerson', 'emails'), 'missing value')
+                // Handle optional phone field using first-or-default pattern
+                .setFirstOf('personPhone', (e) => e.property('aPerson', 'phones'), 'missing value')
+                // Handle optional birthday field using if-exists pattern
+                .setIfExists(
+                  'personBirthday',
+                  (e) => e.property('aPerson', 'birth date'),
+                  'missing value',
+                  'string',
                 )
                 // Build contact record (mix of properties and variables)
                 .setEndRecord('contactsList', {

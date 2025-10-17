@@ -467,6 +467,89 @@ const script = createScript().tryCatchError(
 - JavaScript indentation matches block hierarchy
 - Callbacks can use standard TypeScript features
 
+### Conditional Assignment with setIfExists
+
+The `setIfExists()` and `setEndIfExists()` methods provide a semantic, readable way to handle optional properties with type conversion and default values.
+
+```typescript
+// Common pattern: Check if property exists, convert type, or use default
+const script = createScript()
+  .tell('Contacts')
+  .repeatWith('aPerson', 'every person')
+  // Check if birth date exists, convert to string, or use default
+  .setIfExists(
+    'personBirthday',
+    (e) => e.property('aPerson', 'birth date'),
+    'missing value',
+    'string',
+  )
+  .endrepeat()
+  .endtell();
+```
+
+**Comparison - Old vs New:**
+
+```typescript
+// OLD WAY: Using setTernary (verbose)
+.setTernary(
+  'personBirthday',
+  (e) => e.exists(e.property('aPerson', 'birth date')),
+  (e) => e.asType(e.property('aPerson', 'birth date'), 'string'),
+  'missing value',
+)
+
+// NEW WAY: Using setIfExists (concise)
+.setIfExists(
+  'personBirthday',
+  (e) => e.property('aPerson', 'birth date'),
+  'missing value',
+  'string',
+)
+```
+
+**Implementation Details:**
+
+- Generates proper if-then-else blocks (AppleScript doesn't support inline conditionals)
+- Built-in type conversion via `asType` parameter
+- Default value is optional (defaults to `'missing value'`)
+- Both string-based and ExprBuilder property expressions supported
+- Type-safe with full TypeScript support and generic type tracking
+
+**Usage Patterns:**
+
+```typescript
+// Basic existence check without type conversion
+.setIfExists('personEmail', (e) => e.property('aPerson', 'email'), 'missing value')
+
+// With type conversion
+.setIfExists('createdDate', (e) => e.property('note', 'creation date'), 'missing value', 'string')
+
+// String-based property
+.setIfExists('personPhone', 'phone of aPerson', '""')
+
+// Append to list if exists
+.setEndIfExists('datesList', (e) => e.property('note', 'creation date'), 'missing value', 'string')
+```
+
+**Generated AppleScript:**
+
+```applescript
+if exists birth date of aPerson then
+  set personBirthday to birth date of aPerson as string
+else
+  set personBirthday to missing value
+end if
+```
+
+**Benefits:**
+
+- More semantic than `setTernary` - method name clearly shows intent
+- Cleaner API - no need to manually construct existence check
+- Self-documenting - obviously checking for property existence
+- Consistent default value handling across codebase
+- Built-in type conversion reduces boilerplate
+- Integrates seamlessly with other builder methods
+
 ### Type-Safe Expressions with ExprBuilder
 
 `ExprBuilder` provides type-safe expression building with autocomplete:

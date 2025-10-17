@@ -46,17 +46,17 @@ tell application "Contacts"
       if count of emails of aPerson > 0 then
         set personEmail to value of item 1 of emails of aPerson
       else
-        set personEmail to "missing value"
+        set personEmail to missing value
       end if
       if count of phones of aPerson > 0 then
         set personPhone to value of item 1 of phones of aPerson
       else
-        set personPhone to "missing value"
+        set personPhone to missing value
       end if
       if exists birth date of aPerson then
         set personBirthday to birth date of aPerson as string
       else
-        set personBirthday to "missing value"
+        set personBirthday to missing value
       end if
       set end of contactsList to {id:id of aPerson, name:name of aPerson, firstName:first name of aPerson, lastName:last name of aPerson, organization:organization of aPerson, jobTitle:job title of aPerson, email:personEmail, phone:personPhone, birthday:personBirthday, isCompany:company of aPerson}
     on error

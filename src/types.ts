@@ -569,6 +569,196 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
     sourceObject: string,
     propertyMap: Record<string, string>,
   ) => ScriptBuilder<TScope, TReturn>;
+  /**
+   * Set variable using ternary operator pattern with if-then-else block.
+   * Much more concise than manually calling ifThenElse for simple conditional assignments.
+   *
+   * @template TNewVar - The variable name (inferred from first parameter)
+   * @param variable - Variable name to set (will be added to scope)
+   * @param condition - Condition to evaluate (string or ExprBuilder callback)
+   * @param trueExpression - Expression to use if condition is true
+   * @param falseExpression - Expression to use if condition is false
+   * @returns Builder with extended scope including the new variable
+   *
+   * @example
+   * // Replaces verbose manual ifThenElse calls for simple assignments
+   * .setTernary('personEmail',
+   *   (e) => e.gt(e.count(e.property('aPerson', 'emails')), 0),
+   *   (e) => e.valueOfItem(1, e.property('aPerson', 'emails')),
+   *   'missing value'
+   * )
+   * // Generates an if-then-else block that conditionally sets personEmail
+   */
+  setTernary: <TNewVar extends string>(
+    variable: TNewVar,
+    condition: string | ((e: ExprBuilder<TScope>) => string),
+    trueExpression: string | ((e: ExprBuilder<TScope>) => string),
+    falseExpression: string | ((e: ExprBuilder<TScope>) => string),
+  ) => ScriptBuilder<TScope | TNewVar, TReturn>;
+  /**
+   * Append to list using ternary operator pattern with if-then-else block.
+   * Combines setEndRaw with conditional logic for ultra-concise syntax.
+   *
+   * @param listVariable - Name of the list to append to
+   * @param condition - Condition to evaluate (string or ExprBuilder callback)
+   * @param trueExpression - Expression to append if condition is true
+   * @param falseExpression - Expression to append if condition is false
+   * @returns Builder instance for method chaining
+   *
+   * @example
+   * // Conditionally append different values based on condition
+   * .forEach('item', 'every file of desktop', (loop) =>
+   *   loop.setEndTernary('results',
+   *     (e) => e.gt(e.property('item', 'size'), 1000000),
+   *     '"large"',
+   *     '"small"'
+   *   )
+   * )
+   * // Generates an if-then-else block that conditionally appends to results
+   */
+  setEndTernary: (
+    listVariable: string,
+    condition: string | ((e: ExprBuilder<TScope>) => string),
+    trueExpression: string | ((e: ExprBuilder<TScope>) => string),
+    falseExpression: string | ((e: ExprBuilder<TScope>) => string),
+  ) => ScriptBuilder<TScope, TReturn>;
+  /**
+   * Set variable to first item of collection or default value if collection is empty.
+   * Ultra-shorthand for the common "first or default" pattern.
+   *
+   * Automatically generates: `set variable to (if count of collection > 0 then value of item 1 of collection else defaultValue)`
+   *
+   * @template TNewVar - The variable name (inferred from first parameter)
+   * @param variable - Variable name to set (will be added to scope)
+   * @param collection - Collection expression (string or ExprBuilder callback)
+   * @param defaultValue - Value to use if collection is empty (defaults to 'missing value')
+   * @returns Builder with extended scope including the new variable
+   *
+   * @example
+   * // OLD WAY: Verbose ternary with explicit condition
+   * .setTernary('personEmail',
+   *   (e) => e.gt(e.count(e.property('aPerson', 'emails')), 0),
+   *   (e) => e.valueOfItem(1, e.property('aPerson', 'emails')),
+   *   'missing value'
+   * )
+   *
+   * // NEW WAY: Ultra-concise first-or-default
+   * .setFirstOf('personEmail', (e) => e.property('aPerson', 'emails'))
+   *
+   * @example
+   * // With custom default value
+   * .setFirstOf('userEmail', 'emailAddresses', '"noreply@example.com"')
+   */
+  setFirstOf: <TNewVar extends string>(
+    variable: TNewVar,
+    collection: string | ((e: ExprBuilder<TScope>) => string),
+    defaultValue?: string | ((e: ExprBuilder<TScope>) => string),
+  ) => ScriptBuilder<TScope | TNewVar, TReturn>;
+  /**
+   * Append first item of collection or default value to a list.
+   * Ultra-shorthand for the common "first or default" pattern in list building.
+   *
+   * Automatically generates: `set end of list to (if count of collection > 0 then value of item 1 of collection else defaultValue)`
+   *
+   * @param listVariable - Name of the list to append to
+   * @param collection - Collection expression (string or ExprBuilder callback)
+   * @param defaultValue - Value to append if collection is empty (defaults to 'missing value')
+   * @returns Builder instance for method chaining
+   *
+   * @example
+   * // Building a list with first-or-default pattern
+   * .set('emailList', [])
+   * .forEach('person', 'every person', (loop) =>
+   *   loop.setEndFirstOf('emailList', (e) => e.property('person', 'emails'))
+   * )
+   *
+   * @example
+   * // With custom default
+   * .setEndFirstOf('phoneNumbers', 'availablePhones', '"555-0000"')
+   */
+  setEndFirstOf: (
+    listVariable: string,
+    collection: string | ((e: ExprBuilder<TScope>) => string),
+    defaultValue?: string | ((e: ExprBuilder<TScope>) => string),
+  ) => ScriptBuilder<TScope, TReturn>;
+  /**
+   * Set variable to property value if it exists, otherwise use default value.
+   * Ultra-shorthand for the common "take if exists or default" pattern.
+   *
+   * Automatically generates: `if exists property then set variable to property [as type] else set variable to defaultValue`
+   *
+   * @template TNewVar - The variable name (inferred from first parameter)
+   * @param variable - Variable name to set (will be added to scope)
+   * @param property - Property expression to check and retrieve (string or ExprBuilder callback)
+   * @param defaultValue - Value to use if property doesn't exist (defaults to 'missing value')
+   * @param asType - Optional type to convert property to (e.g., 'string', 'integer')
+   * @returns Builder with extended scope including the new variable
+   *
+   * @example
+   * // OLD WAY: Verbose ternary with exists check and type conversion
+   * .setTernary('personBirthday',
+   *   (e) => e.exists(e.property('aPerson', 'birth date')),
+   *   (e) => e.asType(e.property('aPerson', 'birth date'), 'string'),
+   *   'missing value'
+   * )
+   *
+   * // NEW WAY: Ultra-concise if-exists with type conversion
+   * .setIfExists('personBirthday',
+   *   (e) => e.property('aPerson', 'birth date'),
+   *   'missing value',
+   *   'string'
+   * )
+   *
+   * @example
+   * // Even simpler with string expression
+   * .setIfExists('personBirthday', 'birth date of aPerson', 'missing value', 'string')
+   *
+   * @example
+   * // Without type conversion
+   * .setIfExists('personNote', 'note of aPerson', '""')
+   */
+  setIfExists: <TNewVar extends string>(
+    variable: TNewVar,
+    property: string | ((e: ExprBuilder<TScope>) => string),
+    defaultValue?: string | ((e: ExprBuilder<TScope>) => string),
+    asType?: string,
+  ) => ScriptBuilder<TScope | TNewVar, TReturn>;
+  /**
+   * Append property value to list if it exists, otherwise append default value.
+   * Ultra-shorthand for the common "take if exists or default" pattern in list building.
+   *
+   * Automatically generates: `if exists property then set end of list to property [as type] else set end of list to defaultValue`
+   *
+   * @param listVariable - Name of the list to append to
+   * @param property - Property expression to check and retrieve (string or ExprBuilder callback)
+   * @param defaultValue - Value to append if property doesn't exist (defaults to 'missing value')
+   * @param asType - Optional type to convert property to (e.g., 'string', 'integer')
+   * @returns Builder instance for method chaining
+   *
+   * @example
+   * // Building a list with if-exists pattern
+   * .set('birthdayList', [])
+   * .forEach('person', 'every person', (loop) =>
+   *   loop.setEndIfExists('birthdayList',
+   *     'birth date of person',
+   *     '""',
+   *     'string'
+   *   )
+   * )
+   *
+   * @example
+   * // With ExprBuilder
+   * .setEndIfExists('notes',
+   *   (e) => e.property('contact', 'note'),
+   *   'missing value'
+   * )
+   */
+  setEndIfExists: (
+    listVariable: string,
+    property: string | ((e: ExprBuilder<TScope>) => string),
+    defaultValue?: string | ((e: ExprBuilder<TScope>) => string),
+    asType?: string,
+  ) => ScriptBuilder<TScope, TReturn>;
   setProperty: (
     variable: string,
     property: string,

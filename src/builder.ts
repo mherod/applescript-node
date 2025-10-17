@@ -951,6 +951,302 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
+  /**
+   * Set variable using ternary operator pattern with if-then-else block.
+   * Much more concise than manually calling ifThenElse for simple conditional assignments.
+   *
+   * Generates an if-then-else block that sets the variable conditionally.
+   *
+   * @param variable - Variable name to set
+   * @param condition - Condition to evaluate (string or ExprBuilder callback)
+   * @param trueExpression - Expression to use if condition is true
+   * @param falseExpression - Expression to use if condition is false
+   *
+   * @example
+   * // With ExprBuilder for type-safe conditions
+   * .setTernary('personEmail',
+   *   (e) => e.gt(e.count(e.property('aPerson', 'emails')), 0),
+   *   (e) => e.valueOfItem(1, e.property('aPerson', 'emails')),
+   *   'missing value'
+   * )
+   *
+   * @example
+   * // With strings
+   * .setTernary('status',
+   *   'count of items > 0',
+   *   '"active"',
+   *   '"empty"'
+   * )
+   *
+   * @example
+   * // Replaces verbose ifThenElse:
+   * // .ifThenElse(
+   * //   (e) => e.gt('x', 10),
+   * //   (then_) => then_.set('result', 'high'),
+   * //   (else_) => else_.set('result', 'low')
+   * // )
+   * // With concise ternary:
+   * .setTernary('result', (e) => e.gt('x', 10), '"high"', '"low"')
+   */
+  setTernary<TNewVar extends string>(
+    variable: TNewVar,
+    condition: string | ((e: ExprBuilder) => string),
+    trueExpression: string | ((e: ExprBuilder) => string),
+    falseExpression: string | ((e: ExprBuilder) => string),
+  ): ScriptBuilder<TNewVar> {
+    const cond = typeof condition === 'function' ? condition(new ExprBuilder()) : condition;
+    const trueExpr =
+      typeof trueExpression === 'function' ? trueExpression(new ExprBuilder()) : trueExpression;
+    const falseExpr =
+      typeof falseExpression === 'function' ? falseExpression(new ExprBuilder()) : falseExpression;
+
+    // Generate proper if-then-else block (AppleScript doesn't support inline conditionals)
+    return this.ifThenElse(
+      cond,
+      (then_) => then_.setExpression(variable, trueExpr),
+      (else_) => else_.setExpression(variable, falseExpr),
+    ) as ScriptBuilder<TNewVar>;
+  }
+
+  /**
+   * Append to list using ternary operator pattern with if-then-else block.
+   * Combines setEndRaw with conditional logic for ultra-concise syntax.
+   *
+   * Generates an if-then-else block that conditionally appends to the list.
+   *
+   * @param listVariable - Name of the list to append to
+   * @param condition - Condition to evaluate (string or ExprBuilder callback)
+   * @param trueExpression - Expression to append if condition is true
+   * @param falseExpression - Expression to append if condition is false
+   *
+   * @example
+   * // Conditionally append different values
+   * .set('results', [])
+   * .forEach('item', 'every file of desktop', (loop) =>
+   *   loop.setEndTernary('results',
+   *     (e) => e.gt(e.property('item', 'size'), 1000000),
+   *     '"large"',
+   *     '"small"'
+   *   )
+   * )
+   *
+   * @example
+   * // With complex expressions
+   * .setEndTernary('emails',
+   *   'count of email addresses of person > 0',
+   *   'value of item 1 of email addresses of person',
+   *   'missing value'
+   * )
+   */
+  setEndTernary(
+    listVariable: string,
+    condition: string | ((e: ExprBuilder) => string),
+    trueExpression: string | ((e: ExprBuilder) => string),
+    falseExpression: string | ((e: ExprBuilder) => string),
+  ): ScriptBuilder {
+    const cond = typeof condition === 'function' ? condition(new ExprBuilder()) : condition;
+    const trueExpr =
+      typeof trueExpression === 'function' ? trueExpression(new ExprBuilder()) : trueExpression;
+    const falseExpr =
+      typeof falseExpression === 'function' ? falseExpression(new ExprBuilder()) : falseExpression;
+
+    // Generate proper if-then-else block (AppleScript doesn't support inline conditionals)
+    return this.ifThenElse(
+      cond,
+      (then_) => then_.setEndRaw(listVariable, trueExpr),
+      (else_) => else_.setEndRaw(listVariable, falseExpr),
+    );
+  }
+
+  /**
+   * Set variable to first item of collection or default value if collection is empty.
+   * Ultra-shorthand for the common "first or default" pattern.
+   *
+   * Automatically generates an if-then-else block that checks the collection count and sets the variable accordingly.
+   *
+   * @template TNewVar - The variable name (inferred from first parameter)
+   * @param variable - Variable name to set (will be added to scope)
+   * @param collection - Collection expression to get first item from
+   * @param defaultValue - Value to use if collection is empty (default: 'missing value')
+   *
+   * @example
+   * // Get first email or missing value
+   * .setFirstOf('personEmail', (e) => e.property('aPerson', 'emails'))
+   *
+   * @example
+   * // Get first email or custom default
+   * .setFirstOf('personEmail', (e) => e.property('aPerson', 'emails'), '"no-email@example.com"')
+   *
+   * @example
+   * // With string expression
+   * .setFirstOf('personEmail', 'emails of aPerson', 'missing value')
+   *
+   * @example
+   * // Replaces verbose pattern:
+   * // .setTernary('personEmail',
+   * //   (e) => e.gt(e.count(e.property('aPerson', 'emails')), 0),
+   * //   (e) => e.valueOfItem(1, e.property('aPerson', 'emails')),
+   * //   'missing value'
+   * // )
+   */
+  setFirstOf<TNewVar extends string>(
+    variable: TNewVar,
+    collection: string | ((e: ExprBuilder) => string),
+    defaultValue: string | ((e: ExprBuilder) => string) = 'missing value',
+  ): ScriptBuilder<TNewVar> {
+    const coll = typeof collection === 'function' ? collection(new ExprBuilder()) : collection;
+    const defaultVal =
+      typeof defaultValue === 'function' ? defaultValue(new ExprBuilder()) : defaultValue;
+
+    // Generate proper if-then-else block (AppleScript doesn't support inline conditionals)
+    return this.ifThenElse(
+      `count of ${coll} > 0`,
+      (then_) => then_.setExpression(variable, `value of item 1 of ${coll}`),
+      (else_) => else_.setExpression(variable, defaultVal),
+    ) as ScriptBuilder<TNewVar>;
+  }
+
+  /**
+   * Append first item of collection or default value to a list.
+   * Ultra-shorthand for the common "first or default" pattern in list building.
+   *
+   * Automatically generates an if-then-else block that checks the collection count and appends to the list accordingly.
+   *
+   * @param listVariable - Name of the list to append to
+   * @param collection - Collection expression to get first item from
+   * @param defaultValue - Value to use if collection is empty (default: 'missing value')
+   *
+   * @example
+   * // Build list of first emails
+   * .forEach('person', 'every person', (loop) =>
+   *   loop.setEndFirstOf('emails', (e) => e.property('person', 'email addresses'))
+   * )
+   *
+   * @example
+   * // With custom default
+   * .setEndFirstOf('results', 'items of record', '""')
+   */
+  setEndFirstOf(
+    listVariable: string,
+    collection: string | ((e: ExprBuilder) => string),
+    defaultValue: string | ((e: ExprBuilder) => string) = 'missing value',
+  ): ScriptBuilder {
+    const coll = typeof collection === 'function' ? collection(new ExprBuilder()) : collection;
+    const defaultVal =
+      typeof defaultValue === 'function' ? defaultValue(new ExprBuilder()) : defaultValue;
+
+    // Generate proper if-then-else block (AppleScript doesn't support inline conditionals)
+    return this.ifThenElse(
+      `count of ${coll} > 0`,
+      (then_) => then_.setEndRaw(listVariable, `value of item 1 of ${coll}`),
+      (else_) => else_.setEndRaw(listVariable, defaultVal),
+    );
+  }
+
+  /**
+   * Set variable to property value if it exists, otherwise use default value.
+   * Ultra-shorthand for the common "take if exists or default" pattern.
+   *
+   * Automatically generates an if-then-else block that checks if the property exists
+   * and sets the variable accordingly, with optional type conversion.
+   *
+   * @template TNewVar - The variable name (inferred from first parameter)
+   * @param variable - Variable name to set (will be added to scope)
+   * @param property - Property expression to check and retrieve
+   * @param defaultValue - Value to use if property doesn't exist (default: 'missing value')
+   * @param asType - Optional type to convert property to (e.g., 'string', 'integer')
+   *
+   * @example
+   * // Get birth date as string or missing value
+   * .setIfExists('personBirthday',
+   *   (e) => e.property('aPerson', 'birth date'),
+   *   'missing value',
+   *   'string'
+   * )
+   *
+   * @example
+   * // Simpler syntax with string expression
+   * .setIfExists('personBirthday', 'birth date of aPerson', 'missing value', 'string')
+   *
+   * @example
+   * // Without type conversion
+   * .setIfExists('personNote', 'note of aPerson', '""')
+   *
+   * @example
+   * // Replaces verbose pattern:
+   * // .setTernary('personBirthday',
+   * //   (e) => e.exists(e.property('aPerson', 'birth date')),
+   * //   (e) => e.asType(e.property('aPerson', 'birth date'), 'string'),
+   * //   'missing value'
+   * // )
+   */
+  setIfExists<TNewVar extends string>(
+    variable: TNewVar,
+    property: string | ((e: ExprBuilder) => string),
+    defaultValue: string | ((e: ExprBuilder) => string) = 'missing value',
+    asType?: string,
+  ): ScriptBuilder<TNewVar> {
+    const prop = typeof property === 'function' ? property(new ExprBuilder()) : property;
+    const defaultVal =
+      typeof defaultValue === 'function' ? defaultValue(new ExprBuilder()) : defaultValue;
+
+    // Build the value expression with optional type conversion
+    const valueExpr = asType ? `${prop} as ${asType}` : prop;
+
+    // Generate proper if-then-else block
+    return this.ifThenElse(
+      `exists ${prop}`,
+      (then_) => then_.setExpression(variable, valueExpr),
+      (else_) => else_.setExpression(variable, defaultVal),
+    ) as ScriptBuilder<TNewVar>;
+  }
+
+  /**
+   * Append property value to list if it exists, otherwise append default value.
+   * Ultra-shorthand for the common "take if exists or default" pattern in list building.
+   *
+   * Automatically generates an if-then-else block that checks if the property exists
+   * and appends to the list accordingly, with optional type conversion.
+   *
+   * @param listVariable - Name of the list to append to
+   * @param property - Property expression to check and retrieve
+   * @param defaultValue - Value to use if property doesn't exist (default: 'missing value')
+   * @param asType - Optional type to convert property to (e.g., 'string', 'integer')
+   *
+   * @example
+   * // Build list of birth dates
+   * .forEach('person', 'every person', (loop) =>
+   *   loop.setEndIfExists('dates', 'birth date of person', '""', 'string')
+   * )
+   *
+   * @example
+   * // With ExprBuilder
+   * .setEndIfExists('notes',
+   *   (e) => e.property('contact', 'note'),
+   *   'missing value'
+   * )
+   */
+  setEndIfExists(
+    listVariable: string,
+    property: string | ((e: ExprBuilder) => string),
+    defaultValue: string | ((e: ExprBuilder) => string) = 'missing value',
+    asType?: string,
+  ): ScriptBuilder {
+    const prop = typeof property === 'function' ? property(new ExprBuilder()) : property;
+    const defaultVal =
+      typeof defaultValue === 'function' ? defaultValue(new ExprBuilder()) : defaultValue;
+
+    // Build the value expression with optional type conversion
+    const valueExpr = asType ? `${prop} as ${asType}` : prop;
+
+    // Generate proper if-then-else block
+    return this.ifThenElse(
+      `exists ${prop}`,
+      (then_) => then_.setEndRaw(listVariable, valueExpr),
+      (else_) => else_.setEndRaw(listVariable, defaultVal),
+    );
+  }
+
   setProperty(variable: string, property: string, value: AppleScriptValue): ScriptBuilder {
     this.script.push(
       `${this.getIndentation()}set ${property} of ${variable} to ${this.formatValue(value)}`,
