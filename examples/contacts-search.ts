@@ -24,60 +24,20 @@ async function searchContacts(
 
   const searchScript = createScript()
     .tell('Contacts')
-    // First, get the filtered list of contacts
-    .setExpression('matchingPeople', searchExpression)
-    .set('results', [])
-    .set('counter', 0)
-    // Then iterate through the filtered list with limit
-    .forEachUntil(
+    .mapToJson(
       'aPerson',
-      'matchingPeople',
-      (e) => e.gte('counter', maxResults),
-      (b) =>
-        b.increment('counter').tryCatch(
-          (tryBlock) =>
-            tryBlock
-              // Handle optional email field
-              .ifThenElse(
-                (e) => e.gt(e.count(e.property('aPerson', 'emails')), 0),
-                (then_) =>
-                  then_.setExpression('personEmail', (e) =>
-                    e.valueOfItem(1, e.property('aPerson', 'emails')),
-                  ),
-                (else_) => else_.set('personEmail', 'missing value'),
-              )
-              // Handle optional phone field using ExprBuilder
-              .ifThenElse(
-                (e) => e.gt(e.count(e.property('aPerson', 'phones')), 0),
-                (then_) =>
-                  then_.setExpression('personPhone', (e) =>
-                    e.valueOfItem(1, e.property('aPerson', 'phones')),
-                  ),
-                (else_) => else_.set('personPhone', 'missing value'),
-              )
-              // Build contact record
-              .setEndRecord('results', {
-                id: 'id of aPerson',
-                name: 'name of aPerson',
-                firstName: 'first name of aPerson',
-                lastName: 'last name of aPerson',
-                organization: 'organization of aPerson',
-                email: 'personEmail',
-                phone: 'personPhone',
-              }),
-          (catchBlock) => catchBlock.comment('Skip contacts with errors'),
-        ),
+      searchExpression,
+      {
+        id: 'id',
+        name: 'name',
+        firstName: 'first name',
+        lastName: 'last name',
+        organization: 'organization',
+        email: { property: 'emails', firstOf: true },
+        phone: { property: 'phones', firstOf: true },
+      },
+      { limit: maxResults, skipErrors: true },
     )
-    // Return as JSON for clean parsing
-    .returnAsJson('results', {
-      id: 'id',
-      name: 'name',
-      firstName: 'firstName',
-      lastName: 'lastName',
-      organization: 'organization',
-      email: 'email',
-      phone: 'phone',
-    })
     .endtell();
 
   // Write generated script to output directory
@@ -157,43 +117,17 @@ async function demonstrateContactSearch() {
 
   const advancedScript = createScript()
     .tell('Contacts')
-    .setExpression(
-      'matchingPeople',
-      'every person whose name contains "John" and organization contains "UNiDAYS"',
-    )
-    .set('results', [])
-    .set('counter', 0)
-    .forEachUntil(
+    .mapToJson(
       'aPerson',
-      'matchingPeople',
-      (e) => e.gte('counter', 10),
-      (b) =>
-        b.increment('counter').tryCatch(
-          (tryBlock) =>
-            tryBlock
-              .ifThenElse(
-                (e) => e.gt(e.count(e.property('aPerson', 'emails')), 0),
-                (then_) =>
-                  then_.setExpression('personEmail', (e) =>
-                    e.valueOfItem(1, e.property('aPerson', 'emails')),
-                  ),
-                (else_) => else_.set('personEmail', 'missing value'),
-              )
-              .setEndRecord('results', {
-                name: 'name of aPerson',
-                organization: 'organization of aPerson',
-                jobTitle: 'job title of aPerson',
-                email: 'personEmail',
-              }),
-          (catchBlock) => catchBlock.comment('Skip contacts with errors'),
-        ),
+      'every person whose name contains "John" and organization contains "UNiDAYS"',
+      {
+        name: 'name',
+        organization: 'organization',
+        jobTitle: 'job title',
+        email: { property: 'emails', firstOf: true },
+      },
+      { limit: 10, skipErrors: true },
     )
-    .returnAsJson('results', {
-      name: 'name',
-      organization: 'organization',
-      jobTitle: 'jobTitle',
-      email: 'email',
-    })
     .endtell();
 
   writeFileSync('examples/output/contacts-search-advanced.applescript', advancedScript.build());

@@ -96,11 +96,14 @@ if (result.success) {
   - Built-in type conversion support via `asType` parameter
   - Reduces boilerplate when handling optional fields
   - Perfect for extracting data from macOS applications with optional properties
-- **Ultra-Shorthand Collection Mapping**: New `mapToJson()` method for one-line collection-to-JSON conversion
-  - Reduces ~30 lines of code to a single method call
-  - Handles initialization, iteration, property extraction, error handling, and JSON conversion
+- **Ultra-Shorthand Collection Mapping with Field Transformations**: Enhanced `mapToJson()` method with `PropertyExtractor` support
+  - **Field-level transformations**: `firstOf` for multi-value fields, `ifExists` for optional properties
+  - **Backward compatible**: Simple string properties still work as before
+  - Reduces ~40 lines of collection mapping code to a single method call (62.5% reduction)
+  - Handles initialization, iteration, property extraction, field transformations, error handling, and JSON conversion
   - Supports limit, until, while, and skipErrors options
-  - Perfect for extracting structured data from macOS applications
+  - Perfect for extracting structured data from macOS applications with complex field requirements
+  - Example: Extract contacts with first email/phone and optional birthday in one call
 - **Smart Property Picking**: New `pickEndRecord()` method with intelligent expression detection
   - Automatically detects simple properties vs complex expressions
   - Simple properties get "of source" appended automatically
@@ -658,6 +661,8 @@ The method detects complex expressions by checking for AppleScript keywords:
 
 The `mapToJson()` method is the ultimate shorthand for the common pattern of iterating over a collection, extracting properties, and converting to JSON.
 
+#### Basic Usage with Simple Properties
+
 ```typescript
 import { createScript, runScript } from 'applescript-node';
 
@@ -698,6 +703,146 @@ if (result.success) {
   console.log(`Retrieved ${notes.length} notes`);
   notes.forEach((note) => console.log(`- ${note.name}`));
 }
+```
+
+#### Advanced Field Transformations with PropertyExtractor
+
+The enhanced `mapToJson()` now supports field-level transformations using `PropertyExtractor` objects. This eliminates the need for manual property extraction and conditional logic.
+
+**PropertyExtractor Interface:**
+
+```typescript
+interface PropertyExtractor {
+  property: string | ((e: ExprBuilder) => string);
+  firstOf?: boolean; // Get first item from collection or default
+  ifExists?: boolean; // Check if property exists before accessing
+  asType?: string; // Convert property to specified type
+  default?: string | ((e: ExprBuilder) => string); // Default value
+}
+```
+
+**Example: Extracting Contacts with Optional Fields**
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+// Extract contacts with smart handling of optional/multi-value fields
+const contactsScript = createScript()
+  .tell('Contacts')
+  .mapToJson(
+    'aPerson',
+    'every person',
+    {
+      // Simple properties (used as-is)
+      id: 'id',
+      name: 'name',
+      firstName: 'first name',
+      lastName: 'last name',
+      organization: 'organization',
+      jobTitle: 'job title',
+
+      // PropertyExtractor: Get first email or default to missing value
+      email: {
+        property: (e) => e.property('aPerson', 'emails'),
+        firstOf: true,
+      },
+
+      // PropertyExtractor: Get first phone with string property syntax
+      phone: {
+        property: 'phones',
+        firstOf: true,
+      },
+
+      // PropertyExtractor: Check if birthday exists and convert to string
+      birthday: {
+        property: 'birth date',
+        ifExists: true,
+        asType: 'string',
+      },
+
+      isCompany: 'company',
+    },
+    { limit: 50, skipErrors: true },
+  )
+  .endtell();
+
+const result = await runScript(contactsScript);
+if (result.success) {
+  const contacts = result.output; // Automatically parsed as JSON
+  console.log(`Retrieved ${contacts.length} contacts`);
+}
+```
+
+**What This Does Behind the Scenes:**
+
+For fields with `PropertyExtractor`:
+
+1. **firstOf**: Generates code to check if collection has items, gets first item's value, or uses default
+2. **ifExists**: Generates code to check if property exists before accessing, with optional type conversion
+3. Stores transformed values in temporary variables
+4. Uses temp variables in final record construction
+
+**Comparison - Before vs After:**
+
+```typescript
+// BEFORE: Manual extraction (~40 lines)
+const oldScript = createScript()
+  .tell('Contacts')
+  .set('contactsList', [])
+  .set('counter', 0)
+  .forEachUntil(
+    'aPerson',
+    'every person',
+    (e) => e.gt('counter', 50),
+    (b) =>
+      b.increment('counter').tryCatch(
+        (tryBlock) =>
+          tryBlock
+            // Manual firstOf for email
+            .setFirstOf('personEmail', (e) => e.property('aPerson', 'emails'), 'missing value')
+            // Manual firstOf for phone
+            .setFirstOf('personPhone', (e) => e.property('aPerson', 'phones'), 'missing value')
+            // Manual ifExists for birthday
+            .setIfExists(
+              'personBirthday',
+              (e) => e.property('aPerson', 'birth date'),
+              'missing value',
+              'string',
+            )
+            // Build record manually
+            .setEndRecord('contactsList', {
+              id: 'id of aPerson',
+              name: 'name of aPerson',
+              email: 'personEmail',
+              phone: 'personPhone',
+              birthday: 'personBirthday',
+              // ... more fields
+            }),
+        (catchBlock) => catchBlock.comment('Skip contacts with errors'),
+      ),
+  )
+  .returnAsJson('contactsList', {
+    /* all field mappings */
+  })
+  .endtell();
+
+// AFTER: PropertyExtractor (~15 lines - 62.5% reduction!)
+const newScript = createScript()
+  .tell('Contacts')
+  .mapToJson(
+    'aPerson',
+    'every person',
+    {
+      id: 'id',
+      name: 'name',
+      email: { property: (e) => e.property('aPerson', 'emails'), firstOf: true },
+      phone: { property: 'phones', firstOf: true },
+      birthday: { property: 'birth date', ifExists: true, asType: 'string' },
+      // ... more fields
+    },
+    { limit: 50, skipErrors: true },
+  )
+  .endtell();
 ```
 
 **Advanced Options:**
@@ -1225,11 +1370,14 @@ The ScriptBuilder provides a rich set of methods for constructing AppleScript co
 
 #### Collection and JSON Operations
 
-- `mapToJson(itemVariable: string, collection: string, properties: Record<string, string>, options?: MapToJsonOptions): ScriptBuilder` - Ultra-shorthand for collection-to-JSON conversion
-  - Handles initialization, iteration, property extraction, error handling, and JSON conversion in one call
+- `mapToJson(itemVariable: string, collection: string, properties: Record<string, string | PropertyExtractor>, options?: MapToJsonOptions): ScriptBuilder` - Ultra-shorthand for collection-to-JSON conversion with field transformations
+  - Handles initialization, iteration, property extraction, field transformations, error handling, and JSON conversion in one call
+  - Properties can be simple strings or `PropertyExtractor` objects for advanced transformations
+  - PropertyExtractor supports: `firstOf` (get first item from collection), `ifExists` (check existence), `asType` (type conversion), `default` (default value)
   - Options: `{ limit?, until?, while?, skipErrors? }`
-  - Reduces ~30 lines of code to a single method call
+  - Reduces ~40 lines of code to a single method call (62.5% reduction)
   - Returns properly formatted JSON array string
+  - Backward compatible: simple string properties work as before
 
 #### Utility Methods
 

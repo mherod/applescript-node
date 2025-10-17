@@ -550,6 +550,261 @@ end if
 - Built-in type conversion reduces boilerplate
 - Integrates seamlessly with other builder methods
 
+### Enhanced mapToJson() with PropertyExtractor
+
+The `mapToJson()` method now supports field-level transformations using `PropertyExtractor` objects. This eliminates the need for manual property extraction loops and dramatically simplifies collection mapping code.
+
+**PropertyExtractor Interface:**
+
+```typescript
+interface PropertyExtractor {
+  property: string | ((e: ExprBuilder) => string);
+  firstOf?: boolean; // Get first item from collection or default
+  ifExists?: boolean; // Check if property exists before accessing
+  asType?: string; // Convert property to specified type
+  default?: string | ((e: ExprBuilder) => string); // Default value
+}
+```
+
+**Basic Usage - Backward Compatible:**
+
+```typescript
+// Simple string properties (same as before)
+const script = createScript()
+  .tell('Notes')
+  .mapToJson(
+    'aNote',
+    'every note',
+    {
+      id: 'id',
+      name: 'name',
+      content: 'plaintext',
+    },
+    { limit: 10, skipErrors: true },
+  )
+  .endtell();
+```
+
+**Advanced Usage - PropertyExtractor with Field Transformations:**
+
+```typescript
+// Extract contacts with complex field requirements
+const script = createScript()
+  .tell('Contacts')
+  .mapToJson(
+    'aPerson',
+    'every person',
+    {
+      // Simple properties (used as-is)
+      id: 'id',
+      name: 'name',
+      firstName: 'first name',
+      lastName: 'last name',
+      organization: 'organization',
+
+      // PropertyExtractor: Get first email from collection
+      email: {
+        property: (e) => e.property('aPerson', 'emails'),
+        firstOf: true,
+        default: 'missing value',
+      },
+
+      // PropertyExtractor: String property syntax
+      phone: {
+        property: 'phones',
+        firstOf: true,
+      },
+
+      // PropertyExtractor: Optional field with type conversion
+      birthday: {
+        property: 'birth date',
+        ifExists: true,
+        asType: 'string',
+        default: 'missing value',
+      },
+
+      isCompany: 'company',
+    },
+    { limit: 50, skipErrors: true },
+  )
+  .endtell();
+```
+
+**How It Works Internally:**
+
+For each PropertyExtractor field, mapToJson():
+
+1. Generates a temporary variable (e.g., `__temp_email`)
+2. Calls `setFirstOf()` if `firstOf: true` is specified
+3. Calls `setIfExists()` if `ifExists: true` is specified
+4. Stores the transformed value in the temp variable
+5. Uses the temp variable in the final record construction
+
+**Comparison - Before vs After:**
+
+```typescript
+// BEFORE: Manual extraction (~40 lines)
+const oldScript = createScript()
+  .tell('Contacts')
+  .set('contactsList', [])
+  .set('counter', 0)
+  .forEachUntil(
+    'aPerson',
+    'every person',
+    (e) => e.gt('counter', 50),
+    (b) =>
+      b.increment('counter').tryCatch(
+        (tryBlock) =>
+          tryBlock
+            // Manual firstOf for email
+            .setFirstOf('personEmail', (e) => e.property('aPerson', 'emails'), 'missing value')
+            // Manual firstOf for phone
+            .setFirstOf('personPhone', (e) => e.property('aPerson', 'phones'), 'missing value')
+            // Manual ifExists for birthday
+            .setIfExists(
+              'personBirthday',
+              (e) => e.property('aPerson', 'birth date'),
+              'missing value',
+              'string',
+            )
+            // Build record manually
+            .setEndRecord('contactsList', {
+              id: 'id of aPerson',
+              name: 'name of aPerson',
+              firstName: 'first name of aPerson',
+              lastName: 'last name of aPerson',
+              organization: 'organization of aPerson',
+              email: 'personEmail',
+              phone: 'personPhone',
+              birthday: 'personBirthday',
+              isCompany: 'company of aPerson',
+            }),
+        (catchBlock) => catchBlock.comment('Skip contacts with errors'),
+      ),
+  )
+  .returnAsJson('contactsList', {
+    id: 'id',
+    name: 'name',
+    firstName: 'firstName',
+    lastName: 'lastName',
+    organization: 'organization',
+    email: 'email',
+    phone: 'phone',
+    birthday: 'birthday',
+    isCompany: 'isCompany',
+  })
+  .endtell();
+
+// AFTER: PropertyExtractor (~15 lines - 62.5% reduction!)
+const newScript = createScript()
+  .tell('Contacts')
+  .mapToJson(
+    'aPerson',
+    'every person',
+    {
+      id: 'id',
+      name: 'name',
+      firstName: 'first name',
+      lastName: 'last name',
+      organization: 'organization',
+      email: { property: (e) => e.property('aPerson', 'emails'), firstOf: true },
+      phone: { property: 'phones', firstOf: true },
+      birthday: { property: 'birth date', ifExists: true, asType: 'string' },
+      isCompany: 'company',
+    },
+    { limit: 50, skipErrors: true },
+  )
+  .endtell();
+```
+
+**PropertyExtractor Options:**
+
+- **firstOf**: Checks if collection has items, gets `value of item 1`, or uses default
+  - Generates: `if count of <property> > 0 then ... else ...`
+  - Perfect for multi-value fields like emails, phones, addresses
+- **ifExists**: Checks if property exists before accessing
+  - Generates: `if exists <property> then ... else ...`
+  - Optional type conversion via `asType` parameter
+  - Perfect for optional fields like birth dates, notes, custom fields
+- **asType**: Converts property to specified AppleScript type
+  - Example: `asType: 'string'` generates `as string`
+  - Works with both firstOf and ifExists
+- **default**: Default value if property missing or collection empty
+  - Can be string literal or ExprBuilder callback
+  - Defaults to `'missing value'` if not specified
+
+**Generated AppleScript Example:**
+
+For the contacts example above, mapToJson() generates approximately:
+
+```applescript
+tell application "Contacts"
+  set __collected_items to {}
+  set __counter to 0
+  repeat with aPerson in every person
+    if __counter >= 50 then
+      exit repeat
+    end if
+    set __counter to __counter + 1
+
+    -- firstOf transformation for email
+    if count of emails of aPerson > 0 then
+      set __temp_email to value of item 1 of emails of aPerson
+    else
+      set __temp_email to missing value
+    end if
+
+    -- firstOf transformation for phone
+    if count of phones > 0 then
+      set __temp_phone to value of item 1 of phones
+    else
+      set __temp_phone to missing value
+    end if
+
+    -- ifExists transformation for birthday
+    if exists birth date then
+      set __temp_birthday to birth date as string
+    else
+      set __temp_birthday to missing value
+    end if
+
+    try
+      set end of __collected_items to {
+        id:id of aPerson,
+        name:name of aPerson,
+        firstName:first name of aPerson,
+        lastName:last name of aPerson,
+        organization:organization of aPerson,
+        email:__temp_email of aPerson,
+        phone:__temp_phone of aPerson,
+        birthday:__temp_birthday of aPerson,
+        isCompany:company of aPerson
+      }
+    on error
+      -- Skip items with errors
+    end try
+  end repeat
+
+  -- JSON conversion code...
+  return jsonArray
+end tell
+```
+
+**Key Benefits:**
+
+- **62.5% code reduction**: From ~40 lines to ~15 lines
+- **Declarative syntax**: Describes what you want, not how to get it
+- **Type-safe**: Full TypeScript support with PropertyExtractor interface
+- **Backward compatible**: Simple string properties work as before
+- **Self-documenting**: Field transformations clearly specified inline
+- **Leverages existing methods**: Uses battle-tested `setFirstOf()` and `setIfExists()` internally
+- **Consistent behavior**: Same transformation logic across all usages
+- **Reduces bugs**: Less manual loop/conditional code to maintain
+
+**Real-World Example - See `examples/contacts-automation.ts`:**
+
+The contacts example demonstrates a realistic use case: extracting contact data with a mix of required fields, multi-value fields (emails, phones), and optional fields (birthday). The PropertyExtractor approach reduces the code from ~40 lines to ~15 lines while maintaining clarity and type safety.
+
 ### Type-Safe Expressions with ExprBuilder
 
 `ExprBuilder` provides type-safe expression building with autocomplete:

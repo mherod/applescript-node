@@ -12,6 +12,7 @@ interface Note {
 }
 
 async function getLatestNotesAsJson(): Promise<Note[]> {
+  // ALWAYS KEEP THE TYPE IN THE PROMISE<TYPE>
   // Ultra-concise! mapToJson handles iteration, property extraction, error handling, and JSON conversion
   const notesScript = createScript()
     .tell('Notes')
@@ -19,20 +20,39 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
       'aNote',
       'every note',
       {
+        // Simple properties
         id: 'id',
         name: 'name',
         content: 'plaintext',
-        created: 'creation date of aNote as string',
-        modified: 'modification date of aNote as string',
-        shared: 'shared',
-        passwordProtected: 'password protected',
+        // PropertyExtractor: Optional fields with type conversion
+        created: {
+          property: (e) => e.property('aNote', 'creation date'),
+          ifExists: true,
+          asType: 'string',
+        },
+        modified: {
+          property: (e) => e.property('aNote', 'modification date'),
+          ifExists: true,
+          asType: 'string',
+        },
+        shared: {
+          property: 'shared',
+          asType: 'boolean' as const,
+        },
+        passwordProtected: {
+          property: (e) => e.property('aNote', 'password protected'),
+          ifExists: true,
+          asType: 'boolean' as const,
+        },
       },
       { limit: 10, skipErrors: true },
     )
     .endtell();
 
+  const builtScript = notesScript.build();
+
   // Write generated script to output directory
-  writeFileSync('examples/output/notes-latest-json.applescript', notesScript.build());
+  writeFileSync('examples/output/notes-latest-json.applescript', builtScript);
 
   const result = await runScript(notesScript);
 
@@ -40,8 +60,8 @@ async function getLatestNotesAsJson(): Promise<Note[]> {
     throw new Error(`Failed to fetch notes: ${result.error}`);
   }
 
-  // Parse JSON output directly (AppleScript generates JSON via returnAsJson())
-  return JSON.parse(String(result.output)) as Note[];
+  // The output is automatically parsed from JSON by runScript
+  return result.output; // DO NOT CAST BECAUSE IT SHOULD BE ALREADY THE CORRECT TYPE
 }
 
 // Main execution

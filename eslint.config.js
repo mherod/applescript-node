@@ -128,6 +128,9 @@ export default [
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-unnecessary-type-arguments': 'off',
       '@typescript-eslint/use-unknown-in-catch-callback-variable': 'off',
+      '@typescript-eslint/consistent-type-assertions': ['error', {
+        assertionStyle: 'never',
+      }],
     },
   },
   {

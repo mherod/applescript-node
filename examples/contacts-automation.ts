@@ -55,73 +55,54 @@ async function demonstrateContactsAutomation() {
       ),
     );
 
+    // Ultra-concise with enhanced mapToJson() - replaces ~40 lines with ~15!
     const contactsScript = createScript()
       .tell('Contacts')
-      .set('contactsList', [])
-      .set('counter', 0)
-      // Use forEachUntil for cleaner iteration with built-in break condition
-      .forEachUntil(
+      .mapToJson(
         'aPerson',
         'every person',
-        (e) => e.gt('counter', contactsToFetch),
-        (b) =>
-          b.increment('counter').tryCatch(
-            (tryBlock) =>
-              tryBlock
-                // Handle optional email field using first-or-default pattern
-                .setFirstOf('personEmail', (e) => e.property('aPerson', 'emails'), 'missing value')
-                // Handle optional phone field using first-or-default pattern
-                .setFirstOf('personPhone', (e) => e.property('aPerson', 'phones'), 'missing value')
-                // Handle optional birthday field using if-exists pattern
-                .setIfExists(
-                  'personBirthday',
-                  (e) => e.property('aPerson', 'birth date'),
-                  'missing value',
-                  'string',
-                )
-                // Build contact record (mix of properties and variables)
-                .setEndRecord('contactsList', {
-                  id: 'id of aPerson',
-                  name: 'name of aPerson',
-                  firstName: 'first name of aPerson',
-                  lastName: 'last name of aPerson',
-                  organization: 'organization of aPerson',
-                  jobTitle: 'job title of aPerson',
-                  email: 'personEmail',
-                  phone: 'personPhone',
-                  birthday: 'personBirthday',
-                  isCompany: 'company of aPerson',
-                }),
-            (catchBlock) => catchBlock.comment('Skip contacts with errors'),
-          ),
+        {
+          id: 'id',
+          name: 'name',
+          firstName: 'first name',
+          lastName: 'last name',
+          organization: 'organization',
+          jobTitle: 'job title',
+          // Advanced field extractors (NEW!)
+          email: {
+            property: (e) => e.property('aPerson', 'emails'),
+            firstOf: true,
+            asType: 'string' as const,
+          },
+          phone: {
+            property: (e) => e.property('aPerson', 'phones'),
+            firstOf: true,
+            asType: 'string' as const,
+          },
+          birthday: {
+            property: (e) => e.property('aPerson', 'birth date'),
+            ifExists: true,
+            asType: 'string' as const,
+          },
+          isCompany: 'company',
+        },
+        { limit: contactsToFetch, skipErrors: true },
       )
-      // Return contacts as JSON for clean parsing
-      .returnAsJson('contactsList', {
-        id: 'id',
-        name: 'name',
-        firstName: 'firstName',
-        lastName: 'lastName',
-        organization: 'organization',
-        jobTitle: 'jobTitle',
-        email: 'email',
-        phone: 'phone',
-        birthday: 'birthday',
-        isCompany: 'isCompany',
-      })
       .endtell();
 
+    const builtScript = contactsScript.build();
+
     // Write generated script to output directory
-    writeFileSync('examples/output/contacts-list.applescript', contactsScript.build());
+    writeFileSync('examples/output/contacts-list.applescript', builtScript);
 
     console.log(chalk.gray('Validating script...'));
-    const contactsValidation = validator.validate(contactsScript.build());
+    const contactsValidation = validator.validate(builtScript);
     if (contactsValidation.warnings.length > 0) {
       console.log(chalk.yellow(`⚠ ${contactsValidation.warnings.length} validation warnings`));
     }
 
     const contactsResult = await runScript(contactsScript);
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime safety check for script execution
     if (contactsResult.success && contactsResult.output) {
       // The output is automatically parsed from JSON by runScript
       const contacts = contactsResult.output;

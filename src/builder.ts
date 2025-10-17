@@ -452,16 +452,17 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * - Creating temporary collection list
    * - Iterating through items (with optional limit/condition)
    * - Extracting properties with smart detection (simple vs complex expressions)
+   * - Field-level transformations (firstOf, ifExists, type conversion)
    * - Error handling (skip failed items)
    * - JSON serialization and return
    *
    * @param itemVariable Loop variable name (e.g., 'aNote')
    * @param collection Collection to iterate (e.g., 'every note')
-   * @param properties Mapping of JSON keys to AppleScript properties
+   * @param properties Mapping of JSON keys to AppleScript properties or PropertyExtractor objects
    * @param options Optional: limit, until/while conditions, error handling
    *
    * @example
-   * // Ultra-concise! Replaces ~20 lines of builder code
+   * // Simple properties
    * .tell('Notes')
    * .mapToJson('aNote', 'every note', {
    *   id: 'id',
@@ -470,8 +471,32 @@ export class AppleScriptBuilder implements ScriptBuilder {
    *   created: 'creation date of aNote as string',
    * }, { limit: 10, skipErrors: true })
    * .endtell()
+   *
+   * @example
+   * // Advanced field extractors (NEW!)
+   * .tell('Contacts')
+   * .mapToJson('aPerson', 'every person', {
+   *   id: 'id',
+   *   name: 'name',
+   *   email: { property: (e) => e.property('aPerson', 'emails'), firstOf: true },
+   *   phone: { property: 'phones', firstOf: true },
+   *   birthday: { property: 'birth date', ifExists: true, asType: 'string' },
+   * }, { limit: 50, skipErrors: true })
+   * .endtell()
    */
-  mapToJson<TProperties extends Record<string, string>>(
+  mapToJson<
+    TProperties extends Record<
+      string,
+      | string
+      | {
+          readonly property?: string | ((e: ExprBuilder) => string);
+          readonly firstOf?: boolean;
+          readonly ifExists?: boolean;
+          readonly asType?: string;
+          readonly default?: string | ((e: ExprBuilder) => string);
+        }
+    >,
+  >(
     itemVariable: string,
     collection: string,
     properties: TProperties,
@@ -489,15 +514,56 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
     // 2. Set up loop with optional limit/condition
     const buildBody = (b: ScriptBuilder) => {
-      const addRecord = () => b.pickEndRecord(listVar, itemVariable, properties);
+      // Process properties to separate simple strings from transformations
+      const transformedVars: Record<string, string> = {};
+      const finalPropertyMap: Record<string, string> = {};
 
+      for (const [jsonKey, propDef] of Object.entries(properties)) {
+        if (typeof propDef === 'string') {
+          // Simple string property - use directly
+          finalPropertyMap[jsonKey] = propDef;
+        } else {
+          // PropertyExtractor - needs transformation
+          if (!propDef.property) {
+            throw new ScriptBuilderError(
+              `PropertyExtractor for "${jsonKey}" must have a "property" field`,
+            );
+          }
+          const tempVarName = `__temp_${jsonKey}`;
+          const propExpr =
+            typeof propDef.property === 'function'
+              ? propDef.property(new ExprBuilder())
+              : propDef.property;
+          const defaultVal = propDef.default
+            ? typeof propDef.default === 'function'
+              ? propDef.default(new ExprBuilder())
+              : propDef.default
+            : 'missing value';
+
+          if (propDef.firstOf) {
+            // Use setFirstOf() for first-or-default pattern
+            b.setFirstOf(tempVarName, propExpr, defaultVal);
+          } else if (propDef.ifExists) {
+            // Use setIfExists() for existence check pattern
+            b.setIfExists(tempVarName, propExpr, defaultVal, propDef.asType);
+          } else {
+            // Just set the expression directly
+            b.setExpression(tempVarName, propExpr);
+          }
+
+          transformedVars[jsonKey] = tempVarName;
+          finalPropertyMap[jsonKey] = tempVarName;
+        }
+      }
+
+      // Build record using both simple properties and transformed variables
       if (options.skipErrors) {
         b.tryCatch(
-          (tryBlock) => tryBlock.pickEndRecord(listVar, itemVariable, properties),
+          (tryBlock) => tryBlock.pickEndRecord(listVar, itemVariable, finalPropertyMap),
           (catchBlock) => catchBlock.comment('Skip items with errors'),
         );
       } else {
-        addRecord();
+        b.pickEndRecord(listVar, itemVariable, finalPropertyMap);
       }
     };
 
@@ -923,8 +989,10 @@ export class AppleScriptBuilder implements ScriptBuilder {
     const recordExpressions = Object.entries(propertyMap).reduce<Record<string, string>>(
       (acc, [key, prop]) => {
         // Check if property looks like a full expression (contains AppleScript keywords)
+        // OR if it's a temp variable from PropertyExtractor (starts with __temp_)
         // If so, use as-is. Otherwise, append "of source" for shorthand.
         const isFullExpression =
+          prop.startsWith('__temp_') ||
           prop.includes(' of ') ||
           prop.includes(' where ') ||
           prop.includes(' as ') ||

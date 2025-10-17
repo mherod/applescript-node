@@ -35,36 +35,36 @@ on valueToJson(val)
 end valueToJson
 
 tell application "Contacts"
-  set contactsList to {}
-  set counter to 0
+  set __collected_items to {}
+  set __counter to 0
   repeat with aPerson in every person
-    if counter > 50 then
+    if __counter >= 50 then
       exit repeat
     end if
-    set counter to counter + 1
+    set __counter to __counter + 1
+    if count of emails of aPerson > 0 then
+      set __temp_email to value of item 1 of emails of aPerson
+    else
+      set __temp_email to missing value
+    end if
+    if count of phones of aPerson > 0 then
+      set __temp_phone to value of item 1 of phones of aPerson
+    else
+      set __temp_phone to missing value
+    end if
+    if exists birth date then
+      set __temp_birthday to birth date as string
+    else
+      set __temp_birthday to missing value
+    end if
     try
-      if count of emails of aPerson > 0 then
-        set personEmail to value of item 1 of emails of aPerson
-      else
-        set personEmail to missing value
-      end if
-      if count of phones of aPerson > 0 then
-        set personPhone to value of item 1 of phones of aPerson
-      else
-        set personPhone to missing value
-      end if
-      if exists birth date of aPerson then
-        set personBirthday to birth date of aPerson as string
-      else
-        set personBirthday to missing value
-      end if
-      set end of contactsList to {id:id of aPerson, name:name of aPerson, firstName:first name of aPerson, lastName:last name of aPerson, organization:organization of aPerson, jobTitle:job title of aPerson, email:personEmail, phone:personPhone, birthday:personBirthday, isCompany:company of aPerson}
+      set end of __collected_items to {id:id of aPerson, name:name of aPerson, firstName:first name, lastName:last name, organization:organization of aPerson, jobTitle:job title of aPerson, email:__temp_email of aPerson, phone:__temp_phone of aPerson, birthday:__temp_birthday of aPerson, isCompany:company of aPerson}
     on error
-      -- Skip contacts with errors
+      -- Skip items with errors
     end try
   end repeat
   set jsonParts to {}
-  repeat with rec in contactsList
+  repeat with rec in __collected_items
     try
       set itemJson to "{"
       set itemJson to itemJson & "\"id\":" & my valueToJson(id of rec)

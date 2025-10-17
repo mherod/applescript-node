@@ -42,8 +42,18 @@ tell application "Notes"
       exit repeat
     end if
     set __counter to __counter + 1
+    if exists creation date of aNote then
+      set __temp_created to creation date of aNote as string
+    else
+      set __temp_created to missing value
+    end if
+    if exists modification date of aNote then
+      set __temp_modified to modification date of aNote as string
+    else
+      set __temp_modified to missing value
+    end if
     try
-      set end of __collected_items to {id:id of aNote, name:name of aNote, content:plaintext of aNote, created:creation date of aNote as string, modified:modification date of aNote as string, shared:shared of aNote, passwordProtected:password protected of aNote}
+      set end of __collected_items to {id:id of aNote, name:name of aNote, content:plaintext of aNote, created:__temp_created, modified:__temp_modified, shared:shared of aNote, passwordProtected:password protected of aNote}
     on error
       -- Skip items with errors
     end try

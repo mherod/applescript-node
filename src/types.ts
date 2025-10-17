@@ -1,5 +1,14 @@
 import type { ExprBuilder } from './expressions.js';
 
+/**
+ * Utility type to expand and prettify complex types for better IDE tooltips.
+ * Forces TypeScript to display the full expanded type instead of showing type aliases.
+ * Handles arrays, objects, and primitives correctly.
+ */
+export type Prettify<T> =
+  // biome-ignore lint/style/useConsistentArrayType: Array<T> syntax required for type inference
+  T extends Array<infer U> ? Array<Prettify<U>> : T extends object ? { [K in keyof T]: T[K] } : T;
+
 // Configuration options for script execution
 export interface OsaScriptOptions {
   // The scripting language to use
@@ -10,12 +19,19 @@ export interface OsaScriptOptions {
   errorToStdout?: boolean;
 }
 
-export interface ScriptExecutionResult<T = unknown> {
-  success: boolean;
-  output: T;
-  error?: string;
-  exitCode: number;
-}
+export type ScriptExecutionResult<T = unknown> =
+  | {
+      success: true;
+      output?: Prettify<T>;
+      error?: undefined;
+      exitCode: number;
+    }
+  | {
+      success: false;
+      output?: Prettify<T>;
+      error: string;
+      exitCode: number;
+    };
 
 export interface WindowInfo {
   name: string;
@@ -45,13 +61,164 @@ export type AppleScriptValue =
   | AppleScriptValue[];
 
 /**
- * Helper type to infer the shape of objects returned by returnAsJson.
- * Converts a property map like { id: 'id', name: 'name' } to { id: unknown, name: unknown }.
- * The actual runtime values are unknown since AppleScript is dynamically typed.
+ * Map AppleScript type names to TypeScript types.
  */
-export type JsonObjectShape<T extends Record<string, string>> = {
-  [K in keyof T]: unknown;
-};
+type AppleScriptTypeToTS<T extends string> = T extends 'string'
+  ? string
+  : T extends 'text'
+    ? string
+    : T extends 'integer'
+      ? number
+      : T extends 'real'
+        ? number
+        : T extends 'number'
+          ? number
+          : T extends 'boolean'
+            ? boolean
+            : T extends 'date'
+              ? string
+              : string; // Default to string for unknown types
+
+/**
+ * Infer TypeScript type from AppleScript property name.
+ * Common boolean properties and patterns are mapped to boolean type.
+ * Pattern matching includes:
+ * - Properties ending in 'able' (capability/state)
+ * - Properties ending in 'ed' (past tense/state)
+ * - Common boolean properties
+ */
+type InferTypeFromPropertyName<T extends string> =
+  // Pattern: ends with 'able' (closeable, resizable, movable, etc.)
+  T extends `${string}able`
+    ? boolean
+    : // Pattern: ends with 'ed' (minimized, modified, titled, etc.)
+      T extends `${string}ed`
+      ? boolean
+      : // Specific common boolean properties
+        T extends
+            | 'shared'
+            | 'password protected'
+            | 'passwordProtected'
+            | 'company'
+            | 'isCompany'
+            | 'visible'
+            | 'frontmost'
+            | 'floating'
+            | 'modal'
+        ? boolean
+        : string;
+
+/**
+ * Normalize a property definition to its runtime value type.
+ * Extracts the TypeScript type from PropertyExtractor's asType field.
+ * Simple string properties infer type from property name.
+ */
+type NormalizeProperty<T> = T extends string
+  ? InferTypeFromPropertyName<T>
+  : T extends { property: unknown }
+    ? T extends { asType: infer TType extends string }
+      ? AppleScriptTypeToTS<TType>
+      : string
+    : never;
+
+/**
+ * Helper type to infer the shape of objects returned by returnAsJson and mapToJson.
+ * Intelligently infers TypeScript types from PropertyExtractor's asType field.
+ * Simple string properties default to string type.
+ *
+ * @example
+ * // Simple properties default to string
+ * type Result1 = JsonObjectShape<{ id: 'id', name: 'name' }>;
+ * // Result: { id: string, name: string }
+ *
+ * @example
+ * // PropertyExtractor without asType defaults to string
+ * type Result2 = JsonObjectShape<{
+ *   id: 'id',
+ *   email: { property: string, firstOf: true }
+ * }>;
+ * // Result: { id: string, email: string }
+ *
+ * @example
+ * // PropertyExtractor with asType infers the correct TypeScript type
+ * type Result3 = JsonObjectShape<{
+ *   name: 'name',
+ *   created: {
+ *     property: (e: ExprBuilder<never>) => string;
+ *     ifExists: true;
+ *     asType: 'string';
+ *   },
+ *   count: {
+ *     property: 'count',
+ *     asType: 'integer';
+ *   }
+ * }>;
+ * // Result: { name: string, created: string, count: number }
+ */
+export type JsonObjectShape<
+  T extends Record<
+    string,
+    | string
+    | {
+        readonly property?: string | ((e: ExprBuilder) => string);
+        readonly firstOf?: boolean;
+        readonly ifExists?: boolean;
+        readonly asType?: string;
+        readonly default?: string | ((e: ExprBuilder) => string);
+      }
+  >,
+> = Prettify<{
+  [K in keyof T]: NormalizeProperty<T[K]>;
+}>;
+
+/**
+ * Property extractor descriptor for advanced field transformations in mapToJson.
+ * Allows specifying how to extract and transform individual properties.
+ *
+ * @example
+ * // Simple string property (used as-is)
+ * { name: 'name' }
+ *
+ * @example
+ * // First item from collection or default
+ * { email: { property: (e) => e.property('aPerson', 'emails'), firstOf: true } }
+ *
+ * @example
+ * // Property with existence check and type conversion
+ * { birthday: { property: 'birth date', ifExists: true, asType: 'string' as const, default: 'missing value' } }
+ */
+export interface PropertyExtractor<TType extends string = string> {
+  /**
+   * The property expression to extract.
+   * Can be a string (e.g., 'name', 'emails') or an ExprBuilder callback.
+   */
+  property: string | ((e: ExprBuilder) => string);
+
+  /**
+   * If true, gets the first item from the collection or uses default value if empty.
+   * Uses setFirstOf() internally.
+   */
+  firstOf?: boolean;
+
+  /**
+   * If true, checks if the property exists before extracting it.
+   * Uses setIfExists() internally.
+   */
+  ifExists?: boolean;
+
+  /**
+   * Optional type conversion (e.g., 'string', 'integer', 'text').
+   * Only applies when if Exists is true.
+   * Use `as const` to preserve the literal type: asType: 'string' as const
+   */
+  asType?: TType;
+
+  /**
+   * Default value to use if property is missing or empty.
+   * Defaults to 'missing value' if not specified.
+   */
+  default?: string | ((e: ExprBuilder) => string);
+}
 
 export interface ApplicationTarget {
   name: string;
@@ -237,21 +404,54 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
    *   })
    *   .endtell();
    *
-   * // Type is inferred as: Array<{ id: unknown; name: unknown; email: unknown }>
+   * // Type is inferred as: Array<{ id: string; name: string; email: string }>
    * const result = await runScript(script);
    * result.output[0].name; // TypeScript knows 'name' exists!
    */
   returnAsJson: <TProperties extends Record<string, string>>(
     listVariable: string,
     propertyMap: TProperties,
+    // biome-ignore lint/style/useConsistentArrayType: Array<T> syntax required for type inference
   ) => ScriptBuilder<TScope, Array<JsonObjectShape<TProperties>>>;
   /**
    * Map a collection to JSON with automatic iteration, property extraction, and type inference.
    * Sets the return type to an array of objects with the shape of the properties map.
    *
+   * Supports advanced property extractors for field-level transformations:
+   * - Simple strings for direct property access
+   * - PropertyExtractor objects for firstOf, ifExists, and type conversion
+   *
    * @template TProperties - Property map type (inferred)
+   *
+   * @example
+   * // Simple properties
+   * .mapToJson('aPerson', 'every person', {
+   *   id: 'id',
+   *   name: 'name'
+   * })
+   *
+   * @example
+   * // Advanced field extractors
+   * .mapToJson('aPerson', 'every person', {
+   *   id: 'id',
+   *   name: 'name',
+   *   email: { property: (e) => e.property('aPerson', 'emails'), firstOf: true },
+   *   birthday: { property: 'birth date', ifExists: true, asType: 'string' }
+   * }, { limit: 50, skipErrors: true })
    */
-  mapToJson: <TProperties extends Record<string, string>>(
+  mapToJson: <
+    TProperties extends Record<
+      string,
+      | string
+      | {
+          readonly property?: string | ((e: ExprBuilder) => string);
+          readonly firstOf?: boolean;
+          readonly ifExists?: boolean;
+          readonly asType?: string;
+          readonly default?: string | ((e: ExprBuilder) => string);
+        }
+    >,
+  >(
     itemVariable: string,
     collection: string,
     properties: TProperties,
@@ -261,6 +461,7 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
       while?: string | ((expr: ExprBuilder<TScope>) => string);
       skipErrors?: boolean;
     },
+    // biome-ignore lint/style/useConsistentArrayType: Array<T> syntax required for type inference
   ) => ScriptBuilder<TScope, Array<JsonObjectShape<TProperties>>>;
   log: (message: string) => ScriptBuilder<TScope, TReturn>;
   comment: (text: string) => ScriptBuilder<TScope, TReturn>;

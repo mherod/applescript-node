@@ -1,6 +1,6 @@
 import { AppleScriptBuilder } from './builder.js';
 import { ScriptExecutor } from './executor.js';
-import type { OsaScriptOptions, ScriptBuilder, ScriptExecutionResult } from './types.js';
+import type { OsaScriptOptions, Prettify, ScriptBuilder, ScriptExecutionResult } from './types.js';
 
 export * from './builder.js';
 export * from './compiler.js';
@@ -22,8 +22,10 @@ export type {
   Enumerator,
   OsaScriptOptions,
   Parameter,
+  Prettify,
   ProcessInfo,
   Property,
+  PropertyExtractor,
   ScriptBuilder,
   ScriptError,
   ScriptExecutionResult,
@@ -35,19 +37,16 @@ export * from './validator.js';
 
 export const createScript = () => new AppleScriptBuilder();
 
-// Overload 1: When passing ScriptBuilder, extract and use its TReturn type
-
 export function runScript<TScope extends string, TReturn>(
   script: ScriptBuilder<TScope, TReturn>,
   options?: OsaScriptOptions,
-): Promise<ScriptExecutionResult<TReturn>>;
+): Promise<ScriptExecutionResult<Prettify<TReturn>>>;
 
-// Overload 2: When passing string, use explicit generic parameter T
 // eslint-disable-next-line no-redeclare
 export function runScript<T = string>(
   script: string,
   options?: OsaScriptOptions,
-): Promise<ScriptExecutionResult<T>>;
+): Promise<ScriptExecutionResult<Prettify<T>>>;
 
 // Implementation
 // eslint-disable-next-line no-redeclare
@@ -68,7 +67,7 @@ export async function runScript<T = string>(
         return {
           ...result,
           output: parsed,
-        };
+        } as ScriptExecutionResult<T>;
       } catch {
         // If parsing fails, return the string as-is
         // This handles cases where the string happens to start with '[' or '{' but isn't valid JSON

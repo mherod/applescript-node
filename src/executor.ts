@@ -1,6 +1,6 @@
 import { exec as execCallback } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { OsaScriptOptions, ScriptExecutionResult } from './types.js';
+import type { OsaScriptOptions, Prettify, ScriptExecutionResult } from './types.js';
 
 const exec = promisify(execCallback);
 
@@ -35,14 +35,14 @@ export class ScriptExecutor {
 
       return {
         success: true,
-        output: stdout.trim() as T,
+        output: stdout.trim() as Prettify<T>,
         exitCode: 0,
       };
     } catch (error) {
       const err = error as { message: string; code: number };
       return {
         success: false,
-        output: null as T,
+        output: null as Prettify<T>,
         error: err.message,
         exitCode: err.code || 1,
       };
@@ -61,14 +61,14 @@ export class ScriptExecutor {
 
       return {
         success: true,
-        output: stdout.trim() as T,
+        output: stdout.trim() as Prettify<T>,
         exitCode: 0,
       };
     } catch (error) {
       const err = error as { message: string; code: number };
       return {
         success: false,
-        output: null as T,
+        output: null as Prettify<T>,
         error: err.message,
         exitCode: err.code || 1,
       };

@@ -23,10 +23,10 @@ async function main() {
     .end()
     .tellApp('Calculator', (app) => {
       app.quit();
-    })
-    .build();
+    });
 
-  writeFileSync('examples/output/calculator-addition.applescript', additionScript);
+  const builtScript = additionScript.build();
+  writeFileSync('examples/output/calculator-addition.applescript', builtScript);
 
   const addResult = await runScript(additionScript);
   if (addResult.success) {
@@ -52,10 +52,10 @@ async function main() {
     .end()
     .tellApp('Calculator', (app) => {
       app.quit();
-    })
-    .build();
+    });
 
-  writeFileSync('examples/output/calculator-multiplication.applescript', multiplicationScript);
+  const builtMultiplicationScript = multiplicationScript.build();
+  writeFileSync('examples/output/calculator-multiplication.applescript', builtMultiplicationScript);
 
   const multiplyResult = await runScript(multiplicationScript);
   if (multiplyResult.success) {
@@ -84,10 +84,11 @@ async function main() {
     .end()
     .tellApp('Calculator', (app) => {
       app.quit();
-    })
-    .build();
+    });
 
-  writeFileSync('examples/output/calculator-complex.applescript', complexScript);
+  const builtComplexScript = complexScript.build();
+
+  writeFileSync('examples/output/calculator-complex.applescript', builtComplexScript);
 
   const complexResult = await runScript(complexScript);
   if (complexResult.success) {
@@ -113,10 +114,11 @@ async function main() {
     .end()
     .tellApp('Calculator', (app) => {
       app.quit();
-    })
-    .build();
+    });
 
-  writeFileSync('examples/output/calculator-subtraction.applescript', subtractionScript);
+  const builtSubtractionScript = subtractionScript.build();
+
+  writeFileSync('examples/output/calculator-subtraction.applescript', builtSubtractionScript);
 
   const subtractionResult = await runScript(subtractionScript);
   if (subtractionResult.success) {
@@ -125,21 +127,22 @@ async function main() {
     console.error(`  Error: ${subtractionResult.error}\n`);
   }
 
-  // Example 5: Get Calculator window properties (as JSON)
-  console.log('Example 5: Get Calculator Window Info (JSON output)');
+  // Example 5: Get Calculator window properties (as JSON) - using ExprBuilder
+  console.log('Example 5: Get Calculator Window Info (JSON output) - Type-Safe Expressions');
   const windowInfoScript = createScript()
     .tellApp('Calculator', (app) => {
       app.activate();
     })
     .delay(0.5)
     .tellProcess('Calculator')
-    .setExpression('winName', 'name of window 1')
-    .setExpression('positionList', 'position of window 1')
-    .setExpression('sizeList', 'size of window 1')
-    .setExpression('positionX', 'item 1 of positionList')
-    .setExpression('positionY', 'item 2 of positionList')
-    .setExpression('sizeWidth', 'item 1 of sizeList')
-    .setExpression('sizeHeight', 'item 2 of sizeList')
+    // Use ExprBuilder for type-safe expressions
+    .setExpression('winName', (e) => e.property('window 1', 'name'))
+    .setExpression('positionList', (e) => e.property('window 1', 'position'))
+    .setExpression('sizeList', (e) => e.property('window 1', 'size'))
+    .setExpression('positionX', (e) => e.item(1, 'positionList'))
+    .setExpression('positionY', (e) => e.item(2, 'positionList'))
+    .setExpression('sizeWidth', (e) => e.item(1, 'sizeList'))
+    .setExpression('sizeHeight', (e) => e.item(2, 'sizeList'))
     .end()
     .tellApp('Calculator', (app) => {
       app.quit();
@@ -150,29 +153,28 @@ async function main() {
       positionY: 'positionY',
       sizeWidth: 'sizeWidth',
       sizeHeight: 'sizeHeight',
-    })
-    .build();
+    });
 
-  writeFileSync('examples/output/calculator-window-info.applescript', windowInfoScript);
+  const builtWindowInfoScript = windowInfoScript.build();
 
-  const windowInfo = await runScript<string>(windowInfoScript);
-  if (windowInfo.success) {
-    const data = JSON.parse(windowInfo.output) as {
-      name: string;
-      positionX: number;
-      positionY: number;
-      sizeWidth: number;
-      sizeHeight: number;
-    };
-    console.log('  Window data (JSON):', data);
-    console.log(`  - Name: ${data.name}`);
-    console.log(`  - Position: (${data.positionX}, ${data.positionY})`);
-    console.log(`  - Size: ${data.sizeWidth} × ${data.sizeHeight}\n`);
-  } else {
+  writeFileSync('examples/output/calculator-window-info.applescript', builtWindowInfoScript);
+
+  const windowInfo = await runScript(windowInfoScript);
+  if (!(windowInfo.success && windowInfo.output)) {
     console.error(`  Error: ${windowInfo.error}\n`);
+    return;
   }
 
+  const windowInfoData = windowInfo.output;
+  console.log('  Window data (JSON):', JSON.stringify(windowInfoData, null, 2));
+  console.log(`  - Name: ${windowInfoData.name}`);
+  console.log(`  - Position: (${windowInfoData.positionX}, ${windowInfoData.positionY})`);
+  console.log(`  - Size: ${windowInfoData.sizeWidth} × ${windowInfoData.sizeHeight}`);
+  console.log();
+
+  console.log();
   console.log('✅ Calculator automation examples completed!');
+  console.log('📝 Note: Example 5 demonstrates ExprBuilder for type-safe expressions');
 }
 
 main().catch(console.error);
