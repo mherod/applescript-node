@@ -48,7 +48,7 @@ const typescript = {
       'error',
       { fixMixedExportsWithInlineTypeSpecifier: true },
     ],
-    '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
+    '@typescript-eslint/array-type': ['error', { default: 'array' }],
     '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
     '@typescript-eslint/restrict-template-expressions': [
       'error',
@@ -128,9 +128,12 @@ export default [
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-unnecessary-type-arguments': 'off',
       '@typescript-eslint/use-unknown-in-catch-callback-variable': 'off',
-      '@typescript-eslint/consistent-type-assertions': ['error', {
-        assertionStyle: 'never',
-      }],
+      '@typescript-eslint/consistent-type-assertions': [
+        'error',
+        {
+          assertionStyle: 'never',
+        },
+      ],
     },
   },
   {

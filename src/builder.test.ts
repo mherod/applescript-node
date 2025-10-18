@@ -24,7 +24,7 @@ describe('AppleScriptBuilder', () => {
 
     it('should handle if statements', () => {
       const builder = new AppleScriptBuilder();
-      const script = builder.if('true').then().set('x', 1).end().build();
+      const script = builder.if('true').thenBlock().set('x', 1).end().build();
 
       expect(script).toBe('if true then\n  set x to 1\nend if');
     });
@@ -116,9 +116,9 @@ describe('AppleScriptBuilder', () => {
       const builder = new AppleScriptBuilder();
       const script = builder
         .if('x > 10')
-        .then()
+        .thenBlock()
         .if('y > 20')
-        .then()
+        .thenBlock()
         .set('result', 'both conditions met')
         .else()
         .set('result', 'only x > 10')
@@ -167,7 +167,7 @@ describe('AppleScriptBuilder', () => {
       const script = builder
         .considering(['case', 'punctuation'])
         .if('someText contains "Hello!"')
-        .then()
+        .thenBlock()
         .set('exactMatch', true)
         .end()
         .end()
@@ -302,7 +302,7 @@ describe('AppleScriptBuilder', () => {
   describe('Error handling and edge cases', () => {
     it('should handle empty blocks correctly', () => {
       const builder = new AppleScriptBuilder();
-      const script = builder.tell('Finder').if('true').then().end().end().build();
+      const script = builder.tell('Finder').if('true').thenBlock().end().end().build();
 
       expect(script).toBe('tell application "Finder"\n  if true then\n  end if\nend tell');
     });
@@ -332,9 +332,11 @@ describe('AppleScriptBuilder', () => {
       expect(() => builder.build()).toThrow('Unclosed blocks remain: tell');
     });
 
-    it('should throw when calling then() without an if block', () => {
+    it('should throw when calling thenBlock() without an if block', () => {
       const builder = new AppleScriptBuilder();
-      expect(() => builder.then()).toThrow('Cannot call then(): no if block is currently open');
+      expect(() => builder.thenBlock()).toThrow(
+        'Cannot call thenBlock(): no if block is currently open',
+      );
     });
 
     it('should throw when calling else() without an if block', () => {
@@ -388,7 +390,7 @@ describe('AppleScriptBuilder', () => {
       const script = builder
         .tell('Finder')
         .if('true')
-        .then()
+        .thenBlock()
         .considering(['case'])
         .end()
         .end()
@@ -490,10 +492,10 @@ describe('AppleScriptBuilder', () => {
         const builder = new AppleScriptBuilder();
         const script = builder
           .if('x = 1')
-          .then()
+          .thenBlock()
           .set('result', 'one')
           .elseIf('x = 2')
-          .then()
+          .thenBlock()
           .set('result', 'two')
           .else()
           .set('result', 'other')
@@ -557,7 +559,7 @@ describe('AppleScriptBuilder', () => {
     describe('Loop control methods', () => {
       it('should add exitRepeat statement', () => {
         const builder = new AppleScriptBuilder();
-        const script = builder.repeat(5).if('x = 3').then().exitRepeat().end().end().build();
+        const script = builder.repeat(5).if('x = 3').thenBlock().exitRepeat().end().end().build();
 
         expect(script).toBe(
           'repeat 5 times\n' +
@@ -570,7 +572,14 @@ describe('AppleScriptBuilder', () => {
 
       it('should add continueRepeat statement', () => {
         const builder = new AppleScriptBuilder();
-        const script = builder.repeat(5).if('x = 3').then().continueRepeat().end().end().build();
+        const script = builder
+          .repeat(5)
+          .if('x = 3')
+          .thenBlock()
+          .continueRepeat()
+          .end()
+          .end()
+          .build();
 
         expect(script).toBe(
           'repeat 5 times\n' +
@@ -1107,7 +1116,7 @@ describe('AppleScriptBuilder', () => {
           const builder = new AppleScriptBuilder();
           const script = builder
             .tellApp('Finder', (app) => {
-              app.if('count of windows > 0').then();
+              app.if('count of windows > 0').thenBlock();
               app.closeWindow();
               app.endif();
             })

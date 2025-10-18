@@ -415,7 +415,7 @@ describe('Builder - If with ExprBuilder', () => {
     const builder = new AppleScriptBuilder();
     const script = builder
       .if((e) => e.gt('counter', 0))
-      .then()
+      .thenBlock()
       .if((e) => e.lt('counter', 100))
       .raw('log "in range"')
       .endif()

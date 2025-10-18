@@ -23,7 +23,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
   private script: string[] = [];
   private indentLevel = 0;
   private readonly INDENT = '  ';
-  private blockStack: Array<{ type: BlockType; target?: string }> = [];
+  private blockStack: { type: BlockType; target?: string }[] = [];
 
   private getIndentation(): string {
     return this.INDENT.repeat(this.indentLevel);
@@ -100,13 +100,13 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   // Core language constructs
-  tell(target: string): ScriptBuilder {
+  tell(target: string): this {
     this.script.push(`${this.getIndentation()}tell application "${this.escapeString(target)}"`);
     this.pushBlock('tell', target);
     return this;
   }
 
-  tellProcess(processName: string): ScriptBuilder {
+  tellProcess(processName: string): this {
     this.script.push(
       `${this.getIndentation()}tell application "System Events" to tell process "${this.escapeString(processName)}"`,
     );
@@ -114,21 +114,194 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  on(handlerName: string, parameters?: string[]): ScriptBuilder {
+  on(handlerName: string, parameters?: string[]): this {
     const params = parameters?.length ? ` ${parameters.join(', ')}` : '';
     this.script.push(`${this.getIndentation()}on ${handlerName}${params}`);
-    this.pushBlock('on');
+    this.pushBlock('on', handlerName);
     return this;
   }
 
-  end(): ScriptBuilder {
+  /**
+   * Define a handler using the 'to' syntax (alternative to 'on').
+   * Both 'on' and 'to' are equivalent in AppleScript.
+   * @param handlerName The name of the handler
+   * @param parameters Optional array of parameter names
+   * @returns This builder instance for method chaining
+   * @example
+   * .to('sayHello', ['name'])
+   *   .displayDialog('Hello ' & name)
+   * .endto()
+   */
+  to(handlerName: string, parameters?: string[]): this {
+    const params = parameters?.length ? ` ${parameters.join(', ')}` : '';
+    this.script.push(`${this.getIndentation()}to ${handlerName}${params}`);
+    this.pushBlock('on', handlerName);
+    return this;
+  }
+
+  /**
+   * Call/invoke a handler with parameters.
+   * @param handlerName The name of the handler to call
+   * @param parameters Optional array of parameter values
+   * @returns This builder instance for method chaining
+   * @example
+   * .callHandler('sayHello', ['"John"'])
+   * .callHandler('processFile', ['theFile', 'true'])
+   */
+  callHandler(handlerName: string, parameters?: string[]): this {
+    const params = parameters?.length ? ` ${parameters.join(', ')}` : '';
+    this.script.push(`${this.getIndentation()}${handlerName}${params}`);
+    return this;
+  }
+
+  /**
+   * Call a handler from within a tell statement using 'my' keyword.
+   * Required when calling handlers from within tell blocks.
+   * @param handlerName The name of the handler to call
+   * @param parameters Optional array of parameter values
+   * @returns This builder instance for method chaining
+   * @example
+   * .tell('Finder')
+   *   .my('processFile', ['theFile'])
+   * .endtell()
+   */
+  my(handlerName: string, parameters?: string[]): this {
+    const params = parameters?.length ? ` ${parameters.join(', ')}` : '';
+    this.script.push(`${this.getIndentation()}my ${handlerName}${params}`);
+    return this;
+  }
+
+  /**
+   * Call a handler from within a tell statement using 'of me' syntax.
+   * Alternative to 'my' keyword for calling handlers from within tell blocks.
+   * @param handlerName The name of the handler to call
+   * @param parameters Optional array of parameter values
+   * @returns This builder instance for method chaining
+   * @example
+   * .tell('Finder')
+   *   .ofMe('processFile', ['theFile'])
+   * .endtell()
+   */
+  ofMe(handlerName: string, parameters?: string[]): this {
+    const params = parameters?.length ? ` ${parameters.join(', ')}` : '';
+    this.script.push(`${this.getIndentation()}${handlerName}${params} of me`);
+    return this;
+  }
+
+  /**
+   * Define a handler with labeled parameters (interleaved syntax).
+   * AppleScript supports splitting parameter names with colons and spaces.
+   * @param handlerName The name of the handler
+   * @param labeledParams Object with parameter labels and values
+   * @returns This builder instance for method chaining
+   * @example
+   * .onLabeled('displayError', { message: 'theErrorMessage', buttons: 'theButtons' })
+   *   .displayDialog(theErrorMessage, { buttons: theButtons })
+   * .endon()
+   */
+  onLabeled(handlerName: string, labeledParams: Record<string, string>): this {
+    const paramPairs = Object.entries(labeledParams);
+    const params = paramPairs.map(([label, value]) => `${label} ${value}`).join(', ');
+    this.script.push(`${this.getIndentation()}on ${handlerName} ${params}`);
+    this.pushBlock('on', handlerName);
+    return this;
+  }
+
+  /**
+   * Define a handler with labeled parameters using 'to' syntax.
+   * @param handlerName The name of the handler
+   * @param labeledParams Object with parameter labels and values
+   * @returns This builder instance for method chaining
+   */
+  toLabeled(handlerName: string, labeledParams: Record<string, string>): this {
+    const paramPairs = Object.entries(labeledParams);
+    const params = paramPairs.map(([label, value]) => `${label} ${value}`).join(', ');
+    this.script.push(`${this.getIndentation()}to ${handlerName} ${params}`);
+    this.pushBlock('on', handlerName);
+    return this;
+  }
+
+  // Event Handlers
+
+  /**
+   * Define a 'run' event handler (implicit or explicit).
+   * The run handler is called when a script executes.
+   * @param explicit If true, explicitly define the run handler; if false, use implicit
+   * @returns This builder instance for method chaining
+   * @example
+   * .runHandler(true)  // Explicit: on run ... end run
+   *   .displayDialog('Script is running')
+   * .endrun()
+   */
+  runHandler(explicit = false): this {
+    if (explicit) {
+      this.script.push(`${this.getIndentation()}on run`);
+      this.pushBlock('on', 'run');
+    }
+    return this;
+  }
+
+  /**
+   * Define a 'quit' event handler.
+   * Called when a script app quits.
+   * @returns This builder instance for method chaining
+   * @example
+   * .quitHandler()
+   *   .displayDialog('Script is quitting')
+   * .endquit()
+   */
+  quitHandler(): this {
+    this.script.push(`${this.getIndentation()}on quit`);
+    this.pushBlock('on', 'quit');
+    return this;
+  }
+
+  /**
+   * Define an 'open' event handler for drag-and-drop support.
+   * Makes the script app drag-and-droppable.
+   * @param parameterName Name for the dropped items parameter (default: 'theDroppedItems')
+   * @returns This builder instance for method chaining
+   * @example
+   * .openHandler('theFiles')
+   *   .repeatWith('aFile', 'theFiles')
+   *     .displayDialog('Processing: ' & aFile)
+   *   .endrepeat()
+   * .endopen()
+   */
+  openHandler(parameterName = 'theDroppedItems'): this {
+    this.script.push(`${this.getIndentation()}on open ${parameterName}`);
+    this.pushBlock('on', 'open');
+    return this;
+  }
+
+  /**
+   * Define an 'idle' event handler for stay-open applications.
+   * Called periodically in stay-open script apps.
+   * @param returnSeconds Number of seconds to wait before next idle call (default: 30)
+   * @returns This builder instance for method chaining
+   * @example
+   * .idleHandler(5)  // Check every 5 seconds
+   *   .displayDialog('Idle processing')
+   *   .return(5)  // Return 5 seconds for next idle
+   * .endidle()
+   */
+  idleHandler(_returnSeconds = 30): this {
+    this.script.push(`${this.getIndentation()}on idle`);
+    this.pushBlock('on', 'idle');
+    return this;
+  }
+
+  end(): this {
     if (this.blockStack.length === 0) {
       throw new ScriptBuilderError('Cannot call end(): no blocks are currently open');
     }
 
     const block = this.blockStack[this.blockStack.length - 1];
     this.popBlock();
-    this.script.push(`${this.getIndentation()}end ${block.type}`);
+
+    // For 'on' blocks, use the handler name if available, otherwise use 'on'
+    const endText = block.type === 'on' && block.target ? block.target : block.type;
+    this.script.push(`${this.getIndentation()}end ${endText}`);
     return this;
   }
 
@@ -136,7 +309,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * Explicitly end an if block.
    * Preferred over end() for clarity when working with multiple nested blocks.
    */
-  endif(): ScriptBuilder {
+  endif(): this {
     this.validateBlockType('if');
     return this.end();
   }
@@ -145,7 +318,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * Explicitly end a repeat block.
    * Preferred over end() for clarity when working with multiple nested blocks.
    */
-  endrepeat(): ScriptBuilder {
+  endrepeat(): this {
     this.validateBlockType('repeat');
     return this.end();
   }
@@ -154,7 +327,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * Explicitly end a try block.
    * Preferred over end() for clarity when working with multiple nested blocks.
    */
-  endtry(): ScriptBuilder {
+  endtry(): this {
     this.validateBlockType('try');
     return this.end();
   }
@@ -163,7 +336,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * Explicitly end a tell block.
    * Preferred over end() for clarity when working with multiple nested blocks.
    */
-  endtell(): ScriptBuilder {
+  endtell(): this {
     this.validateBlockType('tell');
     return this.end();
   }
@@ -172,7 +345,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * Explicitly end an on handler block.
    * Preferred over end() for clarity when working with multiple nested blocks.
    */
-  endon(): ScriptBuilder {
+  endon(): this {
     this.validateBlockType('on');
     return this.end();
   }
@@ -181,7 +354,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * Explicitly end a considering block.
    * Preferred over end() for clarity when working with multiple nested blocks.
    */
-  endconsidering(): ScriptBuilder {
+  endconsidering(): this {
     this.validateBlockType('considering');
     return this.end();
   }
@@ -190,7 +363,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * Explicitly end an ignoring block.
    * Preferred over end() for clarity when working with multiple nested blocks.
    */
-  endignoring(): ScriptBuilder {
+  endignoring(): this {
     this.validateBlockType('ignoring');
     return this.end();
   }
@@ -199,7 +372,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * Explicitly end a using block.
    * Preferred over end() for clarity when working with multiple nested blocks.
    */
-  endusing(): ScriptBuilder {
+  endusing(): this {
     this.validateBlockType('using');
     return this.end();
   }
@@ -208,21 +381,66 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * Explicitly end a with block.
    * Preferred over end() for clarity when working with multiple nested blocks.
    */
-  endwith(): ScriptBuilder {
+  endwith(): this {
     this.validateBlockType('with');
     return this.end();
   }
 
-  if(condition: string | ((expr: ExprBuilder) => string)): ScriptBuilder {
+  /**
+   * Explicitly end a 'to' handler block.
+   * Preferred over end() for clarity when working with handlers.
+   */
+  endto(): this {
+    this.validateBlockType('on'); // 'to' handlers use the same block type as 'on'
+    return this.end();
+  }
+
+  /**
+   * Explicitly end a 'run' handler block.
+   * Preferred over end() for clarity when working with run handlers.
+   */
+  endrun(): this {
+    this.validateBlockType('on');
+    return this.end();
+  }
+
+  /**
+   * Explicitly end a 'quit' handler block.
+   * Preferred over end() for clarity when working with quit handlers.
+   */
+  endquit(): this {
+    this.validateBlockType('on');
+    return this.end();
+  }
+
+  /**
+   * Explicitly end an 'open' handler block.
+   * Preferred over end() for clarity when working with open handlers.
+   */
+  endopen(): this {
+    this.validateBlockType('on');
+    return this.end();
+  }
+
+  /**
+   * Explicitly end an 'idle' handler block.
+   * Preferred over end() for clarity when working with idle handlers.
+   */
+  endidle(): this {
+    this.validateBlockType('on');
+    return this.end();
+  }
+
+  if(condition: string | ((expr: ExprBuilder) => string)): this {
     const conditionStr = typeof condition === 'function' ? condition(new ExprBuilder()) : condition;
     this.script.push(`${this.getIndentation()}if ${conditionStr}`);
     this.pushBlock('if');
     return this;
   }
 
-  then(): ScriptBuilder {
+  thenBlock(): this {
     if (this.blockStack.length === 0 || this.blockStack[this.blockStack.length - 1].type !== 'if') {
-      throw new ScriptBuilderError('Cannot call then(): no if block is currently open');
+      throw new ScriptBuilderError('Cannot call thenBlock(): no if block is currently open');
     }
     // Append 'then' to the previous if statement line
     const lastLine = this.script[this.script.length - 1];
@@ -230,7 +448,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  else(): ScriptBuilder {
+  else(): this {
     if (this.blockStack.length === 0 || this.blockStack[this.blockStack.length - 1].type !== 'if') {
       throw new ScriptBuilderError('Cannot call else(): no if block is currently open');
     }
@@ -240,7 +458,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  elseIf(condition: string): ScriptBuilder {
+  elseIf(condition: string): this {
     if (this.blockStack.length === 0 || this.blockStack[this.blockStack.length - 1].type !== 'if') {
       throw new ScriptBuilderError('Cannot call elseIf(): no if block is currently open');
     }
@@ -250,7 +468,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  repeat(times?: number): ScriptBuilder {
+  repeat(times?: number): this {
     if (times !== undefined && (!Number.isInteger(times) || times < 1)) {
       throw new ScriptBuilderError('Repeat times must be a positive integer');
     }
@@ -264,7 +482,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  repeatWith(variable: string, list: string): ScriptBuilder {
+  repeatWith(variable: string, list: string): this {
     if (!(variable && list)) {
       throw new ScriptBuilderError('Both variable and list must be provided for repeatWith');
     }
@@ -273,7 +491,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  repeatUntil(condition: string): ScriptBuilder {
+  repeatUntil(condition: string): this {
     if (!condition) {
       throw new ScriptBuilderError('Condition must be provided for repeatUntil');
     }
@@ -282,7 +500,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  repeatWhile(condition: string): ScriptBuilder {
+  repeatWhile(condition: string): this {
     if (!condition) {
       throw new ScriptBuilderError('Condition must be provided for repeatWhile');
     }
@@ -291,7 +509,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  exitRepeat(): ScriptBuilder {
+  exitRepeat(): this {
     const hasRepeatBlock = this.blockStack.some((block) => block.type === 'repeat');
     if (!hasRepeatBlock) {
       throw new ScriptBuilderError('Cannot call exitRepeat(): no repeat block is currently open');
@@ -300,7 +518,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  continueRepeat(): ScriptBuilder {
+  continueRepeat(): this {
     const hasRepeatBlock = this.blockStack.some((block) => block.type === 'repeat');
     if (!hasRepeatBlock) {
       throw new ScriptBuilderError(
@@ -311,7 +529,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  considering(attributes: string[]): ScriptBuilder {
+  considering(attributes: string[]): this {
     if (!attributes.length) {
       throw new ScriptBuilderError('At least one attribute must be provided for considering');
     }
@@ -320,7 +538,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  ignoring(attributes: string[]): ScriptBuilder {
+  ignoring(attributes: string[]): this {
     if (!attributes.length) {
       throw new ScriptBuilderError('At least one attribute must be provided for ignoring');
     }
@@ -329,13 +547,13 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  using(terms: string[]): ScriptBuilder {
+  using(terms: string[]): this {
     this.script.push(`${this.getIndentation()}using terms from ${terms.join(', ')}`);
     this.pushBlock('using');
     return this;
   }
 
-  with(timeout?: number, transaction?: boolean): ScriptBuilder {
+  with(timeout?: number, transaction?: boolean): this {
     let command = `${this.getIndentation()}with`;
     if (timeout !== undefined) command += ` timeout of ${timeout}`;
     if (transaction) command += ' transaction';
@@ -344,13 +562,13 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  try(): ScriptBuilder {
+  try(): this {
     this.script.push(`${this.getIndentation()}try`);
     this.pushBlock('try');
     return this;
   }
 
-  onError(variableName?: string): ScriptBuilder {
+  onError(variableName?: string): this {
     if (
       this.blockStack.length === 0 ||
       this.blockStack[this.blockStack.length - 1].type !== 'try'
@@ -364,19 +582,19 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  error(message: string, number?: number): ScriptBuilder {
+  error(message: string, number?: number): this {
     let command = `${this.getIndentation()}error "${this.escapeString(message)}"`;
     if (number !== undefined) command += ` number ${number}`;
     this.script.push(command);
     return this;
   }
 
-  return(value: AppleScriptValue): ScriptBuilder {
+  return(value: AppleScriptValue): this {
     this.script.push(`${this.getIndentation()}return ${this.formatValue(value)}`);
     return this;
   }
 
-  returnRaw(expression: string): ScriptBuilder {
+  returnRaw(expression: string): this {
     this.script.push(`${this.getIndentation()}return ${expression}`);
     return this;
   }
@@ -506,7 +724,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
       while?: string | ((expr: ExprBuilder) => string);
       skipErrors?: boolean;
     } = {},
-  ): ScriptBuilder<never, Array<JsonObjectShape<TProperties>>> {
+  ): ScriptBuilder<never, JsonObjectShape<TProperties>[]> {
     const listVar = '__collected_items';
 
     // 1. Initialize collection list
@@ -606,7 +824,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
   returnAsJson<TProperties extends Record<string, string>>(
     listVariable: string,
     propertyMap: TProperties,
-  ): ScriptBuilder<never, Array<JsonObjectShape<TProperties>>> {
+  ): ScriptBuilder<never, JsonObjectShape<TProperties>[]> {
     // Prepend handlers to the beginning of the script (they must be at top level)
     const handlers = [
       '',
@@ -674,47 +892,47 @@ export class AppleScriptBuilder implements ScriptBuilder {
     this.raw(`set jsonArray to "[" & (jsonParts as text) & "]"`);
     this.raw(`set AppleScript's text item delimiters to ""`);
     this.raw('return jsonArray');
-    return this as ScriptBuilder<never, Array<JsonObjectShape<TProperties>>>;
+    return this as ScriptBuilder<never, JsonObjectShape<TProperties>[]>;
   }
 
-  log(message: string): ScriptBuilder {
+  log(message: string): this {
     this.script.push(`${this.getIndentation()}log "${this.escapeString(message)}"`);
     return this;
   }
 
-  comment(text: string): ScriptBuilder {
+  comment(text: string): this {
     this.script.push(`${this.getIndentation()}-- ${text}`);
     return this;
   }
 
   // Application control
-  activate(): ScriptBuilder {
+  activate(): this {
     this.script.push(`${this.getIndentation()}activate`);
     return this;
   }
 
-  quit(): ScriptBuilder {
+  quit(): this {
     this.script.push(`${this.getIndentation()}quit`);
     return this;
   }
 
-  reopen(): ScriptBuilder {
+  reopen(): this {
     this.script.push(`${this.getIndentation()}reopen`);
     return this;
   }
 
-  launch(): ScriptBuilder {
+  launch(): this {
     this.script.push(`${this.getIndentation()}launch`);
     return this;
   }
 
-  running(): ScriptBuilder {
+  running(): this {
     this.script.push(`${this.getIndentation()}running`);
     return this;
   }
 
   // Window management
-  closeWindow(window?: string): ScriptBuilder {
+  closeWindow(window?: string): this {
     if (window) {
       this.script.push(`${this.getIndentation()}close window "${this.escapeString(window)}"`);
     } else {
@@ -723,12 +941,12 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  closeAllWindows(): ScriptBuilder {
+  closeAllWindows(): this {
     this.script.push(`${this.getIndentation()}close every window`);
     return this;
   }
 
-  minimizeWindow(window?: string): ScriptBuilder {
+  minimizeWindow(window?: string): this {
     if (window) {
       this.script.push(
         `${this.getIndentation()}set miniaturized of window "${this.escapeString(window)}" to true`,
@@ -739,7 +957,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  zoomWindow(window?: string): ScriptBuilder {
+  zoomWindow(window?: string): this {
     if (window) {
       this.script.push(
         `${this.getIndentation()}set zoomed of window "${this.escapeString(window)}" to true`,
@@ -751,12 +969,12 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   // UI interaction
-  click(target: string): ScriptBuilder {
+  click(target: string): this {
     this.script.push(`${this.getIndentation()}click ${target}`);
     return this;
   }
 
-  keystroke(text: string, modifiers?: string[]): ScriptBuilder {
+  keystroke(text: string, modifiers?: string[]): this {
     const modString = modifiers?.length ? ` using {${modifiers.join(', ')}}` : '';
     this.script.push(`${this.getIndentation()}keystroke "${this.escapeString(text)}"${modString}`);
     return this;
@@ -773,7 +991,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * // Use:
    * // .keystrokes('123')
    */
-  keystrokes(text: string, delayBetween = 0.1): ScriptBuilder {
+  keystrokes(text: string, delayBetween = 0.1): this {
     const chars = text.split('');
     chars.forEach((char, index) => {
       this.keystroke(char);
@@ -785,7 +1003,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  delay(seconds: number): ScriptBuilder {
+  delay(seconds: number): this {
     this.script.push(`${this.getIndentation()}delay ${seconds}`);
     return this;
   }
@@ -871,17 +1089,17 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this as ScriptBuilder<TNewVar>;
   }
 
-  increment(variable: string, by = 1): ScriptBuilder {
+  increment(variable: string, by = 1): this {
     this.script.push(`${this.getIndentation()}set ${variable} to ${variable} + ${by}`);
     return this;
   }
 
-  decrement(variable: string, by = 1): ScriptBuilder {
+  decrement(variable: string, by = 1): this {
     this.script.push(`${this.getIndentation()}set ${variable} to ${variable} - ${by}`);
     return this;
   }
 
-  get(property: string): ScriptBuilder {
+  get(property: string): this {
     this.script.push(`${this.getIndentation()}get ${property}`);
     return this;
   }
@@ -891,7 +1109,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this as ScriptBuilder<TNewVar>;
   }
 
-  count(items: string): ScriptBuilder {
+  count(items: string): this {
     this.script.push(`${this.getIndentation()}count ${items}`);
     return this;
   }
@@ -901,12 +1119,12 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this as ScriptBuilder<TNewVar>;
   }
 
-  exists(item: string): ScriptBuilder {
+  exists(item: string): this {
     this.script.push(`${this.getIndentation()}exists ${item}`);
     return this;
   }
 
-  setEnd(variable: string, value: AppleScriptValue): ScriptBuilder {
+  setEnd(variable: string, value: AppleScriptValue): this {
     this.script.push(
       `${this.getIndentation()}set end of ${variable} to ${this.formatValue(value)}`,
     );
@@ -916,7 +1134,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
   setEndRaw(
     variable: string,
     expression: string | Record<string, string> | ((expr: ExprBuilder) => string),
-  ): ScriptBuilder {
+  ): this {
     let expr: string;
     if (typeof expression === 'function') {
       expr = expression(new ExprBuilder());
@@ -933,7 +1151,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     listVariable: string,
     sourceOrExpressions: string | Record<string, string>,
     propertyMap?: Record<string, string>,
-  ): ScriptBuilder {
+  ): this {
     let recordExpressions: Record<string, string>;
 
     if (typeof sourceOrExpressions === 'string') {
@@ -985,7 +1203,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     listVariable: string,
     sourceObject: string,
     propertyMap: Record<string, string>,
-  ): ScriptBuilder {
+  ): this {
     const recordExpressions = Object.entries(propertyMap).reduce<Record<string, string>>(
       (acc, [key, prop]) => {
         // Check if property looks like a full expression (contains AppleScript keywords)
@@ -1315,7 +1533,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     );
   }
 
-  setProperty(variable: string, property: string, value: AppleScriptValue): ScriptBuilder {
+  setProperty(variable: string, property: string, value: AppleScriptValue): this {
     this.script.push(
       `${this.getIndentation()}set ${property} of ${variable} to ${this.formatValue(value)}`,
     );
@@ -1330,32 +1548,32 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   // List operations
-  first(items: string): ScriptBuilder {
+  first(items: string): this {
     this.script.push(`${this.getIndentation()}first item of ${items}`);
     return this;
   }
 
-  last(items: string): ScriptBuilder {
+  last(items: string): this {
     this.script.push(`${this.getIndentation()}last item of ${items}`);
     return this;
   }
 
-  rest(items: string): ScriptBuilder {
+  rest(items: string): this {
     this.script.push(`${this.getIndentation()}rest of ${items}`);
     return this;
   }
 
-  reverse(items: string): ScriptBuilder {
+  reverse(items: string): this {
     this.script.push(`${this.getIndentation()}reverse of ${items}`);
     return this;
   }
 
-  some(items: string, test: string): ScriptBuilder {
+  some(items: string, test: string): this {
     this.script.push(`${this.getIndentation()}some item of ${items} where ${test}`);
     return this;
   }
 
-  every(items: string, test: string): ScriptBuilder {
+  every(items: string, test: string): this {
     this.script.push(`${this.getIndentation()}every item of ${items} where ${test}`);
     return this;
   }
@@ -1364,56 +1582,56 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return `${items} whose ${condition}`;
   }
 
-  getEvery(itemType: string, location?: string): ScriptBuilder {
+  getEvery(itemType: string, location?: string): this {
     const loc = location ? ` of ${location}` : '';
     this.script.push(`${this.getIndentation()}get every ${itemType}${loc}`);
     return this;
   }
 
-  getEveryWhere(itemType: string, condition: string, location?: string): ScriptBuilder {
+  getEveryWhere(itemType: string, condition: string, location?: string): this {
     const loc = location ? ` of ${location}` : '';
     this.script.push(`${this.getIndentation()}get every ${itemType}${loc} where ${condition}`);
     return this;
   }
 
   // Text operations
-  offset(text: string, in_: string): ScriptBuilder {
+  offset(text: string, in_: string): this {
     this.script.push(`${this.getIndentation()}offset of ${text} in ${in_}`);
     return this;
   }
 
-  contains(text: string, in_: string): ScriptBuilder {
+  contains(text: string, in_: string): this {
     this.script.push(`${this.getIndentation()}${in_} contains ${text}`);
     return this;
   }
 
-  beginsWith(text: string, with_: string): ScriptBuilder {
+  beginsWith(text: string, with_: string): this {
     this.script.push(`${this.getIndentation()}${text} begins with ${with_}`);
     return this;
   }
 
-  endsWith(text: string, with_: string): ScriptBuilder {
+  endsWith(text: string, with_: string): this {
     this.script.push(`${this.getIndentation()}${text} ends with ${with_}`);
     return this;
   }
 
   // System operations
-  path(to: string): ScriptBuilder {
+  path(to: string): this {
     this.script.push(`${this.getIndentation()}path to ${to}`);
     return this;
   }
 
-  info(for_: string): ScriptBuilder {
+  info(for_: string): this {
     this.script.push(`${this.getIndentation()}info for ${for_}`);
     return this;
   }
 
-  do(script: string): ScriptBuilder {
+  do(script: string): this {
     this.script.push(`${this.getIndentation()}do script "${this.escapeString(script)}"`);
     return this;
   }
 
-  doShellScript(command: string, administrator?: boolean): ScriptBuilder {
+  doShellScript(command: string, administrator?: boolean): this {
     let cmd = `${this.getIndentation()}do shell script "${this.escapeString(command)}"`;
     if (administrator) {
       cmd += ' with administrator privileges';
@@ -1423,58 +1641,58 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   // Raw script and building
-  raw(script: string): ScriptBuilder {
+  raw(script: string): this {
     this.script.push(`${this.getIndentation()}${script}`);
     return this;
   }
 
   // Enhanced Application control
-  getRunningApplications(): ScriptBuilder {
+  getRunningApplications(): this {
     this.raw(
       'tell application "System Events" to return {name, bundle identifier, visible, frontmost} of every process where background only is false',
     );
     return this;
   }
 
-  getFrontmostApplication(): ScriptBuilder {
+  getFrontmostApplication(): this {
     this.raw(
       'tell application "System Events" to return name of first process where frontmost is true',
     );
     return this;
   }
 
-  activateApplication(appName: string): ScriptBuilder {
+  activateApplication(appName: string): this {
     this.raw(`tell application "${this.escapeString(appName)}" to activate`);
     return this;
   }
 
-  hideApplication(appName: string): ScriptBuilder {
+  hideApplication(appName: string): this {
     this.raw(
       `tell application "System Events" to tell process "${this.escapeString(appName)}" to set visible to false`,
     );
     return this;
   }
 
-  unhideApplication(appName: string): ScriptBuilder {
+  unhideApplication(appName: string): this {
     this.raw(
       `tell application "System Events" to tell process "${this.escapeString(appName)}" to set visible to true`,
     );
     return this;
   }
 
-  quitApplication(appName: string): ScriptBuilder {
+  quitApplication(appName: string): this {
     this.raw(`tell application "${this.escapeString(appName)}" to quit`);
     return this;
   }
 
-  isApplicationRunning(appName: string): ScriptBuilder {
+  isApplicationRunning(appName: string): this {
     this.raw(
       `tell application "System Events" to return exists (processes where name is "${this.escapeString(appName)}")`,
     );
     return this;
   }
 
-  getApplicationInfo(appName: string): ScriptBuilder {
+  getApplicationInfo(appName: string): this {
     this.raw(
       `tell application "System Events" to tell process "${this.escapeString(appName)}" to return properties`,
     );
@@ -1482,7 +1700,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   // Enhanced Window management
-  getWindowInfo(appName: string, windowName?: string): ScriptBuilder {
+  getWindowInfo(appName: string, windowName?: string): this {
     this.raw(
       windowName
         ? `tell application "${this.escapeString(appName)}" to tell window "${this.escapeString(windowName)}" to return {name, id, bounds, miniaturized, zoomed}`
@@ -1491,14 +1709,14 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  getAllWindows(appName: string): ScriptBuilder {
+  getAllWindows(appName: string): this {
     this.raw(
       `tell application "${this.escapeString(appName)}" to return {name, id, bounds, miniaturized, zoomed} of every window`,
     );
     return this;
   }
 
-  getFrontmostWindow(appName: string): ScriptBuilder {
+  getFrontmostWindow(appName: string): this {
     this.raw(
       `tell application "${this.escapeString(appName)}" to tell front window to return {name, id, bounds, miniaturized, zoomed}`,
     );
@@ -1509,33 +1727,33 @@ export class AppleScriptBuilder implements ScriptBuilder {
     appName: string,
     windowName: string,
     bounds: { x: number; y: number; width: number; height: number },
-  ): ScriptBuilder {
+  ): this {
     this.raw(
       `tell application "${this.escapeString(appName)}" to tell window "${this.escapeString(windowName)}" to set bounds to {${bounds.x}, ${bounds.y}, ${bounds.x + bounds.width}, ${bounds.y + bounds.height}}`,
     );
     return this;
   }
 
-  moveWindow(appName: string, windowName: string, x: number, y: number): ScriptBuilder {
+  moveWindow(appName: string, windowName: string, x: number, y: number): this {
     this.raw(
       `tell application "${this.escapeString(appName)}" to tell window "${this.escapeString(windowName)}" to set position to {${x}, ${y}}`,
     );
     return this;
   }
 
-  resizeWindow(appName: string, windowName: string, width: number, height: number): ScriptBuilder {
+  resizeWindow(appName: string, windowName: string, width: number, height: number): this {
     this.raw(
       `tell application "${this.escapeString(appName)}" to tell window "${this.escapeString(windowName)}" to set size to {${width}, ${height}}`,
     );
     return this;
   }
 
-  arrangeWindows(arrangement: 'cascade' | 'tile' | 'stack'): ScriptBuilder {
+  arrangeWindows(arrangement: 'cascade' | 'tile' | 'stack'): this {
     this.raw(`tell application "System Events" to tell process "Finder" to ${arrangement} windows`);
     return this;
   }
 
-  focusWindow(appName: string, windowName: string): ScriptBuilder {
+  focusWindow(appName: string, windowName: string): this {
     this.raw(`tell application "${this.escapeString(appName)}" to activate`);
     this.raw(
       `tell application "${this.escapeString(appName)}" to tell window "${this.escapeString(windowName)}" to set index to 1`,
@@ -1543,40 +1761,34 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  switchToWindow(appName: string, windowName: string): ScriptBuilder {
+  switchToWindow(appName: string, windowName: string): this {
     return this.focusWindow(appName, windowName);
   }
 
   // Enhanced UI interaction
-  pressKey(
-    key: string,
-    modifiers?: Array<'command' | 'option' | 'control' | 'shift'>,
-  ): ScriptBuilder {
+  pressKey(key: string, modifiers?: ('command' | 'option' | 'control' | 'shift')[]): this {
     const modString = modifiers?.length ? ` using {${modifiers.join(', ')}}` : '';
     this.raw(`tell application "System Events" to key code ${key}${modString}`);
     return this;
   }
 
-  pressKeyCode(
-    keyCode: number,
-    modifiers?: Array<'command' | 'option' | 'control' | 'shift'>,
-  ): ScriptBuilder {
+  pressKeyCode(keyCode: number, modifiers?: ('command' | 'option' | 'control' | 'shift')[]): this {
     const modString = modifiers?.length ? ` using {${modifiers.join(', ')}}` : '';
     this.raw(`tell application "System Events" to key code ${keyCode}${modString}`);
     return this;
   }
 
-  typeText(text: string): ScriptBuilder {
+  typeText(text: string): this {
     this.raw(`tell application "System Events" to keystroke "${this.escapeString(text)}"`);
     return this;
   }
 
-  clickButton(buttonName: string): ScriptBuilder {
+  clickButton(buttonName: string): this {
     this.raw(`tell application "System Events" to click button "${this.escapeString(buttonName)}"`);
     return this;
   }
 
-  clickMenuItem(menuName: string, itemName: string): ScriptBuilder {
+  clickMenuItem(menuName: string, itemName: string): this {
     this.raw(
       `tell application "System Events" to click menu item "${this.escapeString(itemName)}" of menu "${this.escapeString(menuName)}" of menu bar 1`,
     );
@@ -1590,7 +1802,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * @param appName Name of the application to tell
    * @param block Callback that builds commands for the application
    */
-  tellApp(appName: string, block: (builder: ScriptBuilder) => void): ScriptBuilder {
+  tellApp(appName: string, block: (builder: ScriptBuilder) => void): this {
     this.tell(appName);
     block(this as ScriptBuilder);
     return this.end();
@@ -1598,22 +1810,22 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   /**
    * Simplified if-then pattern that automatically closes the if block.
-   * Cleaner than manually calling if()...then()...endif().
+   * Cleaner than manually calling if()...thenBlock()...endif().
    * @param condition The condition to check (string or ExprBuilder callback)
    * @param thenBlock Callback that builds the then branch
    */
   ifThen(
     condition: string | ((expr: ExprBuilder) => string),
     thenBlock: (builder: ScriptBuilder) => void,
-  ): ScriptBuilder {
-    this.if(condition).then();
+  ): this {
+    this.if(condition).thenBlock();
     thenBlock(this as ScriptBuilder);
     return this.endif();
   }
 
   /**
    * Simplified if-then-else pattern that automatically closes the if block.
-   * Cleaner than manually calling if()...then()...else()...endif().
+   * Cleaner than manually calling if()...thenBlock()...else()...endif().
    * @param condition The condition to check (string or ExprBuilder callback)
    * @param thenBlock Callback that builds the then branch
    * @param elseBlock Callback that builds the else branch
@@ -1622,8 +1834,8 @@ export class AppleScriptBuilder implements ScriptBuilder {
     condition: string | ((expr: ExprBuilder) => string),
     thenBlock: (builder: ScriptBuilder) => void,
     elseBlock: (builder: ScriptBuilder) => void,
-  ): ScriptBuilder {
-    this.if(condition).then();
+  ): this {
+    this.if(condition).thenBlock();
     thenBlock(this as ScriptBuilder);
     this.else();
     elseBlock(this as ScriptBuilder);
@@ -1639,7 +1851,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
   tryCatch(
     tryBlock: (builder: ScriptBuilder) => void,
     catchBlock: (builder: ScriptBuilder) => void,
-  ): ScriptBuilder {
+  ): this {
     this.try();
     tryBlock(this as ScriptBuilder);
     this.onError();
@@ -1657,7 +1869,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     tryBlock: (builder: ScriptBuilder) => void,
     errorVarName: string,
     catchBlock: (builder: ScriptBuilder) => void,
-  ): ScriptBuilder {
+  ): this {
     this.try();
     tryBlock(this as ScriptBuilder);
     this.onError(errorVarName);
@@ -1676,7 +1888,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     variable: TNewVar,
     list: string,
     block: (builder: ScriptBuilder<TNewVar>) => void,
-  ): ScriptBuilder {
+  ): this {
     this.repeatWith(variable, list);
     block(this as ScriptBuilder<TNewVar>);
     return this.endrepeat();
@@ -1695,7 +1907,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     list: string,
     condition: string | ((expr: ExprBuilder<TNewVar>) => string),
     block: (builder: ScriptBuilder<TNewVar>) => void,
-  ): ScriptBuilder {
+  ): this {
     this.repeatWith(variable, list);
     this.ifThen(
       typeof condition === 'function' ? (e) => e.not(condition(e)) : (e) => e.not(condition),
@@ -1718,7 +1930,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     list: string,
     condition: string | ((expr: ExprBuilder<TNewVar>) => string),
     block: (builder: ScriptBuilder<TNewVar>) => void,
-  ): ScriptBuilder {
+  ): this {
     this.repeatWith(variable, list);
     this.ifThen(condition, (b) => b.exitRepeat());
     block(this as ScriptBuilder<TNewVar>);
@@ -1730,7 +1942,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * @param times Number of times to repeat
    * @param block Callback that builds the loop body
    */
-  repeatTimes(times: number, block: (builder: ScriptBuilder) => void): ScriptBuilder {
+  repeatTimes(times: number, block: (builder: ScriptBuilder) => void): this {
     this.repeat(times);
     block(this as ScriptBuilder);
     return this.endrepeat();
@@ -1741,7 +1953,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * @param condition Condition to check (continues while true)
    * @param block Callback that builds the loop body
    */
-  repeatWhileBlock(condition: string, block: (builder: ScriptBuilder) => void): ScriptBuilder {
+  repeatWhileBlock(condition: string, block: (builder: ScriptBuilder) => void): this {
     this.repeatWhile(condition);
     block(this as ScriptBuilder);
     return this.endrepeat();
@@ -1752,10 +1964,83 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * @param condition Condition to check (continues until true)
    * @param block Callback that builds the loop body
    */
-  repeatUntilBlock(condition: string, block: (builder: ScriptBuilder) => void): ScriptBuilder {
+  repeatUntilBlock(condition: string, block: (builder: ScriptBuilder) => void): this {
     this.repeatUntil(condition);
     block(this as ScriptBuilder);
     return this.endrepeat();
+  }
+
+  /**
+   * Load an existing AppleScript into the builder, preserving its structure.
+   * Parses the script to detect block structure (tell, if, repeat, etc.) and
+   * maintains proper nesting so you can continue editing with the builder API.
+   * @param script The AppleScript source code to load
+   * @returns This builder instance for method chaining
+   */
+  loadFromScript(script: string): this {
+    const lines = script.split('\n');
+
+    for (const line of lines) {
+      // Add the line as-is to preserve original formatting
+      this.script.push(line);
+
+      // Detect block structure to maintain proper nesting
+      const trimmed = line.trim().toLowerCase();
+
+      // Detect block starts and update block stack
+      if (trimmed.startsWith('tell ') || /^tell application/.exec(trimmed)) {
+        const target = this.extractTarget(line);
+        this.pushBlock('tell', target);
+      } else if (trimmed.startsWith('if ')) {
+        this.pushBlock('if');
+      } else if (
+        trimmed.startsWith('repeat ') ||
+        trimmed === 'repeat' ||
+        trimmed.startsWith('repeat with ')
+      ) {
+        this.pushBlock('repeat');
+      } else if (trimmed === 'try' || trimmed.startsWith('try ')) {
+        this.pushBlock('try');
+      } else if (trimmed.startsWith('on ') && !trimmed.startsWith('on error')) {
+        // Only push 'on' block for handler definitions, not 'on error' in try blocks
+        this.pushBlock('on');
+      } else if (trimmed.startsWith('considering ')) {
+        this.pushBlock('considering');
+      } else if (trimmed.startsWith('ignoring ')) {
+        this.pushBlock('ignoring');
+      } else if (trimmed.startsWith('using ')) {
+        this.pushBlock('using');
+      } else if (trimmed.startsWith('with ')) {
+        this.pushBlock('with');
+      }
+      // Detect block ends and update block stack
+      else if (
+        trimmed === 'end' ||
+        trimmed === 'end tell' ||
+        trimmed === 'end if' ||
+        trimmed === 'end repeat' ||
+        trimmed === 'end try' ||
+        trimmed === 'end considering' ||
+        trimmed === 'end ignoring' ||
+        trimmed === 'end using' ||
+        trimmed === 'end with' ||
+        trimmed.startsWith('end ')
+      ) {
+        this.popBlock();
+      }
+    }
+
+    return this;
+  }
+
+  /**
+   * Helper method to extract the target from a tell statement.
+   * @param line The tell statement line
+   * @returns The extracted target or undefined
+   */
+  private extractTarget(line: string): string | undefined {
+    const match = /tell\s+(?:application\s+)?"?([^"]+)"?/i.exec(line);
+    return match ? match[1].trim() : undefined;
   }
 
   build(): string {
@@ -1763,7 +2048,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this.script.join('\n');
   }
 
-  reset(): ScriptBuilder {
+  reset(): this {
     this.script = [];
     this.indentLevel = 0;
     this.blockStack = [];

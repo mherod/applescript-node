@@ -1,6 +1,6 @@
-import CliTable3 from 'cli-table3';
 import chalk from 'chalk';
-import { ScriptValidator, createScript } from '../src/index.js';
+import CliTable3 from 'cli-table3';
+import { createScript, ScriptValidator } from '../src/index.js';
 
 async function demonstrateScriptValidation() {
   console.log(chalk.bold.blue('🔍 Script Validation Demo\n'));
@@ -99,7 +99,7 @@ async function demonstrateScriptValidation() {
   console.log();
 
   const strictResult = validator.validate(warningScript, { strictness: 'strict' });
-  console.log(chalk.yellow(`Strictness: strict (warnings = errors)\n`));
+  console.log(chalk.yellow('Strictness: strict (warnings = errors)\n'));
   displayValidationResult(strictResult);
 
   // Example 6: Property access validation
@@ -214,10 +214,10 @@ async function demonstrateScriptValidation() {
  */
 function displayValidationResult(result: {
   valid: boolean;
-  issues: Array<{ severity: string; message: string; code?: string; suggestion?: string }>;
-  errors: Array<{ severity: string; message: string; code?: string; suggestion?: string }>;
-  warnings: Array<{ severity: string; message: string; code?: string; suggestion?: string }>;
-  info: Array<{ severity: string; message: string; code?: string; suggestion?: string }>;
+  issues: { severity: string; message: string; code?: string; suggestion?: string }[];
+  errors: { severity: string; message: string; code?: string; suggestion?: string }[];
+  warnings: { severity: string; message: string; code?: string; suggestion?: string }[];
+  info: { severity: string; message: string; code?: string; suggestion?: string }[];
 }): void {
   // Status
   const statusIcon = result.valid ? chalk.green('✓ VALID') : chalk.red('✗ INVALID');

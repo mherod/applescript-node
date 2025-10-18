@@ -5,9 +5,11 @@ import type { ExprBuilder } from './expressions.js';
  * Forces TypeScript to display the full expanded type instead of showing type aliases.
  * Handles arrays, objects, and primitives correctly.
  */
-export type Prettify<T> =
-  // biome-ignore lint/style/useConsistentArrayType: Array<T> syntax required for type inference
-  T extends Array<infer U> ? Array<Prettify<U>> : T extends object ? { [K in keyof T]: T[K] } : T;
+export type Prettify<T> = T extends T[]
+  ? Prettify<T>[]
+  : T extends object
+    ? { [K in keyof T]: T[K] }
+    : T;
 
 // Configuration options for script execution
 export interface OsaScriptOptions {
@@ -346,6 +348,11 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   endtry: () => ScriptBuilder<TScope, TReturn>;
   endtell: () => ScriptBuilder<TScope, TReturn>;
   endon: () => ScriptBuilder<TScope, TReturn>;
+  endto: () => ScriptBuilder<TScope, TReturn>;
+  endrun: () => ScriptBuilder<TScope, TReturn>;
+  endquit: () => ScriptBuilder<TScope, TReturn>;
+  endopen: () => ScriptBuilder<TScope, TReturn>;
+  endidle: () => ScriptBuilder<TScope, TReturn>;
   endconsidering: () => ScriptBuilder<TScope, TReturn>;
   endignoring: () => ScriptBuilder<TScope, TReturn>;
   endusing: () => ScriptBuilder<TScope, TReturn>;
@@ -353,7 +360,7 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   if: (
     condition: string | ((expr: ExprBuilder<TScope>) => string),
   ) => ScriptBuilder<TScope, TReturn>;
-  then: () => ScriptBuilder<TScope, TReturn>;
+  thenBlock: () => ScriptBuilder<TScope, TReturn>;
   else: () => ScriptBuilder<TScope, TReturn>;
   elseIf: (condition: string) => ScriptBuilder<TScope, TReturn>;
   repeat: (times?: number) => ScriptBuilder<TScope, TReturn>;
@@ -366,6 +373,22 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   exitRepeat: () => ScriptBuilder<TScope, TReturn>;
   continueRepeat: () => ScriptBuilder<TScope, TReturn>;
   on: (handlerName: string, parameters?: string[]) => ScriptBuilder<TScope, TReturn>;
+  to: (handlerName: string, parameters?: string[]) => ScriptBuilder<TScope, TReturn>;
+  callHandler: (handlerName: string, parameters?: string[]) => ScriptBuilder<TScope, TReturn>;
+  my: (handlerName: string, parameters?: string[]) => ScriptBuilder<TScope, TReturn>;
+  ofMe: (handlerName: string, parameters?: string[]) => ScriptBuilder<TScope, TReturn>;
+  onLabeled: (
+    handlerName: string,
+    labeledParams: Record<string, string>,
+  ) => ScriptBuilder<TScope, TReturn>;
+  toLabeled: (
+    handlerName: string,
+    labeledParams: Record<string, string>,
+  ) => ScriptBuilder<TScope, TReturn>;
+  runHandler: (explicit?: boolean) => ScriptBuilder<TScope, TReturn>;
+  quitHandler: () => ScriptBuilder<TScope, TReturn>;
+  openHandler: (parameterName?: string) => ScriptBuilder<TScope, TReturn>;
+  idleHandler: (returnSeconds?: number) => ScriptBuilder<TScope, TReturn>;
   considering: (attributes: string[]) => ScriptBuilder<TScope, TReturn>;
   ignoring: (attributes: string[]) => ScriptBuilder<TScope, TReturn>;
   using: (terms: string[]) => ScriptBuilder<TScope, TReturn>;
@@ -411,8 +434,7 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   returnAsJson: <TProperties extends Record<string, string>>(
     listVariable: string,
     propertyMap: TProperties,
-    // biome-ignore lint/style/useConsistentArrayType: Array<T> syntax required for type inference
-  ) => ScriptBuilder<TScope, Array<JsonObjectShape<TProperties>>>;
+  ) => ScriptBuilder<TScope, JsonObjectShape<TProperties>[]>;
   /**
    * Map a collection to JSON with automatic iteration, property extraction, and type inference.
    * Sets the return type to an array of objects with the shape of the properties map.
@@ -461,8 +483,7 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
       while?: string | ((expr: ExprBuilder<TScope>) => string);
       skipErrors?: boolean;
     },
-    // biome-ignore lint/style/useConsistentArrayType: Array<T> syntax required for type inference
-  ) => ScriptBuilder<TScope, Array<JsonObjectShape<TProperties>>>;
+  ) => ScriptBuilder<TScope, JsonObjectShape<TProperties>[]>;
   log: (message: string) => ScriptBuilder<TScope, TReturn>;
   comment: (text: string) => ScriptBuilder<TScope, TReturn>;
 
@@ -654,11 +675,11 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   delay: (seconds: number) => ScriptBuilder<TScope, TReturn>;
   pressKey: (
     key: string,
-    modifiers?: Array<'command' | 'option' | 'control' | 'shift'>,
+    modifiers?: ('command' | 'option' | 'control' | 'shift')[],
   ) => ScriptBuilder<TScope, TReturn>;
   pressKeyCode: (
     keyCode: number,
-    modifiers?: Array<'command' | 'option' | 'control' | 'shift'>,
+    modifiers?: ('command' | 'option' | 'control' | 'shift')[],
   ) => ScriptBuilder<TScope, TReturn>;
   typeText: (text: string) => ScriptBuilder<TScope, TReturn>;
   clickButton: (buttonName: string) => ScriptBuilder<TScope, TReturn>;

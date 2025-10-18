@@ -120,8 +120,8 @@ export class ScriptValidator {
   /**
    * Extract tell application blocks from script
    */
-  private extractTellBlocks(script: string): Array<{ target: string; content: string }> {
-    const blocks: Array<{ target: string; content: string }> = [];
+  private extractTellBlocks(script: string): { target: string; content: string }[] {
+    const blocks: { target: string; content: string }[] = [];
     const lines = script.split('\n');
 
     let currentBlock: { target: string; content: string; depth: number } | null = null;

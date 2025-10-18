@@ -8,6 +8,7 @@ export * from './decompiler.js';
 export * from './executor.js';
 export * from './expressions.js';
 export * from './languages.js';
+export * from './loader.js';
 export * from './sdef.js';
 // High-level data source APIs
 export * as sources from './sources/index.js';
