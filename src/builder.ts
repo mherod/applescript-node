@@ -106,6 +106,12 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
+  tellTarget(target: string): this {
+    this.script.push(`${this.getIndentation()}tell ${target}`);
+    this.pushBlock('tell', target);
+    return this;
+  }
+
   tellProcess(processName: string): this {
     this.script.push(
       `${this.getIndentation()}tell application "System Events" to tell process "${this.escapeString(processName)}"`,
@@ -505,6 +511,19 @@ export class AppleScriptBuilder implements ScriptBuilder {
       throw new ScriptBuilderError('Condition must be provided for repeatWhile');
     }
     this.script.push(`${this.getIndentation()}repeat while ${condition}`);
+    this.pushBlock('repeat');
+    return this;
+  }
+
+  repeatWithRange(variable: string, start: number | string, end: number | string): this {
+    if (!(variable && start && end)) {
+      throw new ScriptBuilderError('Variable, start, and end must be provided for repeatWithRange');
+    }
+    const startExpr = typeof start === 'number' ? start.toString() : start;
+    const endExpr = typeof end === 'number' ? end.toString() : end;
+    this.script.push(
+      `${this.getIndentation()}repeat with ${variable} from ${startExpr} to ${endExpr}`,
+    );
     this.pushBlock('repeat');
     return this;
   }
@@ -971,6 +990,11 @@ export class AppleScriptBuilder implements ScriptBuilder {
   // UI interaction
   click(target: string): this {
     this.script.push(`${this.getIndentation()}click ${target}`);
+    return this;
+  }
+
+  select(target: string): this {
+    this.script.push(`${this.getIndentation()}select ${target}`);
     return this;
   }
 

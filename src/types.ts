@@ -340,6 +340,7 @@ export interface ApplicationDictionary {
 export interface ScriptBuilder<TScope extends string = never, TReturn = unknown> {
   // Core language constructs
   tell: (target: string) => ScriptBuilder<TScope, TReturn>;
+  tellTarget: (target: string) => ScriptBuilder<TScope, TReturn>;
   tellProcess: (processName: string) => ScriptBuilder<TScope, TReturn>;
   end: () => ScriptBuilder<TScope, TReturn>;
   // Explicit block endings for clarity
@@ -370,6 +371,11 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   ) => ScriptBuilder<TScope | TNewVar, TReturn>;
   repeatUntil: (condition: string) => ScriptBuilder<TScope, TReturn>;
   repeatWhile: (condition: string) => ScriptBuilder<TScope, TReturn>;
+  repeatWithRange: <TNewVar extends string>(
+    variable: TNewVar,
+    start: number | string,
+    end: number | string,
+  ) => ScriptBuilder<TScope | TNewVar, TReturn>;
   exitRepeat: () => ScriptBuilder<TScope, TReturn>;
   continueRepeat: () => ScriptBuilder<TScope, TReturn>;
   on: (handlerName: string, parameters?: string[]) => ScriptBuilder<TScope, TReturn>;
@@ -670,6 +676,7 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
 
   // Enhanced UI interaction
   click: (target: string) => ScriptBuilder<TScope, TReturn>;
+  select: (target: string) => ScriptBuilder<TScope, TReturn>;
   keystroke: (text: string, modifiers?: string[]) => ScriptBuilder<TScope, TReturn>;
   keystrokes: (text: string, delayBetween?: number) => ScriptBuilder<TScope, TReturn>;
   delay: (seconds: number) => ScriptBuilder<TScope, TReturn>;
