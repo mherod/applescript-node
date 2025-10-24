@@ -12,75 +12,102 @@ async function exploreOutlineRows() {
     .activate()
     .delay(1.5)
     .endtell()
-    .tell('System Events')
-    .raw('tell process "Activity Monitor"')
-    .raw('tell window 1')
-    .raw('tell group 1')
-    .raw('tell scroll area 1')
-    .raw('tell outline 1')
+    .tellProcess('Activity Monitor')
+    .tellTarget('window 1')
+    .tellTarget('group 1')
+    .tellTarget('scroll area 1')
+    .tellTarget('outline 1')
     .comment('Explore the first 5 rows in detail')
     .set('report', '""')
-    .raw('repeat with i from 1 to 5')
-    .raw('try')
-    .raw('set report to report & "=== ROW " & i & " ===" & linefeed')
-    .comment('Try different ways to get row data')
-    .raw('try')
-    .setExpression('rowValue', 'value of row i')
-    .raw('set report to report & "Value: " & rowValue & linefeed')
-    .raw('on error')
-    .raw('set report to report & "Value: (not accessible)" & linefeed')
-    .raw('end try')
-    .raw('try')
-    .setExpression('rowName', 'name of row i')
-    .raw('set report to report & "Name: " & rowName & linefeed')
-    .raw('on error')
-    .raw('set report to report & "Name: (not accessible)" & linefeed')
-    .raw('end try')
-    .raw('try')
-    .setExpression('rowDesc', 'description of row i')
-    .raw('set report to report & "Description: " & rowDesc & linefeed')
-    .raw('on error')
-    .raw('set report to report & "Description: (not accessible)" & linefeed')
-    .raw('end try')
-    .comment('Check what UI elements are in the row')
-    .setExpression('elemCount', 'count of UI elements of row i')
-    .raw('set report to report & "UI Elements: " & elemCount & linefeed')
-    .raw('if elemCount > 0 and elemCount < 20 then')
-    .raw('repeat with j from 1 to elemCount')
-    .raw('try')
-    .setExpression('elemClass', 'class of UI element j of row i')
-    .setExpression('elemValue', 'value of UI element j of row i')
-    .raw(
-      'set report to report & "  Element " & j & ": " & elemClass & " = " & elemValue & linefeed',
+    .repeatWithRange('i', 1, 5)
+    .tryCatchError(
+      (tryB) =>
+        tryB
+          .setExpression('report', 'report & "=== ROW " & i & " ===" & linefeed')
+          .comment('Try different ways to get row data')
+          .tryCatch(
+            (innerTryB) =>
+              innerTryB
+                .setExpression('rowValue', 'value of row i')
+                .setExpression('report', 'report & "Value: " & rowValue & linefeed'),
+            (innerCatchB) =>
+              innerCatchB.setExpression('report', 'report & "Value: (not accessible)" & linefeed'),
+          )
+          .tryCatch(
+            (innerTryB) =>
+              innerTryB
+                .setExpression('rowName', 'name of row i')
+                .setExpression('report', 'report & "Name: " & rowName & linefeed'),
+            (innerCatchB) =>
+              innerCatchB.setExpression('report', 'report & "Name: (not accessible)" & linefeed'),
+          )
+          .tryCatch(
+            (innerTryB) =>
+              innerTryB
+                .setExpression('rowDesc', 'description of row i')
+                .setExpression('report', 'report & "Description: " & rowDesc & linefeed'),
+            (innerCatchB) =>
+              innerCatchB.setExpression(
+                'report',
+                'report & "Description: (not accessible)" & linefeed',
+              ),
+          )
+          .comment('Check what UI elements are in the row')
+          .setExpression('elemCount', 'count of UI elements of row i')
+          .setExpression('report', 'report & "UI Elements: " & elemCount & linefeed')
+          .ifThen('elemCount > 0 and elemCount < 20', (ifB) =>
+            ifB
+              .repeatWithRange('j', 1, 'elemCount')
+              .tryCatchError(
+                (jTryB) =>
+                  jTryB
+                    .setExpression('elemClass', 'class of UI element j of row i')
+                    .setExpression('elemValue', 'value of UI element j of row i')
+                    .setExpression(
+                      'report',
+                      'report & "  Element " & j & ": " & elemClass & " = " & elemValue & linefeed',
+                    ),
+                'errMsg',
+                (jCatchB) =>
+                  jCatchB.setExpression(
+                    'report',
+                    'report & "  Element " & j & ": (error: " & errMsg & ")" & linefeed',
+                  ),
+              )
+              .endrepeat(),
+          )
+          .comment('Check for static texts specifically')
+          .setExpression('textCount', 'count of static texts of row i')
+          .setExpression('report', 'report & "Static Texts: " & textCount & linefeed')
+          .ifThen('textCount > 0', (ifB) =>
+            ifB
+              .repeatWithRange('j', 1, 'textCount')
+              .tryCatch(
+                (jTryB) =>
+                  jTryB
+                    .setExpression('textValue', 'value of static text j of row i')
+                    .setExpression(
+                      'report',
+                      'report & "  Text " & j & ": " & textValue & linefeed',
+                    ),
+                (jCatchB) => jCatchB.comment('skip'),
+              )
+              .endrepeat(),
+          )
+          .setExpression('report', 'report & linefeed'),
+      'errMsg',
+      (catchB) =>
+        catchB.setExpression(
+          'report',
+          'report & "ERROR exploring row " & i & ": " & errMsg & linefeed & linefeed',
+        ),
     )
-    .raw('on error errMsg')
-    .raw('set report to report & "  Element " & j & ": (error: " & errMsg & ")" & linefeed')
-    .raw('end try')
-    .raw('end repeat')
-    .raw('end if')
-    .comment('Check for static texts specifically')
-    .setExpression('textCount', 'count of static texts of row i')
-    .raw('set report to report & "Static Texts: " & textCount & linefeed')
-    .raw('if textCount > 0 then')
-    .raw('repeat with j from 1 to textCount')
-    .raw('try')
-    .setExpression('textValue', 'value of static text j of row i')
-    .raw('set report to report & "  Text " & j & ": " & textValue & linefeed')
-    .raw('on error')
-    .raw('end try')
-    .raw('end repeat')
-    .raw('end if')
-    .raw('set report to report & linefeed')
-    .raw('on error errMsg')
-    .raw('set report to report & "ERROR exploring row " & i & ": " & errMsg & linefeed & linefeed')
-    .raw('end try')
-    .raw('end repeat')
+    .endrepeat()
     .returnRaw('report')
-    .raw('end tell')
-    .raw('end tell')
-    .raw('end tell')
-    .raw('end tell')
-    .raw('end tell')
+    .endtell()
+    .endtell()
+    .endtell()
+    .endtell()
     .endtell()
     .build();
 
