@@ -537,6 +537,20 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
+  exitRepeatIf(condition: string | ((expr: ExprBuilder) => string)): this {
+    const hasRepeatBlock = this.blockStack.some((block) => block.type === 'repeat');
+    if (!hasRepeatBlock) {
+      throw new ScriptBuilderError('Cannot call exitRepeatIf(): no repeat block is currently open');
+    }
+    const cond = typeof condition === 'function' ? condition(new ExprBuilder()) : condition;
+    this.script.push(`${this.getIndentation()}if ${cond} then`);
+    this.indentLevel++;
+    this.script.push(`${this.getIndentation()}exit repeat`);
+    this.indentLevel--;
+    this.script.push(`${this.getIndentation()}end if`);
+    return this;
+  }
+
   continueRepeat(): this {
     const hasRepeatBlock = this.blockStack.some((block) => block.type === 'repeat');
     if (!hasRepeatBlock) {
@@ -1118,6 +1132,12 @@ export class AppleScriptBuilder implements ScriptBuilder {
       const expr = typeof expression === 'function' ? expression(new ExprBuilder()) : expression;
       this.script.push(`${this.getIndentation()}set ${variable} to ${expr}`);
     }
+    return this;
+  }
+
+  appendTo(variable: string, expression: string | ((expr: ExprBuilder) => string)): this {
+    const expr = typeof expression === 'function' ? expression(new ExprBuilder()) : expression;
+    this.script.push(`${this.getIndentation()}set ${variable} to ${variable} & ${expr}`);
     return this;
   }
 

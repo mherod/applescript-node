@@ -377,6 +377,9 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
     end: number | string,
   ) => ScriptBuilder<TScope | TNewVar, TReturn>;
   exitRepeat: () => ScriptBuilder<TScope, TReturn>;
+  exitRepeatIf: (
+    condition: string | ((expr: ExprBuilder<TScope>) => string),
+  ) => ScriptBuilder<TScope, TReturn>;
   continueRepeat: () => ScriptBuilder<TScope, TReturn>;
   on: (handlerName: string, parameters?: string[]) => ScriptBuilder<TScope, TReturn>;
   to: (handlerName: string, parameters?: string[]) => ScriptBuilder<TScope, TReturn>;
@@ -756,6 +759,10 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   ) => ScriptBuilder<TScope | TNewVar, TReturn>;
   setExpressions: (
     expressions: Record<string, string | ((expr: ExprBuilder<TScope>) => string)>,
+  ) => ScriptBuilder<TScope, TReturn>;
+  appendTo: (
+    variable: string,
+    expression: string | ((expr: ExprBuilder<TScope>) => string),
   ) => ScriptBuilder<TScope, TReturn>;
   increment: (variable: string, by?: number) => ScriptBuilder<TScope, TReturn>;
   decrement: (variable: string, by?: number) => ScriptBuilder<TScope, TReturn>;
