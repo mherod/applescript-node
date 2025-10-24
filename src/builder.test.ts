@@ -802,6 +802,69 @@ describe('AppleScriptBuilder', () => {
         expect(script).toBe('set counter to counter - 3');
       });
 
+      it('should append to string variable', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.set('report', '""').appendTo('report', '"Hello"').build();
+
+        expect(script).toBe('set report to "\\"\\""\nset report to report & "Hello"');
+      });
+
+      it('should append to string variable with ExprBuilder', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('report', '""')
+          .appendTo('report', (e) => e.property('item', 'name'))
+          .build();
+
+        expect(script).toBe('set report to "\\"\\""\nset report to report & name of item');
+      });
+
+      it('should append with prependLinefeed option', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('report', '"Start"')
+          .appendTo('report', '"Line 2"', { prependLinefeed: true })
+          .build();
+
+        expect(script).toBe(
+          'set report to "\\"Start\\""\nset report to report & linefeed & "Line 2"',
+        );
+      });
+
+      it('should append with appendLinefeed option', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('report', '""')
+          .appendTo('report', '"Line 1"', { appendLinefeed: true })
+          .build();
+
+        expect(script).toBe('set report to "\\"\\""\nset report to report & "Line 1" & linefeed');
+      });
+
+      it('should append with both prependLinefeed and appendLinefeed options', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('report', '"Start"')
+          .appendTo('report', '"Middle"', { prependLinefeed: true, appendLinefeed: true })
+          .build();
+
+        expect(script).toBe(
+          'set report to "\\"Start\\""\nset report to report & linefeed & "Middle" & linefeed',
+        );
+      });
+
+      it('should append with options and ExprBuilder', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('report', '""')
+          .appendTo('report', (e) => e.property('row', 'value'), { appendLinefeed: true })
+          .build();
+
+        expect(script).toBe(
+          'set report to "\\"\\""\nset report to report & value of row & linefeed',
+        );
+      });
+
       it('should return raw expression with returnRaw', () => {
         const builder = new AppleScriptBuilder();
         const script = builder.returnRaw('myVariable').build();

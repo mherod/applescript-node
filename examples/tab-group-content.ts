@@ -12,84 +12,110 @@ async function exploreTabGroupContent() {
     .activate()
     .delay(1)
     .endtell()
-    .tell('System Events')
-    .raw('tell process "Activity Monitor"')
-    .raw('set inspectorWin to 0')
-    .raw('repeat with w from 1 to (count of windows)')
-    .raw('if name of window w contains "claude" then')
-    .raw('set inspectorWin to w')
-    .raw('exit repeat')
-    .raw('end if')
-    .raw('end repeat')
-    .raw('if inspectorWin > 0 then')
-    .raw('tell window inspectorWin')
-    .raw('tell tab group 1')
-    .set('report', '"=== TAB GROUP CONTENTS ===" & linefeed & linefeed')
-    .comment('Get counts of everything in the tab group')
-    .setExpression('radioCount', 'count of radio buttons')
-    .setExpression('scrollCount', 'count of scroll areas')
-    .setExpression('groupCount', 'count of groups')
-    .setExpression('textAreaCount', 'count of text areas')
-    .setExpression('splitterCount', 'count of splitter groups')
-    .setExpression('uiElemCount', 'count of UI elements')
-    .raw('set report to report & "Radio buttons: " & radioCount & linefeed')
-    .raw('set report to report & "Scroll areas: " & scrollCount & linefeed')
-    .raw('set report to report & "Groups: " & groupCount & linefeed')
-    .raw('set report to report & "Text areas: " & textAreaCount & linefeed')
-    .raw('set report to report & "Splitters: " & splitterCount & linefeed')
-    .raw('set report to report & "UI elements: " & uiElemCount & linefeed & linefeed')
-    .comment('Explore scroll areas in tab group')
-    .raw('if scrollCount > 0 then')
-    .raw('repeat with s from 1 to scrollCount')
-    .raw('set report to report & "=== SCROLL AREA " & s & " ===" & linefeed')
-    .raw('try')
-    .setExpression('scrollTables', 'count of tables of scroll area s')
-    .setExpression('scrollOutlines', 'count of outlines of scroll area s')
-    .setExpression('scrollTextAreas', 'count of text areas of scroll area s')
-    .setExpression('scrollLists', 'count of lists of scroll area s')
-    .setExpression('scrollGroups', 'count of groups of scroll area s')
-    .raw('set report to report & "  Tables: " & scrollTables & linefeed')
-    .raw('set report to report & "  Outlines: " & scrollOutlines & linefeed')
-    .raw('set report to report & "  Text areas: " & scrollTextAreas & linefeed')
-    .raw('set report to report & "  Lists: " & scrollLists & linefeed')
-    .raw('set report to report & "  Groups: " & scrollGroups & linefeed')
-    .comment('If there is a table, explore it')
-    .raw('if scrollTables > 0 then')
-    .raw('tell table 1 of scroll area s')
-    .setExpression('rowCount', 'count of rows')
-    .raw('set report to report & "  TABLE 1 has " & rowCount & " rows" & linefeed')
-    .raw('if rowCount > 0 then')
-    .raw('set report to report & "  First 3 rows:" & linefeed')
-    .raw('repeat with i from 1 to 3')
-    .raw('if i > rowCount then exit repeat')
-    .raw('try')
-    .setExpression('rowValue', 'value of row i')
-    .raw('set report to report & "    Row " & i & ": " & rowValue & linefeed')
-    .raw('on error')
-    .raw('try')
-    .setExpression('cellValue', 'value of static text 1 of UI element 1 of row i')
-    .raw('set report to report & "    Row " & i & ": " & cellValue & linefeed')
-    .raw('on error')
-    .raw('end try')
-    .raw('end try')
-    .raw('end repeat')
-    .raw('end if')
-    .raw('end tell')
-    .raw('end if')
-    .raw('on error errMsg')
-    .raw('set report to report & "  Error: " & errMsg & linefeed')
-    .raw('end try')
-    .raw('set report to report & linefeed')
-    .raw('end repeat')
-    .raw('end if')
-    .returnRaw('report')
-    .raw('end tell')
-    .raw('end tell')
-    .raw('else')
-    .set('report', '"Inspector window not found"')
-    .returnRaw('report')
-    .raw('end if')
-    .raw('end tell')
+    .tellProcess('Activity Monitor')
+    .set('inspectorWin', 0)
+    .repeatWithRange('w', 1, '(count of windows)')
+    .ifThen('name of window w contains "claude"', (b) =>
+      b.setExpression('inspectorWin', 'w').exitRepeat(),
+    )
+    .endrepeat()
+    .ifThenElse(
+      (e) => e.gt('inspectorWin', 0),
+      (thenB) =>
+        thenB
+          .tellTarget('window inspectorWin')
+          .tellTarget('tab group 1')
+          .set('report', '"=== TAB GROUP CONTENTS ===" & linefeed & linefeed')
+          .comment('Get counts of everything in the tab group')
+          .setExpressions({
+            radioCount: (e) => e.count('radio buttons'),
+            scrollCount: (e) => e.count('scroll areas'),
+            groupCount: (e) => e.count('groups'),
+            textAreaCount: (e) => e.count('text areas'),
+            splitterCount: (e) => e.count('splitter groups'),
+            uiElemCount: (e) => e.count('UI elements'),
+          })
+          .appendTo('report', '"Radio buttons: " & radioCount & linefeed')
+          .appendTo('report', '"Scroll areas: " & scrollCount & linefeed')
+          .appendTo('report', '"Groups: " & groupCount & linefeed')
+          .appendTo('report', '"Text areas: " & textAreaCount & linefeed')
+          .appendTo('report', '"Splitters: " & splitterCount & linefeed')
+          .appendTo('report', '"UI elements: " & uiElemCount & linefeed & linefeed')
+          .comment('Explore scroll areas in tab group')
+          .ifThen(
+            (e) => e.gt('scrollCount', 0),
+            (ifB) =>
+              ifB
+                .repeatWithRange('s', 1, 'scrollCount')
+                .appendTo('report', '"=== SCROLL AREA " & s & " ===" & linefeed')
+                .tryCatchError(
+                  (tryB) =>
+                    tryB
+                      .setExpressions({
+                        scrollTables: (e) => e.count('tables of scroll area s'),
+                        scrollOutlines: (e) => e.count('outlines of scroll area s'),
+                        scrollTextAreas: (e) => e.count('text areas of scroll area s'),
+                        scrollLists: (e) => e.count('lists of scroll area s'),
+                        scrollGroups: (e) => e.count('groups of scroll area s'),
+                      })
+                      .appendTo('report', '"  Tables: " & scrollTables & linefeed')
+                      .appendTo('report', '"  Outlines: " & scrollOutlines & linefeed')
+                      .appendTo('report', '"  Text areas: " & scrollTextAreas & linefeed')
+                      .appendTo('report', '"  Lists: " & scrollLists & linefeed')
+                      .appendTo('report', '"  Groups: " & scrollGroups & linefeed')
+                      .comment('If there is a table, explore it')
+                      .ifThen(
+                        (e) => e.gt('scrollTables', 0),
+                        (tableIfB) =>
+                          tableIfB
+                            .tellTarget('table 1 of scroll area s')
+                            .setExpression('rowCount', (e) => e.count('rows'))
+                            .appendTo('report', '"  TABLE 1 has " & rowCount & " rows" & linefeed')
+                            .ifThen(
+                              (e) => e.gt('rowCount', 0),
+                              (rowIfB) =>
+                                rowIfB
+                                  .appendTo('report', '"  First 3 rows:" & linefeed')
+                                  .repeatWithRange('i', 1, 3)
+                                  .exitRepeatIf((e) => e.gt('i', 'rowCount'))
+                                  .tryCatch(
+                                    (innerTryB) =>
+                                      innerTryB
+                                        .setExpression('rowValue', 'value of row i')
+                                        .appendTo(
+                                          'report',
+                                          '"    Row " & i & ": " & rowValue & linefeed',
+                                        ),
+                                    (innerCatchB) =>
+                                      innerCatchB.tryCatch(
+                                        (nestedTryB) =>
+                                          nestedTryB
+                                            .setExpression(
+                                              'cellValue',
+                                              'value of static text 1 of UI element 1 of row i',
+                                            )
+                                            .appendTo(
+                                              'report',
+                                              '"    Row " & i & ": " & cellValue & linefeed',
+                                            ),
+                                        (nestedCatchB) => nestedCatchB.comment('skip'),
+                                      ),
+                                  )
+                                  .endrepeat(),
+                            )
+                            .endtell(),
+                      ),
+                  'errMsg',
+                  (catchB) => catchB.appendTo('report', '"  Error: " & errMsg & linefeed'),
+                )
+                .appendTo('report', 'linefeed')
+                .endrepeat(),
+          )
+          .returnRaw('report')
+          .endtell()
+          .endtell(),
+      (elseB) => elseB.set('report', '"Inspector window not found"').returnRaw('report'),
+    )
     .endtell()
     .build();
 

@@ -22,43 +22,55 @@ async function exploreActivityMonitorUI() {
     .delay(2)
     .endtell()
     .comment('Explore the UI structure')
-    .tell('System Events')
-    .raw('tell process "Activity Monitor"')
+    .tellProcess('Activity Monitor')
     .comment('Get window information')
-    .setExpression('winCount', 'count of windows')
-    .setExpression('winNames', 'name of every window')
+    .setExpressions({
+      winCount: (e) => e.count('windows'),
+      winNames: 'name of every window',
+    })
     .comment('Get main window UI elements')
-    .raw('tell window 1')
-    .setExpression('scrollCount', 'count of scroll areas')
-    .setExpression('groupCount', 'count of groups')
-    .setExpression('splitterCount', 'count of splitter groups')
+    .tellTarget('window 1')
+    .setExpressions({
+      scrollCount: (e) => e.count('scroll areas'),
+      groupCount: (e) => e.count('groups'),
+      splitterCount: (e) => e.count('splitter groups'),
+    })
     .comment('Explore group 1')
-    .raw('if groupCount > 0 then')
-    .setExpression('group1Tables', 'count of tables of group 1')
-    .setExpression('group1ScrollAreas', 'count of scroll areas of group 1')
-    .setExpression('group1Splitters', 'count of splitter groups of group 1')
-    .raw('if group1Splitters > 0 then')
-    .setExpression('splitterScrollAreas', 'count of scroll areas of splitter group 1 of group 1')
-    .raw('if splitterScrollAreas > 0 then')
-    .setExpression(
-      'splitterTables',
-      'count of tables of scroll area 1 of splitter group 1 of group 1',
+    .ifThenElse(
+      (e) => e.gt('groupCount', 0),
+      (thenB) =>
+        thenB
+          .setExpressions({
+            group1Tables: (e) => e.count('tables of group 1'),
+            group1ScrollAreas: (e) => e.count('scroll areas of group 1'),
+            group1Splitters: (e) => e.count('splitter groups of group 1'),
+          })
+          .ifThenElse(
+            (e) => e.gt('group1Splitters', 0),
+            (innerThenB) =>
+              innerThenB
+                .setExpression('splitterScrollAreas', (e) =>
+                  e.count('scroll areas of splitter group 1 of group 1'),
+                )
+                .ifThenElse(
+                  (e) => e.gt('splitterScrollAreas', 0),
+                  (innerInnerThen) =>
+                    innerInnerThen.setExpression('splitterTables', (e) =>
+                      e.count('tables of scroll area 1 of splitter group 1 of group 1'),
+                    ),
+                  (innerInnerElse) => innerInnerElse.set('splitterTables', 0),
+                ),
+            (innerElseB) => innerElseB.set('splitterScrollAreas', 0).set('splitterTables', 0),
+          ),
+      (elseB) =>
+        elseB
+          .set('group1Tables', 0)
+          .set('group1ScrollAreas', 0)
+          .set('group1Splitters', 0)
+          .set('splitterScrollAreas', 0)
+          .set('splitterTables', 0),
     )
-    .raw('else')
-    .set('splitterTables', 0)
-    .raw('end if')
-    .raw('else')
-    .set('splitterScrollAreas', 0)
-    .set('splitterTables', 0)
-    .raw('end if')
-    .raw('else')
-    .set('group1Tables', 0)
-    .set('group1ScrollAreas', 0)
-    .set('group1Splitters', 0)
-    .set('splitterScrollAreas', 0)
-    .set('splitterTables', 0)
-    .raw('end if')
-    .raw('end tell')
+    .endtell()
     .comment('Build debug output')
     .setExpression(
       'debugInfo',
@@ -77,7 +89,6 @@ async function exploreActivityMonitorUI() {
         '"  Splitter -> Scroll area -> Tables: " & splitterTables',
     )
     .returnRaw('debugInfo')
-    .raw('end tell')
     .endtell()
     .build();
 
@@ -116,66 +127,89 @@ async function _findClaudeProcess() {
     .delay(1)
     .endtell()
     .comment('Use System Events for GUI scripting')
-    .tell('System Events')
-    .raw('tell process "Activity Monitor"')
+    .tellProcess('Activity Monitor')
     .comment('Try to find the table with processes')
-    .raw('tell window 1')
+    .tellTarget('window 1')
     .comment('Look for tables - try group -> splitter -> scroll area path')
-    .setExpression('groupCount', 'count of groups')
-    .raw('if groupCount > 0 then')
-    .setExpression('splitterCount', 'count of splitter groups of group 1')
-    .raw('if splitterCount > 0 then')
-    .setExpression('scrollCount', 'count of scroll areas of splitter group 1 of group 1')
-    .raw('if scrollCount > 0 then')
-    .setExpression('tableCount', 'count of tables of scroll area 1 of splitter group 1 of group 1')
-    .raw('if tableCount > 0 then')
-    .comment('Get first table (process list)')
-    .raw('tell table 1 of scroll area 1 of splitter group 1 of group 1')
-    .setExpression('rowCount', 'count of rows')
-    .setExpression('columnCount', 'count of columns')
-    .comment('Search for claude process')
-    .set('foundRow', 0)
-    .raw('repeat with i from 1 to rowCount')
-    .raw('try')
-    .setExpression('rowText', 'value of static text 1 of row i')
-    .raw('if rowText contains "claude" or rowText contains "Claude" then')
-    .raw('set foundRow to i')
-    .comment('Found the claude row!')
-    .raw('end if')
-    .raw('on error')
-    .comment('Skip rows that cause errors')
-    .raw('end try')
-    .raw('end repeat')
-    .comment('Check if we found the row')
-    .raw('if foundRow > 0 then')
-    .setExpression(
-      'result',
-      '"Found claude process in row " & foundRow & " out of " & rowCount & " rows" & linefeed & ' +
-        '"Table has " & columnCount & " columns"',
+    .setExpression('groupCount', (e) => e.count('groups'))
+    .ifThenElse(
+      (e) => e.gt('groupCount', 0),
+      (thenB) =>
+        thenB
+          .setExpression('splitterCount', (e) => e.count('splitter groups of group 1'))
+          .ifThenElse(
+            (e) => e.gt('splitterCount', 0),
+            (innerThen) =>
+              innerThen
+                .setExpression('scrollCount', (e) =>
+                  e.count('scroll areas of splitter group 1 of group 1'),
+                )
+                .ifThenElse(
+                  (e) => e.gt('scrollCount', 0),
+                  (scrollThen) =>
+                    scrollThen
+                      .setExpression('tableCount', (e) =>
+                        e.count('tables of scroll area 1 of splitter group 1 of group 1'),
+                      )
+                      .ifThenElse(
+                        (e) => e.gt('tableCount', 0),
+                        (tableThen) =>
+                          tableThen
+                            .comment('Get first table (process list)')
+                            .tellTarget('table 1 of scroll area 1 of splitter group 1 of group 1')
+                            .setExpressions({
+                              rowCount: (e) => e.count('rows'),
+                              columnCount: (e) => e.count('columns'),
+                            })
+                            .comment('Search for claude process')
+                            .set('foundRow', 0)
+                            .repeatWithRange('i', 1, 'rowCount')
+                            .tryCatch(
+                              (tryB) =>
+                                tryB
+                                  .setExpression('rowText', 'value of static text 1 of row i')
+                                  .ifThen(
+                                    'rowText contains "claude" or rowText contains "Claude"',
+                                    (ifB) =>
+                                      ifB
+                                        .setExpression('foundRow', 'i')
+                                        .comment('Found the claude row!'),
+                                  ),
+                              (catchB) => catchB.comment('Skip rows that cause errors'),
+                            )
+                            .endrepeat()
+                            .comment('Check if we found the row')
+                            .ifThenElse(
+                              (e) => e.gt('foundRow', 0),
+                              (foundThen) =>
+                                foundThen
+                                  .setExpression(
+                                    'result',
+                                    '"Found claude process in row " & foundRow & " out of " & rowCount & " rows" & linefeed & ' +
+                                      '"Table has " & columnCount & " columns"',
+                                  )
+                                  .comment('Try to select the row')
+                                  .select('row foundRow')
+                                  .delay(0.5)
+                                  .appendTo('result', 'linefeed & "Selected the row"'),
+                              (foundElse) =>
+                                foundElse.setExpression(
+                                  'result',
+                                  '"Could not find claude process in " & rowCount & " rows"',
+                                ),
+                            )
+                            .endtell(),
+                        (tableElse) => tableElse.set('result', '"No tables found in scroll area"'),
+                      ),
+                  (scrollElse) =>
+                    scrollElse.set('result', '"No scroll areas found in splitter group"'),
+                ),
+            (innerElse) => innerElse.set('result', '"No splitter groups found in group 1"'),
+          ),
+      (elseB) => elseB.set('result', '"No groups found in Activity Monitor window"'),
     )
-    .comment('Try to select the row')
-    .raw('select row foundRow')
-    .delay(0.5)
-    .set('result', 'result & linefeed & "Selected the row"')
-    .raw('else')
-    .setExpression('result', '"Could not find claude process in " & rowCount & " rows"')
-    .raw('end if')
-    .raw('end tell')
-    .raw('else')
-    .set('result', '"No tables found in scroll area"')
-    .raw('end if')
-    .raw('else')
-    .set('result', '"No scroll areas found in splitter group"')
-    .raw('end if')
-    .raw('else')
-    .set('result', '"No splitter groups found in group 1"')
-    .raw('end if')
-    .raw('else')
-    .set('result', '"No groups found in Activity Monitor window"')
-    .raw('end if')
     .returnRaw('result')
-    .raw('end tell')
-    .raw('end tell')
+    .endtell()
     .endtell()
     .build();
 
@@ -208,21 +242,27 @@ async function _clickInspectButton() {
   console.log('\n\nAttempting to click Inspect button...\n');
 
   const clickScript = createScript()
-    .tell('System Events')
-    .raw('tell process "Activity Monitor"')
+    .tellProcess('Activity Monitor')
     .comment('Look for the Inspect button in toolbar or menu bar')
-    .setExpression('buttonCount', 'count of buttons of window 1')
-    .setExpression('toolbarExists', 'exists toolbar 1 of window 1')
-    .raw('if toolbarExists then')
-    .setExpression('toolbarButtons', 'count of buttons of toolbar 1 of window 1')
-    .raw('try')
-    .setExpression('buttonNames', 'description of every button of toolbar 1 of window 1')
-    .raw('on error')
-    .set('buttonNames', '""')
-    .raw('end try')
-    .raw('else')
-    .set('buttonNames', '""')
-    .raw('end if')
+    .setExpressions({
+      buttonCount: (e) => e.count('buttons of window 1'),
+      toolbarExists: 'exists toolbar 1 of window 1',
+    })
+    .ifThenElse(
+      'toolbarExists',
+      (thenB) =>
+        thenB
+          .setExpression('toolbarButtons', (e) => e.count('buttons of toolbar 1 of window 1'))
+          .tryCatch(
+            (tryB) =>
+              tryB.setExpression(
+                'buttonNames',
+                'description of every button of toolbar 1 of window 1',
+              ),
+            (catchB) => catchB.set('buttonNames', '""'),
+          ),
+      (elseB) => elseB.set('buttonNames', '""'),
+    )
     .setExpression(
       'debugInfo',
       '"Buttons in window: " & buttonCount & linefeed & ' +
@@ -231,24 +271,25 @@ async function _clickInspectButton() {
         'buttonNames',
     )
     .comment('Try to click View menu -> Inspect Process')
-    .raw('tell menu bar 1')
-    .raw('tell menu bar item "View"')
-    .raw('tell menu "View"')
+    .tellTarget('menu bar 1')
+    .tellTarget('menu bar item "View"')
+    .tellTarget('menu "View"')
     .setExpression('menuItems', 'name of every menu item')
-    .raw('set debugInfo to debugInfo & linefeed & linefeed & "View menu items: " & menuItems')
+    .appendTo('debugInfo', 'linefeed & linefeed & "View menu items: " & menuItems')
     .comment('Click Inspect Process if it exists')
-    .raw('if exists menu item "Inspect Process" then')
-    .raw('click menu item "Inspect Process"')
-    .raw('set debugInfo to debugInfo & linefeed & "Clicked Inspect Process menu item"')
-    .delay(1)
-    .raw('else')
-    .raw('set debugInfo to debugInfo & linefeed & "Inspect Process menu item not found"')
-    .raw('end if')
-    .raw('end tell')
-    .raw('end tell')
-    .raw('end tell')
+    .ifThenElse(
+      'exists menu item "Inspect Process"',
+      (thenB) =>
+        thenB
+          .click('menu item "Inspect Process"')
+          .appendTo('debugInfo', 'linefeed & "Clicked Inspect Process menu item"')
+          .delay(1),
+      (elseB) => elseB.appendTo('debugInfo', 'linefeed & "Inspect Process menu item not found"'),
+    )
+    .endtell()
+    .endtell()
+    .endtell()
     .returnRaw('debugInfo')
-    .raw('end tell')
     .endtell()
     .build();
 
@@ -281,54 +322,67 @@ async function exploreInspectorWindow() {
   console.log('\n\nExploring Inspector Window...\n');
 
   const inspectScript = createScript()
-    .tell('System Events')
-    .raw('tell process "Activity Monitor"')
+    .tellProcess('Activity Monitor')
     .comment('Look for the inspector window')
-    .setExpression('winCount', 'count of windows')
-    .setExpression('winNames', 'name of every window')
+    .setExpressions({
+      winCount: (e) => e.count('windows'),
+      winNames: 'name of every window',
+    })
     .comment('Find the claude inspector window')
     .set('inspectorWin', 0)
-    .raw('repeat with i from 1 to winCount')
-    .raw('if name of window i contains "claude" then')
-    .raw('set inspectorWin to i')
-    .raw('exit repeat')
-    .raw('end if')
-    .raw('end repeat')
-    .raw('if inspectorWin > 0 then')
-    .comment('Explore the inspector window')
-    .raw('tell window inspectorWin')
-    .setExpression('tabGroupCount', 'count of tab groups')
-    .setExpression('scrollCount', 'count of scroll areas')
-    .setExpression('groupCount', 'count of groups')
-    .raw('if tabGroupCount > 0 then')
-    .setExpression('radioGroupCount', 'count of radio groups of tab group 1')
-    .setExpression('radioButtonCount', 'count of radio buttons of tab group 1')
-    .raw('if radioButtonCount > 0 then')
-    .setExpression('radioNames', 'name of every radio button of tab group 1')
-    .raw('else')
-    .set('radioNames', '""')
-    .raw('end if')
-    .raw('else')
-    .set('radioGroupCount', 0)
-    .set('radioButtonCount', 0)
-    .set('radioNames', '""')
-    .raw('end if')
-    .setExpression(
-      'result',
-      '"Inspector Window Found!" & linefeed & linefeed & ' +
-        '"Tab groups: " & tabGroupCount & linefeed & ' +
-        '"Radio groups in tab group 1: " & radioGroupCount & linefeed & ' +
-        '"Radio buttons in tab group 1: " & radioButtonCount & linefeed & ' +
-        '"Radio button names: " & radioNames & linefeed & ' +
-        '"Scroll areas: " & scrollCount & linefeed & ' +
-        '"Groups: " & groupCount',
+    .repeatWithRange('i', 1, 'winCount')
+    .ifThen('name of window i contains "claude"', (b) =>
+      b.setExpression('inspectorWin', 'i').exitRepeat(),
     )
-    .raw('end tell')
-    .raw('else')
-    .set('result', '"Inspector window not found. Windows: " & winNames')
-    .raw('end if')
+    .endrepeat()
+    .ifThenElse(
+      (e) => e.gt('inspectorWin', 0),
+      (thenB) =>
+        thenB
+          .comment('Explore the inspector window')
+          .tellTarget('window inspectorWin')
+          .setExpressions({
+            tabGroupCount: (e) => e.count('tab groups'),
+            scrollCount: (e) => e.count('scroll areas'),
+            groupCount: (e) => e.count('groups'),
+          })
+          .ifThenElse(
+            (e) => e.gt('tabGroupCount', 0),
+            (innerThen) =>
+              innerThen
+                .setExpressions({
+                  radioGroupCount: (e) => e.count('radio groups of tab group 1'),
+                  radioButtonCount: (e) => e.count('radio buttons of tab group 1'),
+                })
+                .ifThenElse(
+                  (e) => e.gt('radioButtonCount', 0),
+                  (radioThen) =>
+                    radioThen.setExpression(
+                      'radioNames',
+                      'name of every radio button of tab group 1',
+                    ),
+                  (radioElse) => radioElse.set('radioNames', '""'),
+                ),
+            (innerElse) =>
+              innerElse
+                .set('radioGroupCount', 0)
+                .set('radioButtonCount', 0)
+                .set('radioNames', '""'),
+          )
+          .setExpression(
+            'result',
+            '"Inspector Window Found!" & linefeed & linefeed & ' +
+              '"Tab groups: " & tabGroupCount & linefeed & ' +
+              '"Radio groups in tab group 1: " & radioGroupCount & linefeed & ' +
+              '"Radio buttons in tab group 1: " & radioButtonCount & linefeed & ' +
+              '"Radio button names: " & radioNames & linefeed & ' +
+              '"Scroll areas: " & scrollCount & linefeed & ' +
+              '"Groups: " & groupCount',
+          )
+          .endtell(),
+      (elseB) => elseB.set('result', '"Inspector window not found. Windows: " & winNames'),
+    )
     .returnRaw('result')
-    .raw('end tell')
     .endtell()
     .build();
 
@@ -361,51 +415,56 @@ async function clickOpenFilesAndPorts() {
   console.log('\n\nClicking Open Files and Ports tab...\n');
 
   const tabScript = createScript()
-    .tell('System Events')
-    .raw('tell process "Activity Monitor"')
+    .tellProcess('Activity Monitor')
     .comment('Find the claude inspector window')
     .set('inspectorWin', 0)
-    .raw('repeat with i from 1 to count of windows')
-    .raw('if name of window i contains "claude" then')
-    .raw('set inspectorWin to i')
-    .raw('exit repeat')
-    .raw('end if')
-    .raw('end repeat')
-    .raw('if inspectorWin > 0 then')
-    .raw('tell window inspectorWin')
-    .comment('Click the Open Files and Ports radio button')
-    .raw('if exists tab group 1 then')
-    .raw('tell tab group 1')
-    .raw('repeat with rb in radio buttons')
-    .raw('if name of rb contains "Open Files" or name of rb contains "Ports" then')
-    .raw('click rb')
-    .delay(0.5)
-    .raw('exit repeat')
-    .raw('end if')
-    .raw('end repeat')
-    .raw('end tell')
-    .comment('Now extract the table data')
-    .raw('if exists scroll area 1 then')
-    .raw('if exists table 1 of scroll area 1 then')
-    .raw('tell table 1 of scroll area 1')
-    .setExpression('rowCount', 'count of rows')
-    .setExpression('result', '"Open Files and Ports data:" & linefeed & "Total rows: " & rowCount')
-    .raw('end tell')
-    .raw('else')
-    .set('result', '"No table found in scroll area"')
-    .raw('end if')
-    .raw('else')
-    .set('result', '"No scroll area found"')
-    .raw('end if')
-    .raw('else')
-    .set('result', '"No tab group found"')
-    .raw('end if')
-    .raw('end tell')
-    .raw('else')
-    .set('result', '"Inspector window not found"')
-    .raw('end if')
+    .repeatWithRange('i', 1, '(count of windows)')
+    .ifThen('name of window i contains "claude"', (b) =>
+      b.setExpression('inspectorWin', 'i').exitRepeat(),
+    )
+    .endrepeat()
+    .ifThenElse(
+      (e) => e.gt('inspectorWin', 0),
+      (thenB) =>
+        thenB
+          .tellTarget('window inspectorWin')
+          .comment('Click the Open Files and Ports radio button')
+          .ifThenElse(
+            'exists tab group 1',
+            (tabThen) =>
+              tabThen
+                .tellTarget('tab group 1')
+                .repeatWith('rb', 'radio buttons')
+                .ifThen('name of rb contains "Open Files" or name of rb contains "Ports"', (ifB) =>
+                  ifB.click('rb').delay(0.5).exitRepeat(),
+                )
+                .endrepeat()
+                .endtell()
+                .comment('Now extract the table data')
+                .ifThenElse(
+                  'exists scroll area 1',
+                  (scrollThen) =>
+                    scrollThen.ifThenElse(
+                      'exists table 1 of scroll area 1',
+                      (tableThen) =>
+                        tableThen
+                          .tellTarget('table 1 of scroll area 1')
+                          .setExpression('rowCount', (e) => e.count('rows'))
+                          .setExpression(
+                            'result',
+                            '"Open Files and Ports data:" & linefeed & "Total rows: " & rowCount',
+                          )
+                          .endtell(),
+                      (tableElse) => tableElse.set('result', '"No table found in scroll area"'),
+                    ),
+                  (scrollElse) => scrollElse.set('result', '"No scroll area found"'),
+                ),
+            (tabElse) => tabElse.set('result', '"No tab group found"'),
+          )
+          .endtell(),
+      (elseB) => elseB.set('result', '"Inspector window not found"'),
+    )
     .returnRaw('result')
-    .raw('end tell')
     .endtell()
     .build();
 

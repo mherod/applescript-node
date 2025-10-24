@@ -12,89 +12,123 @@ async function exploreTabStructure() {
     .activate()
     .delay(1)
     .endtell()
-    .tell('System Events')
-    .raw('tell process "Activity Monitor"')
-    .raw('set inspectorWin to 0')
-    .raw('repeat with w from 1 to (count of windows)')
-    .raw('if name of window w contains "claude" then')
-    .raw('set inspectorWin to w')
-    .raw('exit repeat')
-    .raw('end if')
-    .raw('end repeat')
-    .raw('if inspectorWin > 0 then')
-    .raw('tell window inspectorWin')
-    .set('report', '"=== FULL WINDOW STRUCTURE ===" & linefeed & linefeed')
-    .comment('Check what is directly in the window')
-    .setExpression('groupCount', 'count of groups')
-    .setExpression('scrollCount', 'count of scroll areas')
-    .setExpression('tabGroupCount', 'count of tab groups')
-    .setExpression('splitterCount', 'count of splitter groups')
-    .raw('set report to report & "Groups: " & groupCount & linefeed')
-    .raw('set report to report & "Scroll areas: " & scrollCount & linefeed')
-    .raw('set report to report & "Tab groups: " & tabGroupCount & linefeed')
-    .raw('set report to report & "Splitters: " & splitterCount & linefeed & linefeed')
-    .comment('Explore groups if any')
-    .raw('if groupCount > 0 then')
-    .raw('repeat with g from 1 to groupCount')
-    .raw('set report to report & "=== GROUP " & g & " ===" & linefeed')
-    .raw('try')
-    .setExpression('groupScrolls', 'count of scroll areas of group g')
-    .setExpression('groupSplitters', 'count of splitter groups of group g')
-    .setExpression('groupTextAreas', 'count of text areas of group g')
-    .raw('set report to report & "  Scroll areas: " & groupScrolls & linefeed')
-    .raw('set report to report & "  Splitters: " & groupSplitters & linefeed')
-    .raw('set report to report & "  Text areas: " & groupTextAreas & linefeed')
-    .raw('if groupScrolls > 0 then')
-    .raw('repeat with s from 1 to groupScrolls')
-    .raw('try')
-    .setExpression('scrollTables', 'count of tables of scroll area s of group g')
-    .setExpression('scrollOutlines', 'count of outlines of scroll area s of group g')
-    .setExpression('scrollTextAreas', 'count of text areas of scroll area s of group g')
-    .raw(
-      'set report to report & "    Scroll " & s & ": tables=" & scrollTables & ", outlines=" & scrollOutlines & ", text areas=" & scrollTextAreas & linefeed',
+    .tellProcess('Activity Monitor')
+    .set('inspectorWin', 0)
+    .repeatWithRange('w', 1, '(count of windows)')
+    .ifThen('name of window w contains "claude"', (b) =>
+      b.setExpression('inspectorWin', 'w').exitRepeat(),
     )
-    .raw('on error')
-    .raw('end try')
-    .raw('end repeat')
-    .raw('end if')
-    .raw('on error errMsg')
-    .raw('set report to report & "  Error: " & errMsg & linefeed')
-    .raw('end try')
-    .raw('set report to report & linefeed')
-    .raw('end repeat')
-    .raw('end if')
-    .comment('Explore splitters if any')
-    .raw('if splitterCount > 0 then')
-    .raw('set report to report & "=== SPLITTER 1 ===" & linefeed')
-    .raw('try')
-    .setExpression('splitterGroups', 'count of groups of splitter group 1')
-    .setExpression('splitterScrolls', 'count of scroll areas of splitter group 1')
-    .raw('set report to report & "  Groups: " & splitterGroups & linefeed')
-    .raw('set report to report & "  Scroll areas: " & splitterScrolls & linefeed')
-    .raw('if splitterScrolls > 0 then')
-    .raw('repeat with s from 1 to splitterScrolls')
-    .raw('try')
-    .setExpression('scrollTables', 'count of tables of scroll area s of splitter group 1')
-    .setExpression('scrollOutlines', 'count of outlines of scroll area s of splitter group 1')
-    .setExpression('scrollTextAreas', 'count of text areas of scroll area s of splitter group 1')
-    .raw(
-      'set report to report & "    Scroll " & s & ": tables=" & scrollTables & ", outlines=" & scrollOutlines & ", text areas=" & scrollTextAreas & linefeed',
+    .endrepeat()
+    .ifThenElse(
+      (e) => e.gt('inspectorWin', 0),
+      (thenB) =>
+        thenB
+          .tellTarget('window inspectorWin')
+          .set('report', '"=== FULL WINDOW STRUCTURE ===" & linefeed & linefeed')
+          .comment('Check what is directly in the window')
+          .setExpressions({
+            groupCount: (e) => e.count('groups'),
+            scrollCount: (e) => e.count('scroll areas'),
+            tabGroupCount: (e) => e.count('tab groups'),
+            splitterCount: (e) => e.count('splitter groups'),
+          })
+          .appendTo('report', '"Groups: " & groupCount & linefeed')
+          .appendTo('report', '"Scroll areas: " & scrollCount & linefeed')
+          .appendTo('report', '"Tab groups: " & tabGroupCount & linefeed')
+          .appendTo('report', '"Splitters: " & splitterCount & linefeed & linefeed')
+          .comment('Explore groups if any')
+          .ifThen(
+            (e) => e.gt('groupCount', 0),
+            (ifB) =>
+              ifB
+                .repeatWithRange('g', 1, 'groupCount')
+                .appendTo('report', '"=== GROUP " & g & " ===" & linefeed')
+                .tryCatchError(
+                  (tryB) =>
+                    tryB
+                      .setExpressions({
+                        groupScrolls: (e) => e.count('scroll areas of group g'),
+                        groupSplitters: (e) => e.count('splitter groups of group g'),
+                        groupTextAreas: (e) => e.count('text areas of group g'),
+                      })
+                      .appendTo('report', '"  Scroll areas: " & groupScrolls & linefeed')
+                      .appendTo('report', '"  Splitters: " & groupSplitters & linefeed')
+                      .appendTo('report', '"  Text areas: " & groupTextAreas & linefeed')
+                      .ifThen(
+                        (e) => e.gt('groupScrolls', 0),
+                        (innerIfB) =>
+                          innerIfB
+                            .repeatWithRange('s', 1, 'groupScrolls')
+                            .tryCatch(
+                              (innerTryB) =>
+                                innerTryB
+                                  .setExpressions({
+                                    scrollTables: (e) =>
+                                      e.count('tables of scroll area s of group g'),
+                                    scrollOutlines: (e) =>
+                                      e.count('outlines of scroll area s of group g'),
+                                    scrollTextAreas: (e) =>
+                                      e.count('text areas of scroll area s of group g'),
+                                  })
+                                  .appendTo(
+                                    'report',
+                                    '"    Scroll " & s & ": tables=" & scrollTables & ", outlines=" & scrollOutlines & ", text areas=" & scrollTextAreas & linefeed',
+                                  ),
+                              (innerCatchB) => innerCatchB.comment('skip'),
+                            )
+                            .endrepeat(),
+                      ),
+                  'errMsg',
+                  (catchB) => catchB.appendTo('report', '"  Error: " & errMsg & linefeed'),
+                )
+                .appendTo('report', 'linefeed')
+                .endrepeat(),
+          )
+          .comment('Explore splitters if any')
+          .ifThen(
+            (e) => e.gt('splitterCount', 0),
+            (ifB) =>
+              ifB.appendTo('report', '"=== SPLITTER 1 ===" & linefeed').tryCatchError(
+                (tryB) =>
+                  tryB
+                    .setExpressions({
+                      splitterGroups: (e) => e.count('groups of splitter group 1'),
+                      splitterScrolls: (e) => e.count('scroll areas of splitter group 1'),
+                    })
+                    .appendTo('report', '"  Groups: " & splitterGroups & linefeed')
+                    .appendTo('report', '"  Scroll areas: " & splitterScrolls & linefeed')
+                    .ifThen(
+                      (e) => e.gt('splitterScrolls', 0),
+                      (innerIfB) =>
+                        innerIfB
+                          .repeatWithRange('s', 1, 'splitterScrolls')
+                          .tryCatch(
+                            (innerTryB) =>
+                              innerTryB
+                                .setExpressions({
+                                  scrollTables: (e) =>
+                                    e.count('tables of scroll area s of splitter group 1'),
+                                  scrollOutlines: (e) =>
+                                    e.count('outlines of scroll area s of splitter group 1'),
+                                  scrollTextAreas: (e) =>
+                                    e.count('text areas of scroll area s of splitter group 1'),
+                                })
+                                .appendTo(
+                                  'report',
+                                  '"    Scroll " & s & ": tables=" & scrollTables & ", outlines=" & scrollOutlines & ", text areas=" & scrollTextAreas & linefeed',
+                                ),
+                            (innerCatchB) => innerCatchB.comment('skip'),
+                          )
+                          .endrepeat(),
+                    ),
+                'errMsg',
+                (catchB) => catchB.appendTo('report', '"  Error: " & errMsg & linefeed'),
+              ),
+          )
+          .returnRaw('report')
+          .endtell(),
+      (elseB) => elseB.set('report', '"Inspector window not found"').returnRaw('report'),
     )
-    .raw('on error')
-    .raw('end try')
-    .raw('end repeat')
-    .raw('end if')
-    .raw('on error errMsg')
-    .raw('set report to report & "  Error: " & errMsg & linefeed')
-    .raw('end try')
-    .raw('end if')
-    .returnRaw('report')
-    .raw('end tell')
-    .raw('else')
-    .set('report', '"Inspector window not found"')
-    .returnRaw('report')
-    .raw('end if')
-    .raw('end tell')
     .endtell()
     .build();
 

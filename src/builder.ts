@@ -1135,8 +1135,21 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
-  appendTo(variable: string, expression: string | ((expr: ExprBuilder) => string)): this {
-    const expr = typeof expression === 'function' ? expression(new ExprBuilder()) : expression;
+  appendTo(
+    variable: string,
+    expression: string | ((expr: ExprBuilder) => string),
+    options?: { prependLinefeed?: boolean; appendLinefeed?: boolean },
+  ): this {
+    let expr = typeof expression === 'function' ? expression(new ExprBuilder()) : expression;
+
+    // Add linefeed wrapping if requested
+    if (options?.prependLinefeed) {
+      expr = `linefeed & ${expr}`;
+    }
+    if (options?.appendLinefeed) {
+      expr = `${expr} & linefeed`;
+    }
+
     this.script.push(`${this.getIndentation()}set ${variable} to ${variable} & ${expr}`);
     return this;
   }

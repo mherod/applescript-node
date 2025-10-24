@@ -763,6 +763,7 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   appendTo: (
     variable: string,
     expression: string | ((expr: ExprBuilder<TScope>) => string),
+    options?: { prependLinefeed?: boolean; appendLinefeed?: boolean },
   ) => ScriptBuilder<TScope, TReturn>;
   increment: (variable: string, by?: number) => ScriptBuilder<TScope, TReturn>;
   decrement: (variable: string, by?: number) => ScriptBuilder<TScope, TReturn>;

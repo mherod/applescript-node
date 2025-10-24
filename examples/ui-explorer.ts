@@ -43,58 +43,70 @@ async function exploreActivityMonitorDeep() {
         '"Images: " & imageCount & linefeed & linefeed',
     )
     .comment('If there are outlines, explore them')
-    .ifThen('outlineCount > 0', (b) =>
-      b
-        .tellTarget('outline 1')
-        .setExpression('outlineRows', 'count of rows')
-        .appendTo('report', '"Outline 1 has " & outlineRows & " rows" & linefeed')
-        .ifThen('outlineRows > 0', (innerB) =>
-          innerB
-            .appendTo('report', '"First 3 rows sample:" & linefeed')
-            .repeatWithRange('i', 1, 3)
-            .exitRepeatIf('i > outlineRows')
-            .tryCatchError(
-              (tryB) =>
-                tryB
-                  .setExpression('rowStaticTexts', 'count of static texts of row i')
-                  .appendTo(
-                    'report',
-                    '"  Row " & i & " has " & rowStaticTexts & " static texts" & linefeed',
-                  )
-                  .ifThen('rowStaticTexts > 0', (textB) =>
-                    textB
-                      .setExpression('firstText', 'value of static text 1 of row i')
-                      .appendTo('report', '"    First text: " & firstText & linefeed'),
-                  ),
-              'errMsg',
-              (catchB) => catchB.appendTo('report', '"    Error: " & errMsg & linefeed'),
-            )
-            .endrepeat(),
-        )
-        .endtell(),
+    .ifThen(
+      (e) => e.gt('outlineCount', 0),
+      (b) =>
+        b
+          .tellTarget('outline 1')
+          .setExpression('outlineRows', (e) => e.count('rows'))
+          .appendTo('report', '"Outline 1 has " & outlineRows & " rows" & linefeed')
+          .ifThen(
+            (e) => e.gt('outlineRows', 0),
+            (innerB) =>
+              innerB
+                .appendTo('report', '"First 3 rows sample:" & linefeed')
+                .repeatWithRange('i', 1, 3)
+                .exitRepeatIf((e) => e.gt('i', 'outlineRows'))
+                .tryCatchError(
+                  (tryB) =>
+                    tryB
+                      .setExpression('rowStaticTexts', (e) => e.count('static texts of row i'))
+                      .appendTo(
+                        'report',
+                        '"  Row " & i & " has " & rowStaticTexts & " static texts" & linefeed',
+                      )
+                      .ifThen(
+                        (e) => e.gt('rowStaticTexts', 0),
+                        (textB) =>
+                          textB
+                            .setExpression('firstText', (e) =>
+                              e.valueOfItem(1, 'static text of row i'),
+                            )
+                            .appendTo('report', '"    First text: " & firstText & linefeed'),
+                      ),
+                  'errMsg',
+                  (catchB) => catchB.appendTo('report', '"    Error: " & errMsg & linefeed'),
+                )
+                .endrepeat(),
+          )
+          .endtell(),
     )
     .comment('If there are lists, explore them')
-    .ifThen('listCount > 0', (b) =>
-      b
-        .tellTarget('list 1')
-        .setExpression('listRows', 'count of rows')
-        .appendTo('report', 'linefeed & "List 1 has " & listRows & " rows" & linefeed')
-        .endtell(),
+    .ifThen(
+      (e) => e.gt('listCount', 0),
+      (b) =>
+        b
+          .tellTarget('list 1')
+          .setExpression('listRows', (e) => e.count('rows'))
+          .appendTo('report', 'linefeed & "List 1 has " & listRows & " rows" & linefeed')
+          .endtell(),
     )
     .comment('Explore UI elements if any')
-    .ifThen('uiElementCount > 0 and uiElementCount < 20', (b) =>
-      b
-        .appendTo('report', 'linefeed & "UI Elements:" & linefeed')
-        .repeatWithRange('i', 1, 'uiElementCount')
-        .tryCatch(
-          (tryB) =>
-            tryB
-              .setExpression('elemClass', 'class of UI element i')
-              .setExpression('elemDesc', 'description of UI element i')
-              .appendTo('report', '"  " & i & ": " & elemClass & " - " & elemDesc & linefeed'),
-          (catchB) => catchB.comment('skip'),
-        )
-        .endrepeat(),
+    .ifThen(
+      (e) => e.and(e.gt('uiElementCount', 0), e.lt('uiElementCount', 20)),
+      (b) =>
+        b
+          .appendTo('report', 'linefeed & "UI Elements:" & linefeed')
+          .repeatWithRange('i', 1, 'uiElementCount')
+          .tryCatch(
+            (tryB) =>
+              tryB
+                .setExpression('elemClass', (e) => e.property('UI element i', 'class'))
+                .setExpression('elemDesc', (e) => e.property('UI element i', 'description'))
+                .appendTo('report', '"  " & i & ": " & elemClass & " - " & elemDesc & linefeed'),
+            (catchB) => catchB.comment('skip'),
+          )
+          .endrepeat(),
     )
     .returnRaw('report')
     .endtell()
