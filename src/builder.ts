@@ -1113,6 +1113,13 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this as ScriptBuilder<TNewVar>;
   }
 
+  setExpressions(expressions: Record<string, string>): this {
+    for (const [variable, expression] of Object.entries(expressions)) {
+      this.script.push(`${this.getIndentation()}set ${variable} to ${expression}`);
+    }
+    return this;
+  }
+
   increment(variable: string, by = 1): this {
     this.script.push(`${this.getIndentation()}set ${variable} to ${variable} + ${by}`);
     return this;

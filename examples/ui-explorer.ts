@@ -19,14 +19,16 @@ async function exploreActivityMonitorDeep() {
     .tellTarget('group 1')
     .tellTarget('scroll area 1')
     .comment('Get counts of every UI element type')
-    .setExpression('tableCount', 'count of tables')
-    .setExpression('outlineCount', 'count of outlines')
-    .setExpression('listCount', 'count of lists')
-    .setExpression('groupCount', 'count of groups')
-    .setExpression('uiElementCount', 'count of UI elements')
-    .setExpression('rowCount', 'count of rows')
-    .setExpression('staticTextCount', 'count of static texts')
-    .setExpression('imageCount', 'count of images')
+    .setExpressions({
+      tableCount: 'count of tables',
+      outlineCount: 'count of outlines',
+      listCount: 'count of lists',
+      groupCount: 'count of groups',
+      uiElementCount: 'count of UI elements',
+      rowCount: 'count of rows',
+      staticTextCount: 'count of static texts',
+      imageCount: 'count of images',
+    })
     .comment('Build report')
     .setExpression(
       'report',
