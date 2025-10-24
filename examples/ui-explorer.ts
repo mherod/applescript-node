@@ -18,16 +18,16 @@ async function exploreActivityMonitorDeep() {
     .tellTarget('window 1')
     .tellTarget('group 1')
     .tellTarget('scroll area 1')
-    .comment('Get counts of every UI element type')
+    .comment('Get counts of every UI element type using ExprBuilder')
     .setExpressions({
-      tableCount: 'count of tables',
-      outlineCount: 'count of outlines',
-      listCount: 'count of lists',
-      groupCount: 'count of groups',
-      uiElementCount: 'count of UI elements',
-      rowCount: 'count of rows',
-      staticTextCount: 'count of static texts',
-      imageCount: 'count of images',
+      tableCount: (e) => e.count('tables'),
+      outlineCount: (e) => e.count('outlines'),
+      listCount: (e) => e.count('lists'),
+      groupCount: (e) => e.count('groups'),
+      uiElementCount: (e) => e.count('UI elements'),
+      rowCount: (e) => e.count('rows'),
+      staticTextCount: (e) => e.count('static texts'),
+      imageCount: (e) => e.count('images'),
     })
     .comment('Build report')
     .setExpression(

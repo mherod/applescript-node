@@ -1113,9 +1113,10 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this as ScriptBuilder<TNewVar>;
   }
 
-  setExpressions(expressions: Record<string, string>): this {
+  setExpressions(expressions: Record<string, string | ((expr: ExprBuilder) => string)>): this {
     for (const [variable, expression] of Object.entries(expressions)) {
-      this.script.push(`${this.getIndentation()}set ${variable} to ${expression}`);
+      const expr = typeof expression === 'function' ? expression(new ExprBuilder()) : expression;
+      this.script.push(`${this.getIndentation()}set ${variable} to ${expr}`);
     }
     return this;
   }

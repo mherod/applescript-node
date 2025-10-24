@@ -754,7 +754,9 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
     variable: TNewVar,
     expression: string | Record<string, string> | ((expr: ExprBuilder<TScope>) => string),
   ) => ScriptBuilder<TScope | TNewVar, TReturn>;
-  setExpressions: (expressions: Record<string, string>) => ScriptBuilder<TScope, TReturn>;
+  setExpressions: (
+    expressions: Record<string, string | ((expr: ExprBuilder<TScope>) => string)>,
+  ) => ScriptBuilder<TScope, TReturn>;
   increment: (variable: string, by?: number) => ScriptBuilder<TScope, TReturn>;
   decrement: (variable: string, by?: number) => ScriptBuilder<TScope, TReturn>;
   get: (property: string) => ScriptBuilder<TScope, TReturn>;
