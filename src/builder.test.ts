@@ -1393,5 +1393,789 @@ describe('AppleScriptBuilder', () => {
         });
       });
     });
+
+    describe('Handler definitions and calls', () => {
+      it('should define handler with on syntax', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.on('sayHello', ['name']).displayDialog('Hello').endon().build();
+
+        expect(script).toBe('on sayHello name\n  display dialog "Hello"\nend sayHello');
+      });
+
+      it('should define handler with to syntax', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .to('processFile', ['filePath'])
+          .log('Processing file')
+          .endto()
+          .build();
+
+        expect(script).toBe('to processFile filePath\n  log "Processing file"\nend processFile');
+      });
+
+      it('should define handler with labeled parameters using onLabeled', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .onLabeled('displayError', { message: 'theMessage', level: 'theSeverity' })
+          .displayDialog('Error!')
+          .endon()
+          .build();
+
+        expect(script).toBe(
+          'on displayError message theMessage, level theSeverity\n  display dialog "Error!"\nend displayError',
+        );
+      });
+
+      it('should define handler with labeled parameters using toLabeled', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .toLabeled('computeSum', { first: 'a', second: 'b' })
+          .returnRaw('a + b')
+          .endto()
+          .build();
+
+        expect(script).toBe('to computeSum first a, second b\n  return a + b\nend computeSum');
+      });
+
+      it('should call handler with callHandler', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.callHandler('processFile', ['"test.txt"', 'true']).build();
+
+        expect(script).toBe('processFile "test.txt", true');
+      });
+
+      it('should call handler without parameters', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.callHandler('initialize').build();
+
+        expect(script).toBe('initialize');
+      });
+
+      it('should call handler using my keyword', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tell('Finder').my('processFile', ['theFile']).endtell().build();
+
+        expect(script).toBe('tell application "Finder"\n  my processFile theFile\nend tell');
+      });
+
+      it('should call handler using ofMe syntax', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tell('Finder').ofMe('getCustomData', ['item']).endtell().build();
+
+        expect(script).toBe('tell application "Finder"\n  getCustomData item of me\nend tell');
+      });
+
+      it('should define explicit run handler', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.runHandler(true).displayDialog('Running').endrun().build();
+
+        expect(script).toBe('on run\n  display dialog "Running"\nend run');
+      });
+
+      it('should define quit handler', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.quitHandler().log('Quitting').endquit().build();
+
+        expect(script).toBe('on quit\n  log "Quitting"\nend quit');
+      });
+
+      it('should define open handler with default parameter', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.openHandler().log('Files dropped').endopen().build();
+
+        expect(script).toBe('on open theDroppedItems\n  log "Files dropped"\nend open');
+      });
+
+      it('should define open handler with custom parameter', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.openHandler('theFiles').log('Processing files').endopen().build();
+
+        expect(script).toBe('on open theFiles\n  log "Processing files"\nend open');
+      });
+
+      it('should define idle handler', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.idleHandler(10).log('Idle check').endidle().build();
+
+        expect(script).toBe('on idle\n  log "Idle check"\nend idle');
+      });
+    });
+
+    describe('Additional control flow', () => {
+      it('should create if block with ExprBuilder callback', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .if((e) => e.gt('counter', 10))
+          .thenBlock()
+          .set('result', 'high')
+          .endif()
+          .build();
+
+        expect(script).toBe('if counter > 10 then\n  set result to "high"\nend if');
+      });
+
+      it('should create repeatWhile loop', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.set('x', 0).repeatWhile('x < 5').increment('x').endrepeat().build();
+
+        expect(script).toBe('set x to 0\nrepeat while x < 5\n  set x to x + 1\nend repeat');
+      });
+
+      it('should create repeatUntil loop', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('y', 0)
+          .repeatUntil('y >= 10')
+          .increment('y')
+          .endrepeat()
+          .build();
+
+        expect(script).toBe('set y to 0\nrepeat until y >= 10\n  set y to y + 1\nend repeat');
+      });
+
+      it('should validate exitRepeatIf without repeat block', () => {
+        const builder = new AppleScriptBuilder();
+        expect(() => builder.exitRepeatIf('x > 5')).toThrow(
+          'Cannot call exitRepeatIf(): no repeat block is currently open',
+        );
+      });
+
+      it('should create exitRepeatIf with ExprBuilder', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .repeat(10)
+          .exitRepeatIf((e) => e.gt('counter', 5))
+          .endrepeat()
+          .build();
+
+        expect(script).toBe(
+          'repeat 10 times\n  if counter > 5 then\n    exit repeat\n  end if\nend repeat',
+        );
+      });
+
+      it('should create ignoring block', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .ignoring(['case', 'punctuation'])
+          .if('"hello" = "HELLO"')
+          .thenBlock()
+          .set('match', true)
+          .endif()
+          .endignoring()
+          .build();
+
+        expect(script).toBe(
+          'ignoring case, punctuation\n  if "hello" = "HELLO" then\n    set match to true\n  end if\nend ignoring',
+        );
+      });
+    });
+
+    describe('Return statements', () => {
+      it('should return boolean value', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.return(true).build();
+
+        expect(script).toBe('return true');
+      });
+
+      it('should return null as missing value', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.return(null).build();
+
+        expect(script).toBe('return missing value');
+      });
+
+      it('should return array', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.return([1, 2, 3]).build();
+
+        expect(script).toBe('return {1, 2, 3}');
+      });
+    });
+
+    describe('Window operations', () => {
+      it('should close all windows', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tell('Finder').closeAllWindows().endtell().build();
+
+        expect(script).toBe('tell application "Finder"\n  close every window\nend tell');
+      });
+
+      it('should minimize window by name', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tell('Finder').minimizeWindow('Downloads').endtell().build();
+
+        expect(script).toBe(
+          'tell application "Finder"\n  set miniaturized of window "Downloads" to true\nend tell',
+        );
+      });
+
+      it('should minimize front window', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tell('Finder').minimizeWindow().endtell().build();
+
+        expect(script).toBe(
+          'tell application "Finder"\n  set miniaturized of front window to true\nend tell',
+        );
+      });
+
+      it('should zoom window by name', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tell('Finder').zoomWindow('Downloads').endtell().build();
+
+        expect(script).toBe(
+          'tell application "Finder"\n  set zoomed of window "Downloads" to true\nend tell',
+        );
+      });
+
+      it('should zoom front window', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tell('Finder').zoomWindow().endtell().build();
+
+        expect(script).toBe(
+          'tell application "Finder"\n  set zoomed of front window to true\nend tell',
+        );
+      });
+    });
+
+    describe('UI interaction methods', () => {
+      it('should select UI element', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tellProcess('Finder').select('row 1 of table 1').endtell().build();
+
+        expect(script).toBe(
+          'tell application "System Events" to tell process "Finder"\n  select row 1 of table 1\nend tell',
+        );
+      });
+
+      it('should display dialog with givingUpAfter option', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.displayDialog('Auto-close dialog', { givingUpAfter: 5 }).build();
+
+        expect(script).toBe('display dialog "Auto-close dialog" giving up after 5');
+      });
+
+      it('should display dialog with all options', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .displayDialog('Choose one', {
+            buttons: ['OK', 'Cancel'],
+            defaultButton: 'OK',
+            withIcon: 'caution',
+            givingUpAfter: 10,
+          })
+          .build();
+
+        expect(script).toBe(
+          'display dialog "Choose one" buttons {"OK", "Cancel"} default button "OK" with icon caution giving up after 10',
+        );
+      });
+
+      it('should display notification with title', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.displayNotification('Task complete', { title: 'Success' }).build();
+
+        expect(script).toBe('display notification "Task complete" with title "Success"');
+      });
+
+      it('should display notification with subtitle', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.displayNotification('Message', { subtitle: 'Details' }).build();
+
+        expect(script).toBe('display notification "Message" subtitle "Details"');
+      });
+
+      it('should display notification with sound', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.displayNotification('Alert', { sound: 'Basso' }).build();
+
+        expect(script).toBe('display notification "Alert" sound name "Basso"');
+      });
+
+      it('should display notification with all options', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .displayNotification('Complete', {
+            title: 'Build',
+            subtitle: 'Finished successfully',
+            sound: 'Glass',
+          })
+          .build();
+
+        expect(script).toBe(
+          'display notification "Complete" with title "Build" subtitle "Finished successfully" sound name "Glass"',
+        );
+      });
+
+      it('should press key with modifiers using pressKey', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.pressKey('s', ['command', 'shift']).build();
+
+        expect(script).toBe(
+          'tell application "System Events" to key code s using {command, shift}',
+        );
+      });
+
+      it('should press key code with modifiers using pressKeyCode', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.pressKeyCode(53, ['command']).build();
+
+        expect(script).toBe('tell application "System Events" to key code 53 using {command}');
+      });
+
+      it('should type text using typeText', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.typeText('Hello World').build();
+
+        expect(script).toBe('tell application "System Events" to keystroke "Hello World"');
+      });
+
+      it('should click button using clickButton', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.clickButton('OK').build();
+
+        expect(script).toBe('tell application "System Events" to click button "OK"');
+      });
+
+      it('should click menu item using clickMenuItem', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.clickMenuItem('File', 'Save').build();
+
+        expect(script).toBe(
+          'tell application "System Events" to click menu item "Save" of menu "File" of menu bar 1',
+        );
+      });
+    });
+
+    describe('Error handling methods', () => {
+      it('should throw error with message only', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.error('Something went wrong').build();
+
+        expect(script).toBe('error "Something went wrong"');
+      });
+
+      it('should throw error with message and number', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.error('File not found', -43).build();
+
+        expect(script).toBe('error "File not found" number -43');
+      });
+    });
+
+    describe('tellTarget method', () => {
+      it('should create tell block for UI element', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.tellTarget('window 1').set('x', 100).endtell().build();
+
+        expect(script).toBe('tell window 1\n  set x to 100\nend tell');
+      });
+
+      it('should work with nested targets', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .tellTarget('tab group 1 of window 1')
+          .tellTarget('scroll area 1')
+          .set('visible', true)
+          .endtell()
+          .endtell()
+          .build();
+
+        expect(script).toBe(
+          'tell tab group 1 of window 1\n  tell scroll area 1\n    set visible to true\n  end tell\nend tell',
+        );
+      });
+    });
+
+    describe('setExpressions bulk assignment', () => {
+      it('should set multiple expressions at once', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .setExpressions({
+            name: 'name of item',
+            count: 'count of items',
+            status: '"active"',
+          })
+          .build();
+
+        expect(script).toBe(
+          'set name to name of item\nset count to count of items\nset status to "active"',
+        );
+      });
+
+      it('should work with ExprBuilder callbacks', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .setExpressions({
+            total: (e) => e.count('items'),
+            hasItems: (e) => e.gt(e.count('items'), 0),
+          })
+          .build();
+
+        expect(script).toBe('set total to count of items\nset hasItems to count of items > 0');
+      });
+    });
+
+    describe('loadFromScript method', () => {
+      it('should load script with using block', () => {
+        const builder = new AppleScriptBuilder();
+        const existingScript = 'using terms from application "Finder"\n  activate\nend using';
+        const script = builder.loadFromScript(existingScript).build();
+
+        expect(script).toBe(existingScript);
+      });
+
+      it('should load script with with block', () => {
+        const builder = new AppleScriptBuilder();
+        const existingScript = 'with timeout of 60\n  delay 10\nend with';
+        const script = builder.loadFromScript(existingScript).build();
+
+        expect(script).toBe(existingScript);
+      });
+
+      it('should maintain block stack for loaded script', () => {
+        const builder = new AppleScriptBuilder();
+        const existingScript = 'tell application "Finder"\n  activate';
+        builder.loadFromScript(existingScript);
+        const script = builder.endtell().build();
+
+        expect(script).toBe('tell application "Finder"\n  activate\nend tell');
+      });
+
+      it('should handle complex nested loaded script', () => {
+        const builder = new AppleScriptBuilder();
+        const existingScript =
+          'tell application "Finder"\n  if true then\n    repeat 5 times\n      activate\n    end repeat\n  end if\nend tell';
+        const script = builder.loadFromScript(existingScript).build();
+
+        expect(script).toBe(existingScript);
+      });
+    });
+
+    describe('Conditional assignment helpers', () => {
+      it('should use setTernary for simple conditional assignment', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .setTernary('status', (e) => e.gt('count', 0), '"active"', '"empty"')
+          .build();
+
+        expect(script).toBe(
+          'if count > 0 then\n  set status to "active"\nelse\n  set status to "empty"\nend if',
+        );
+      });
+
+      it('should use setEndTernary for conditional list append', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('results', [])
+          .setEndTernary('results', (e) => e.gt('size', 1000), '"large"', '"small"')
+          .build();
+
+        expect(script).toBe(
+          'set results to {}\nif size > 1000 then\n  set end of results to "large"\nelse\n  set end of results to "small"\nend if',
+        );
+      });
+
+      it('should use setFirstOf for first-or-default pattern', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .setFirstOf('email', (e) => e.property('person', 'emails'), '""')
+          .build();
+
+        expect(script).toBe(
+          'if count of emails of person > 0 then\n  set email to value of item 1 of emails of person\nelse\n  set email to ""\nend if',
+        );
+      });
+
+      it('should use setEndFirstOf for first-or-default in list building', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('emailList', [])
+          .setEndFirstOf('emailList', 'emails of person', 'missing value')
+          .build();
+
+        expect(script).toBe(
+          'set emailList to {}\nif count of emails of person > 0 then\n  set end of emailList to value of item 1 of emails of person\nelse\n  set end of emailList to missing value\nend if',
+        );
+      });
+
+      it('should use setIfExists with type conversion', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .setIfExists('birthday', 'birth date of person', 'missing value', 'string')
+          .build();
+
+        expect(script).toBe(
+          'if exists birth date of person then\n  set birthday to birth date of person as string\nelse\n  set birthday to missing value\nend if',
+        );
+      });
+
+      it('should use setEndIfExists for conditional list append with existence check', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('dates', [])
+          .setEndIfExists('dates', 'birth date of person', '""', 'string')
+          .build();
+
+        expect(script).toBe(
+          'set dates to {}\nif exists birth date of person then\n  set end of dates to birth date of person as string\nelse\n  set end of dates to ""\nend if',
+        );
+      });
+    });
+
+    describe('pickEndRecord shorthand', () => {
+      it('should detect simple properties and append "of source"', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('results', [])
+          .pickEndRecord('results', 'item', {
+            itemName: 'name',
+            itemId: 'id',
+          })
+          .build();
+
+        expect(script).toBe(
+          'set results to {}\nset end of results to {itemName:name of item, itemId:id of item}',
+        );
+      });
+
+      it('should detect full expressions and use as-is', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('results', [])
+          .pickEndRecord('results', 'note', {
+            noteName: 'name',
+            noteDate: 'creation date as string',
+          })
+          .build();
+
+        expect(script).toBe(
+          'set results to {}\nset end of results to {noteName:name of note, noteDate:creation date as string}',
+        );
+      });
+
+      it('should handle temp variables from PropertyExtractor', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('__temp_email', '"test@example.com"')
+          .set('results', [])
+          .pickEndRecord('results', 'person', {
+            email: '__temp_email',
+            name: 'name',
+          })
+          .build();
+
+        expect(script).toBe(
+          'set __temp_email to "\\"test@example.com\\""\nset results to {}\nset end of results to {email:__temp_email, name:name of person}',
+        );
+      });
+    });
+
+    describe('Advanced loop helpers', () => {
+      it('should use forEach with callback', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('results', [])
+          .forEach('item', 'every file', (loop) => {
+            loop.setEndRaw('results', 'name of item');
+          })
+          .build();
+
+        expect(script).toBe(
+          'set results to {}\nrepeat with item in every file\n  set end of results to name of item\nend repeat',
+        );
+      });
+
+      it('should use forEachWhile with condition', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('counter', 0)
+          .forEachWhile(
+            'item',
+            'items',
+            (e) => e.lt('counter', 10),
+            (loop) => {
+              loop.increment('counter');
+            },
+          )
+          .build();
+
+        expect(script).toBe(
+          'set counter to 0\nrepeat with item in items\n  if not counter < 10 then\n    exit repeat\n  end if\n  set counter to counter + 1\nend repeat',
+        );
+      });
+
+      it('should use forEachUntil with condition', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('counter', 0)
+          .forEachUntil(
+            'item',
+            'items',
+            (e) => e.gte('counter', 5),
+            (loop) => {
+              loop.increment('counter');
+            },
+          )
+          .build();
+
+        expect(script).toBe(
+          'set counter to 0\nrepeat with item in items\n  if counter >= 5 then\n    exit repeat\n  end if\n  set counter to counter + 1\nend repeat',
+        );
+      });
+
+      it('should use repeatTimes with callback', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .repeatTimes(3, (loop) => {
+            loop.log('Iteration');
+          })
+          .build();
+
+        expect(script).toBe('repeat 3 times\n  log "Iteration"\nend repeat');
+      });
+
+      it('should use repeatWhileBlock with callback', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('x', 0)
+          .repeatWhileBlock('x < 5', (loop) => {
+            loop.increment('x');
+          })
+          .build();
+
+        expect(script).toBe('set x to 0\nrepeat while x < 5\n  set x to x + 1\nend repeat');
+      });
+
+      it('should use repeatUntilBlock with callback', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .set('y', 0)
+          .repeatUntilBlock('y >= 10', (loop) => {
+            loop.increment('y');
+          })
+          .build();
+
+        expect(script).toBe('set y to 0\nrepeat until y >= 10\n  set y to y + 1\nend repeat');
+      });
+    });
+
+    describe('repeatWithRange shorthand', () => {
+      it('should create numeric range loop with numbers', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder.repeatWithRange('i', 1, 10).log('Iteration').endrepeat().build();
+
+        expect(script).toBe('repeat with i from 1 to 10\n  log "Iteration"\nend repeat');
+      });
+
+      it('should create numeric range loop with expressions', () => {
+        const builder = new AppleScriptBuilder();
+        const script = builder
+          .repeatWithRange('j', 'startIndex', 'endIndex')
+          .increment('counter')
+          .endrepeat()
+          .build();
+
+        expect(script).toBe(
+          'repeat with j from startIndex to endIndex\n  set counter to counter + 1\nend repeat',
+        );
+      });
+
+      it('should throw when missing parameters in repeatWithRange', () => {
+        const builder = new AppleScriptBuilder();
+        expect(() => builder.repeatWithRange('', 1, 10)).toThrow(
+          'Variable, start, and end must be provided for repeatWithRange',
+        );
+      });
+    });
+
+    describe('Explicit block ending methods', () => {
+      it('should validate endif block type', () => {
+        const builder = new AppleScriptBuilder();
+        builder.repeat(5);
+        expect(() => builder.endif()).toThrow('Cannot end if block: currently inside repeat block');
+      });
+
+      it('should validate endrepeat block type', () => {
+        const builder = new AppleScriptBuilder();
+        builder.if('true').thenBlock();
+        expect(() => builder.endrepeat()).toThrow(
+          'Cannot end repeat block: currently inside if block',
+        );
+      });
+
+      it('should validate endtry block type', () => {
+        const builder = new AppleScriptBuilder();
+        builder.tell('Finder');
+        expect(() => builder.endtry()).toThrow('Cannot end try block: currently inside tell block');
+      });
+
+      it('should validate endtell block type', () => {
+        const builder = new AppleScriptBuilder();
+        builder.if('x > 5').thenBlock();
+        expect(() => builder.endtell()).toThrow('Cannot end tell block: currently inside if block');
+      });
+
+      it('should validate endon block type', () => {
+        const builder = new AppleScriptBuilder();
+        builder.repeat(3);
+        expect(() => builder.endon()).toThrow('Cannot end on block: currently inside repeat block');
+      });
+
+      it('should validate endconsidering block type', () => {
+        const builder = new AppleScriptBuilder();
+        builder.try();
+        expect(() => builder.endconsidering()).toThrow(
+          'Cannot end considering block: currently inside try block',
+        );
+      });
+
+      it('should validate endignoring block type', () => {
+        const builder = new AppleScriptBuilder();
+        builder.tell('Finder');
+        expect(() => builder.endignoring()).toThrow(
+          'Cannot end ignoring block: currently inside tell block',
+        );
+      });
+
+      it('should validate endusing block type', () => {
+        const builder = new AppleScriptBuilder();
+        builder.considering(['case']);
+        expect(() => builder.endusing()).toThrow(
+          'Cannot end using block: currently inside considering block',
+        );
+      });
+
+      it('should validate endwith block type', () => {
+        const builder = new AppleScriptBuilder();
+        builder.repeat(5);
+        expect(() => builder.endwith()).toThrow(
+          'Cannot end with block: currently inside repeat block',
+        );
+      });
+    });
+
+    describe('mapToJson with PropertyExtractor error handling', () => {
+      it('should throw error when PropertyExtractor missing property field', () => {
+        const builder = new AppleScriptBuilder();
+        expect(() =>
+          builder
+            .tell('Contacts')
+            .mapToJson(
+              'person',
+              'every person',
+              {
+                name: 'name',
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore Testing invalid PropertyExtractor
+                email: { firstOf: true }, // Missing property field
+              },
+              { limit: 10 },
+            )
+            .endtell()
+            .build(),
+        ).toThrow('PropertyExtractor for "email" must have a "property" field');
+      });
+    });
   });
 });
