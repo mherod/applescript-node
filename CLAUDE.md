@@ -71,7 +71,7 @@ The library enables developers to:
    - Uses Node.js `child_process.exec` with promisified interface
    - Error handling: Captures stderr, exit codes
    - Output processing: Handles human-readable vs raw output
-   - Security: Escapes single quotes in scripts
+   - Security: Properly escapes single quotes in scripts
 
 2. **builder.ts** (`AppleScriptBuilder`)
 
@@ -1099,3 +1099,65 @@ src/
 3. Run verification
 4. Publish to npm
 5. Create GitHub release
+
+## CI/CD and PR Merge Guidelines
+
+### CRITICAL: Never Bypass CI
+
+**Branch protection and CI checks exist for good reasons. Never attempt to circumvent them.**
+
+#### Absolute Rules
+
+1. **NEVER use `--admin` flag** to bypass branch protection or required status checks
+2. **NEVER attempt to force-merge** when CI is still running
+3. **CI running is the NORMAL state** - it is supposed to run and complete before merging
+4. **Be patient** - wait for all checks to pass naturally
+
+#### Correct PR Merge Workflow
+
+```bash
+# 1. Set up auto-merge (correct approach)
+gh pr merge <PR_NUMBER> --squash --auto
+
+# 2. Monitor checks if needed
+gh pr checks <PR_NUMBER>
+
+# 3. Wait for checks to complete - DO NOT try to force it
+# The --auto flag will merge automatically when all checks pass
+
+# 4. Verify merge completed
+gh pr view <PR_NUMBER> --json state
+```
+
+#### What NOT To Do
+
+```bash
+# WRONG: Trying to merge while checks are pending
+gh pr merge <PR_NUMBER> --squash  # Will fail - this is expected!
+
+# WRONG: Bypassing with admin privileges
+gh pr merge <PR_NUMBER> --squash --admin  # NEVER DO THIS
+
+# WRONG: Being impatient when auto-merge is already set
+# Just wait - the merge will happen automatically when checks pass
+```
+
+#### Why This Matters
+
+- **CI protects code quality**: Required checks catch bugs before they reach main
+- **Branch protection is intentional**: It exists to enforce review and quality standards
+- **Bypassing undermines trust**: The team relies on CI to validate changes
+- **"Completing tasks quickly" is not an excuse**: Quality > speed
+
+#### When Checks Are Pending
+
+If `gh pr merge --squash --auto` is set and checks are pending:
+
+1. **Wait** - this is normal
+2. **Monitor** with `gh pr checks <PR_NUMBER>` if needed
+3. **Do not escalate** to `--admin` or other bypass methods
+4. **If checks fail**, investigate and fix the issue - don't bypass
+
+#### Summary
+
+The correct mental model: CI checks are gatekeepers, not obstacles. When they're running, the system is working as designed. Patience and respect for the process is required.
