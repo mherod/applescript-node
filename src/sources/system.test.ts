@@ -1,3 +1,50 @@
+/**
+ * @fileoverview Tests for system source module
+ *
+ * **IMPORTANT: Testing Patterns and Edge Case Coverage**
+ *
+ * This test suite demonstrates critical testing patterns for system operations:
+ *
+ * 1. **Mock Management**: Uses `beforeEach()` to clear mocks, ensuring test isolation.
+ *    See applications.test.ts for detailed explanation of mock clearing patterns.
+ *
+ * 2. **Edge Case Testing**: Comprehensive coverage of edge cases:
+ *    - Invalid boot time output (getUptime) - tests NaN handling
+ *    - Empty clipboard operations
+ *    - Missing system paths
+ *    - Dark mode state variations (whitespace, exact matches)
+ *
+ * 3. **Call Indexing**: Uses `mock.calls.at(-1)` for reliable call access.
+ *    This is especially important for tests using `forEach()` loops that
+ *    make multiple calls in a single test.
+ *
+ * 4. **Type Safety in Tests**: Uses named imports instead of namespace imports
+ *    to improve tree-shaking and type checking. This pattern should be followed
+ *    in all new test files.
+ *
+ * **Critical Test Cases:**
+ * - `getUptime()` with invalid boot time → verifies NaN handling and default to 0
+ * - `isDarkMode()` with whitespace → verifies trim() behavior
+ * - `getPath()` with all folder types → comprehensive path coverage
+ * - Error handling for all operations → ensures graceful failures
+ *
+ * **When Adding New Tests:**
+ * - Always test edge cases (empty, null, invalid input)
+ * - Verify error handling and graceful degradation
+ * - Use `at(-1)` for call indexing in loops
+ * - Test both success and failure paths
+ * - Include type-safe assertions
+ *
+ * **Why These Tests Matter:**
+ * - System operations are critical infrastructure
+ * - Edge cases are common in system-level APIs
+ * - Invalid input handling prevents production crashes
+ * - Comprehensive coverage catches regressions early
+ *
+ * @see {@link system} module for implementation
+ * @see {@link ScriptExecutor} for execution engine
+ */
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ScriptExecutor } from '../executor.js';
 import {
@@ -20,6 +67,7 @@ vi.mock('../executor.js', () => ({
 const mockExecute = vi.mocked(ScriptExecutor.execute);
 
 describe('system', () => {
+  // CRITICAL: Clear mocks between tests for isolation
   beforeEach(() => {
     mockExecute.mockClear();
   });

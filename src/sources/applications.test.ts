@@ -1,6 +1,59 @@
+/**
+ * @fileoverview Tests for applications source module
+ *
+ * **IMPORTANT: Mock Management and Testing Patterns**
+ *
+ * This test suite demonstrates critical testing patterns that must be followed
+ * when testing source modules:
+ *
+ * 1. **Mock Clearing**: Uses `beforeEach()` to clear mocks between tests.
+ *    This is CRITICAL because:
+ *    - Mocks accumulate calls across tests
+ *    - Without clearing, `mock.calls[0]` might reference previous test
+ *    - Tests become order-dependent and fragile
+ *    - Always use `mockClear()` or `mockReset()` in beforeEach
+ *
+ * 2. **Call Indexing**: Tests use `mock.calls.at(-1)` to get the LAST call
+ *    instead of `mock.calls[0]`. This is important because:
+ *    - Multiple calls can occur in a single test
+ *    - Previous tests might have made calls
+ *    - `at(-1)` gets the most recent call reliably
+ *
+ * 3. **Script Content Assertions**: When testing script content:
+ *    - Use flexible matchers (`.toMatch()`, `.toContain()`) for escaping
+ *    - Don't rely on exact backslash counts (varies by context)
+ *    - Test that escaping works, not exact escape sequences
+ *
+ * **When Adding New Tests:**
+ * - Always include `beforeEach(() => mockClear())` for mock management
+ * - Use `mock.calls.at(-1)` for recent calls, not `[0]`
+ * - Test both success and error paths
+ * - Verify script content with flexible matchers
+ * - Test edge cases (empty results, special characters, etc.)
+ *
+ * **Why These Patterns Matter:**
+ * - Prevents flaky tests that pass/fail based on execution order
+ * - Ensures tests are isolated and independent
+ * - Makes tests maintainable and debuggable
+ * - Catches regressions in script generation
+ *
+ * @see {@link applications} module for implementation
+ * @see {@link ScriptExecutor} for execution engine
+ */
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as applications from './applications.js';
 import { ScriptExecutor } from '../executor.js';
+import {
+  activate,
+  getAll,
+  getByName,
+  getFrontmost,
+  hide,
+  isRunning,
+  launch,
+  quit,
+  show,
+} from './applications.js';
 
 vi.mock('../executor.js', () => ({
   ScriptExecutor: {
@@ -11,6 +64,8 @@ vi.mock('../executor.js', () => ({
 const mockExecute = vi.mocked(ScriptExecutor.execute);
 
 describe('applications', () => {
+  // CRITICAL: Clear mocks between tests to prevent call accumulation
+  // Without this, mock.calls[0] might reference a previous test's call
   beforeEach(() => {
     mockExecute.mockClear();
   });
@@ -41,7 +96,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      const apps = await applications.getAll();
+      const apps = await getAll();
 
       expect(apps).toHaveLength(2);
       expect(apps[0]).toEqual(mockApps[0]);
@@ -55,7 +110,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      await applications.getAll();
+      await getAll();
 
       const scriptCall = mockExecute.mock.calls.at(-1);
       expect(scriptCall?.[0]).toContain('whose background only is false');
@@ -68,7 +123,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      await applications.getAll(true);
+      await getAll(true);
 
       const scriptCall = mockExecute.mock.calls[0];
       expect(scriptCall[0]).not.toContain('whose background only is false');
@@ -81,9 +136,7 @@ describe('applications', () => {
         exitCode: 1,
       });
 
-      await expect(applications.getAll()).rejects.toThrow(
-        'Failed to get applications: Script execution failed',
-      );
+      await expect(getAll()).rejects.toThrow('Failed to get applications: Script execution failed');
     });
 
     it('should handle empty result', async () => {
@@ -93,7 +146,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      const apps = await applications.getAll();
+      const apps = await getAll();
       expect(apps).toEqual([]);
     });
   });
@@ -115,7 +168,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      const app = await applications.getFrontmost();
+      const app = await getFrontmost();
 
       expect(app).toEqual(mockApp);
       expect(app.frontmost).toBe(true);
@@ -128,7 +181,7 @@ describe('applications', () => {
         exitCode: 1,
       });
 
-      await expect(applications.getFrontmost()).rejects.toThrow(
+      await expect(getFrontmost()).rejects.toThrow(
         'Failed to get frontmost application: No frontmost app',
       );
     });
@@ -142,7 +195,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      const result = await applications.isRunning('Safari');
+      const result = await isRunning('Safari');
       expect(result).toBe(true);
     });
 
@@ -153,7 +206,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      const result = await applications.isRunning('NonExistentApp');
+      const result = await isRunning('NonExistentApp');
       expect(result).toBe(false);
     });
 
@@ -164,7 +217,7 @@ describe('applications', () => {
         exitCode: 1,
       });
 
-      const result = await applications.isRunning('Safari');
+      const result = await isRunning('Safari');
       expect(result).toBe(false);
     });
 
@@ -175,7 +228,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      await applications.isRunning('App with "quotes"');
+      await isRunning('App with "quotes"');
 
       const scriptCall = mockExecute.mock.calls.at(-1);
       // The script contains: "App with \"quotes\""
@@ -211,7 +264,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      const app = await applications.getByName('Safari');
+      const app = await getByName('Safari');
 
       expect(app).not.toBeNull();
       expect(app?.name).toBe('Safari');
@@ -224,7 +277,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      const app = await applications.getByName('NonExistentApp');
+      const app = await getByName('NonExistentApp');
       expect(app).toBeNull();
     });
   });
@@ -237,7 +290,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      await expect(applications.activate('Safari')).resolves.not.toThrow();
+      await expect(activate('Safari')).resolves.not.toThrow();
     });
 
     it('should throw error on activation failure', async () => {
@@ -247,7 +300,7 @@ describe('applications', () => {
         exitCode: 1,
       });
 
-      await expect(applications.activate('NonExistentApp')).rejects.toThrow(
+      await expect(activate('NonExistentApp')).rejects.toThrow(
         'Failed to activate NonExistentApp: Application not found',
       );
     });
@@ -261,7 +314,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      await expect(applications.launch('Calendar')).resolves.not.toThrow();
+      await expect(launch('Calendar')).resolves.not.toThrow();
     });
 
     it('should throw error on launch failure', async () => {
@@ -271,7 +324,7 @@ describe('applications', () => {
         exitCode: 1,
       });
 
-      await expect(applications.launch('NonExistentApp')).rejects.toThrow(
+      await expect(launch('NonExistentApp')).rejects.toThrow(
         'Failed to launch NonExistentApp: Application not found',
       );
     });
@@ -285,7 +338,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      await expect(applications.quit('TextEdit')).resolves.not.toThrow();
+      await expect(quit('TextEdit')).resolves.not.toThrow();
     });
 
     it('should throw error on quit failure', async () => {
@@ -295,7 +348,7 @@ describe('applications', () => {
         exitCode: 1,
       });
 
-      await expect(applications.quit('NonExistentApp')).rejects.toThrow(
+      await expect(quit('NonExistentApp')).rejects.toThrow(
         'Failed to quit NonExistentApp: Application not running',
       );
     });
@@ -309,7 +362,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      await expect(applications.hide('Safari')).resolves.not.toThrow();
+      await expect(hide('Safari')).resolves.not.toThrow();
     });
 
     it('should throw error on hide failure', async () => {
@@ -319,7 +372,7 @@ describe('applications', () => {
         exitCode: 1,
       });
 
-      await expect(applications.hide('NonExistentApp')).rejects.toThrow(
+      await expect(hide('NonExistentApp')).rejects.toThrow(
         'Failed to hide NonExistentApp: Application not found',
       );
     });
@@ -331,7 +384,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      await applications.hide('App with "quotes"');
+      await hide('App with "quotes"');
 
       const scriptCall = mockExecute.mock.calls.at(-1);
       // The script contains: process "App with \"quotes\""
@@ -348,7 +401,7 @@ describe('applications', () => {
         exitCode: 0,
       });
 
-      await expect(applications.show('Safari')).resolves.not.toThrow();
+      await expect(show('Safari')).resolves.not.toThrow();
     });
 
     it('should throw error on show failure', async () => {
@@ -358,7 +411,7 @@ describe('applications', () => {
         exitCode: 1,
       });
 
-      await expect(applications.show('NonExistentApp')).rejects.toThrow(
+      await expect(show('NonExistentApp')).rejects.toThrow(
         'Failed to show NonExistentApp: Application not found',
       );
     });

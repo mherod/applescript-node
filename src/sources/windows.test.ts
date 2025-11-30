@@ -1,6 +1,38 @@
-import { describe, expect, it, vi } from 'vitest';
-import * as windows from './windows.js';
+/**
+ * @fileoverview Tests for windows source module
+ *
+ * **IMPORTANT: Testing Patterns for Source Modules**
+ *
+ * This test suite follows the same critical patterns as other source module tests:
+ *
+ * 1. **Mock Clearing**: Uses `beforeEach()` to clear mocks between tests.
+ *    Essential for test isolation and preventing call accumulation.
+ *
+ * 2. **Comprehensive Coverage**: Tests cover:
+ *    - Window retrieval (all, by app, frontmost)
+ *    - Window counting and statistics
+ *    - Error handling and edge cases
+ *    - Empty result handling
+ *
+ * **Testing Best Practices Demonstrated:**
+ * - Mock management with beforeEach
+ * - Both success and error path testing
+ * - Edge case coverage (empty results, missing windows)
+ * - Type-safe assertions
+ *
+ * **When Modifying Window Functionality:**
+ * - Update tests to reflect new behavior
+ * - Add tests for new edge cases
+ * - Verify mock clearing is maintained
+ * - Test error handling paths
+ *
+ * @see {@link windows} module for implementation
+ * @see {@link applications.test.ts} for detailed mock management patterns
+ */
+
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ScriptExecutor } from '../executor.js';
+import { getAll, getByApp, getCountByApp, getFrontmost } from './windows.js';
 
 vi.mock('../executor.js', () => ({
   ScriptExecutor: {
@@ -11,6 +43,10 @@ vi.mock('../executor.js', () => ({
 const mockExecute = vi.mocked(ScriptExecutor.execute);
 
 describe('windows', () => {
+  // CRITICAL: Clear mocks between tests for isolation
+  beforeEach(() => {
+    mockExecute.mockClear();
+  });
   describe('getAll', () => {
     it('should return parsed window info', async () => {
       const mockWindows = [
@@ -46,7 +82,7 @@ describe('windows', () => {
         exitCode: 0,
       });
 
-      const result = await windows.getAll();
+      const result = await getAll();
 
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
@@ -87,7 +123,7 @@ describe('windows', () => {
         exitCode: 0,
       });
 
-      const result = await windows.getAll();
+      const result = await getAll();
 
       expect(result[0]).toEqual({
         name: '',
@@ -112,9 +148,7 @@ describe('windows', () => {
         exitCode: 1,
       });
 
-      await expect(windows.getAll()).rejects.toThrow(
-        'Failed to get windows: Script execution failed',
-      );
+      await expect(getAll()).rejects.toThrow('Failed to get windows: Script execution failed');
     });
 
     it('should handle empty result', async () => {
@@ -124,7 +158,7 @@ describe('windows', () => {
         exitCode: 0,
       });
 
-      const result = await windows.getAll();
+      const result = await getAll();
       expect(result).toEqual([]);
     });
   });
@@ -176,7 +210,7 @@ describe('windows', () => {
         exitCode: 0,
       });
 
-      const result = await windows.getByApp('Safari');
+      const result = await getByApp('Safari');
 
       expect(result).toHaveLength(2);
       expect(result[0].app).toBe('Safari');
@@ -190,7 +224,7 @@ describe('windows', () => {
         exitCode: 0,
       });
 
-      const result = await windows.getByApp('NonExistentApp');
+      const result = await getByApp('NonExistentApp');
       expect(result).toEqual([]);
     });
   });
@@ -215,7 +249,7 @@ describe('windows', () => {
         exitCode: 0,
       });
 
-      const result = await windows.getFrontmost();
+      const result = await getFrontmost();
 
       expect(result).not.toBeNull();
       expect(result?.name).toBe('Active Window');
@@ -230,7 +264,7 @@ describe('windows', () => {
         exitCode: 0,
       });
 
-      const result = await windows.getFrontmost();
+      const result = await getFrontmost();
       expect(result).toBeNull();
     });
 
@@ -241,7 +275,7 @@ describe('windows', () => {
         exitCode: 1,
       });
 
-      const result = await windows.getFrontmost();
+      const result = await getFrontmost();
       expect(result).toBeNull();
     });
 
@@ -252,7 +286,7 @@ describe('windows', () => {
         exitCode: 0,
       });
 
-      const result = await windows.getFrontmost();
+      const result = await getFrontmost();
       expect(result).toBeNull();
     });
 
@@ -275,7 +309,7 @@ describe('windows', () => {
         exitCode: 0,
       });
 
-      const result = await windows.getFrontmost();
+      const result = await getFrontmost();
 
       expect(result).not.toBeNull();
       expect(result?.name).toBe('');
@@ -337,7 +371,7 @@ describe('windows', () => {
         exitCode: 0,
       });
 
-      const result = await windows.getCountByApp();
+      const result = await getCountByApp();
 
       expect(result).toEqual({
         Safari: 2,
@@ -352,7 +386,7 @@ describe('windows', () => {
         exitCode: 0,
       });
 
-      const result = await windows.getCountByApp();
+      const result = await getCountByApp();
       expect(result).toEqual({});
     });
   });

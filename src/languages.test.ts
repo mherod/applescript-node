@@ -1,3 +1,44 @@
+/**
+ * @fileoverview Tests for languages module
+ *
+ * **IMPORTANT: Testing Patterns and Requirements**
+ *
+ * This test suite demonstrates critical testing patterns that must be followed
+ * when adding or modifying language-related functionality:
+ *
+ * 1. **Empty Output Handling**: Tests verify that empty output from `osalang -L`
+ *    is handled gracefully. This is critical because:
+ *    - Empty output can occur in test environments
+ *    - Edge cases on systems with no languages installed
+ *    - Prevents runtime errors from undefined access
+ *
+ * 2. **Mock Setup**: Uses proper mocking of `child_process.exec`:
+ *    - Mocks are reset between tests
+ *    - Command-specific responses (check command string)
+ *    - Proper callback invocation pattern
+ *
+ * 3. **Edge Case Coverage**: Tests include:
+ *    - Empty output scenarios
+ *    - Malformed output handling
+ *    - Missing capability flags
+ *    - Default language fallback behavior
+ *
+ * **When Adding New Tests:**
+ * - Always test empty output scenarios
+ * - Verify graceful degradation (empty arrays, defaults)
+ * - Test both success and failure paths
+ * - Mock different output formats
+ *
+ * **Why These Tests Matter:**
+ * - Prevents regressions in error handling
+ * - Ensures production code handles edge cases
+ * - Documents expected behavior for future developers
+ * - Catches issues before they reach production
+ *
+ * @see {@link getInstalledLanguages} for implementation details
+ * @see {@link getDefaultLanguage} for default language logic
+ */
+
 import { exec } from 'node:child_process';
 import { describe, expect, it, type MockInstance, vi } from 'vitest';
 import { getDefaultLanguage, getInstalledLanguages } from './languages.js';
