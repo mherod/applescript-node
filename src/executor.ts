@@ -39,12 +39,19 @@ export class ScriptExecutor {
         exitCode: 0,
       };
     } catch (error) {
-      const err = error as { message: string; code: number };
+      const message = error instanceof Error ? error.message : String(error);
+      const errnoException = error as { code?: string | number | null };
+      const exitCode =
+        typeof errnoException.code === 'string'
+          ? Number.parseInt(errnoException.code, 10) || 1
+          : typeof errnoException.code === 'number'
+            ? errnoException.code
+            : 1;
       return {
         success: false,
         output: null as Prettify<T>,
-        error: err.message,
-        exitCode: err.code || 1,
+        error: message,
+        exitCode,
       };
     }
   }
@@ -65,12 +72,19 @@ export class ScriptExecutor {
         exitCode: 0,
       };
     } catch (error) {
-      const err = error as { message: string; code: number };
+      const message = error instanceof Error ? error.message : String(error);
+      const errnoException = error as { code?: string | number | null };
+      const exitCode =
+        typeof errnoException.code === 'string'
+          ? Number.parseInt(errnoException.code, 10) || 1
+          : typeof errnoException.code === 'number'
+            ? errnoException.code
+            : 1;
       return {
         success: false,
         output: null as Prettify<T>,
-        error: err.message,
-        exitCode: err.code || 1,
+        error: message,
+        exitCode,
       };
     }
   }

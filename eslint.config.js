@@ -87,11 +87,6 @@ export default [
     ignores: [
       'dist/**/*',
       'node_modules/**/*',
-      'examples/contacts-search.ts',
-      'examples/messages-reader.ts',
-      'examples/notes-automation.ts',
-      'examples/notes-creation.ts',
-      'examples/notes-latest-json.ts',
     ],
   },
   eslint.configs.recommended,
@@ -120,6 +115,7 @@ export default [
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/unbound-method': 'off',
     },
   },
   {

@@ -345,5 +345,8 @@ export async function getUptime(): Promise<number> {
   const bootTime = Number.parseInt((result.output ?? '0').trim(), 10);
   const now = Math.floor(Date.now() / 1000);
 
-  return now - bootTime;
+  // If parsing failed, default to 0 (treat as current time)
+  const validBootTime = Number.isNaN(bootTime) ? 0 : bootTime;
+
+  return now - validBootTime;
 }

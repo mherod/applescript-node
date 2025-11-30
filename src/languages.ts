@@ -35,11 +35,14 @@ function parseCapabilityFlags(flags: string): OsaLanguageInfo['capabilities'] {
 
 export async function getInstalledLanguages(): Promise<OsaLanguageInfo[]> {
   const { stdout } = await exec('osalang -L');
-  const lines = stdout.trim().split('\n');
+  const lines = stdout
+    .trim()
+    .split('\n')
+    .filter((line) => line.trim().length > 0);
 
   return lines.map((line) => {
     // Format: name manu flags  description
-    const [name, manufacturer, flags, ...descParts] = line.split(/\s+/);
+    const [name, manufacturer, flags = '', ...descParts] = line.split(/\s+/);
     const description = descParts
       .join(' ')
       .replace(/\(([^)]+)\)/, '$1')
