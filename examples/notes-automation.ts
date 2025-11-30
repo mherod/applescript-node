@@ -75,7 +75,7 @@ async function demonstrateNotesAutomation() {
       colWidths: [25, 10, 10, 35],
     });
 
-    const output = String(accountsResult.output);
+    const output = typeof accountsResult.output === 'string' ? accountsResult.output : '';
     const accountRecords = output.split('accountName:').slice(1);
 
     accountRecords.forEach((record) => {
@@ -180,7 +180,7 @@ async function demonstrateNotesAutomation() {
     const notesResult = await runScript(notesScript);
 
     if (notesResult.success && notesResult.output) {
-      const output = String(notesResult.output);
+      const output = typeof notesResult.output === 'string' ? notesResult.output : '';
 
       if (output && output !== '') {
         console.log(chalk.bold('\n📄 Recent Notes:\n'));

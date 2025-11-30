@@ -13,6 +13,29 @@ interface Contact {
   phone: string;
 }
 
+function isContact(value: unknown): value is Contact {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const obj = value;
+  return (
+    'id' in obj &&
+    'name' in obj &&
+    'firstName' in obj &&
+    'lastName' in obj &&
+    'organization' in obj &&
+    'email' in obj &&
+    'phone' in obj &&
+    typeof obj.id === 'string' &&
+    typeof obj.name === 'string' &&
+    typeof obj.firstName === 'string' &&
+    typeof obj.lastName === 'string' &&
+    typeof obj.organization === 'string' &&
+    typeof obj.email === 'string' &&
+    typeof obj.phone === 'string'
+  );
+}
+
 async function searchContacts(
   searchTerm: string,
   field: 'name' | 'organization' = 'name',
@@ -52,7 +75,12 @@ async function searchContacts(
     return [];
   }
 
-  const contacts = JSON.parse(String(result.output)) as Contact[];
+  const parsed: unknown = JSON.parse(String(result.output));
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+  // Type guard: verify structure matches Contact[]
+  const contacts: Contact[] = parsed.filter(isContact);
   return contacts;
 }
 
@@ -136,12 +164,25 @@ async function demonstrateContactSearch() {
   const advancedResult = await runScript(advancedScript);
 
   if (advancedResult.success && advancedResult.output) {
-    const advancedContacts = JSON.parse(String(advancedResult.output)) as Array<{
+    const parsed: unknown = JSON.parse(String(advancedResult.output));
+    if (!Array.isArray(parsed)) {
+      return;
+    }
+    // Type guard: verify structure
+    const advancedContacts: {
       name: string;
       organization: string;
       jobTitle: string;
       email: string;
-    }>;
+    }[] = parsed.filter(
+      (item): item is { name: string; organization: string; jobTitle: string; email: string } =>
+        typeof item === 'object' &&
+        item !== null &&
+        'name' in item &&
+        'organization' in item &&
+        'jobTitle' in item &&
+        'email' in item,
+    );
 
     if (advancedContacts.length === 0) {
       console.log(chalk.yellow('No contacts found matching both criteria\n'));

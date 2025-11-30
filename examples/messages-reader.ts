@@ -114,7 +114,7 @@ async function readMessagesConversations() {
   if (chatsResult.success && chatsResult.output) {
     try {
       // Parse the AppleScript output
-      const output = String(chatsResult.output);
+      const output = typeof chatsResult.output === 'string' ? chatsResult.output : '';
 
       if (output && output !== '') {
         console.log(chalk.bold('\n💬 Recent Conversations:\n'));

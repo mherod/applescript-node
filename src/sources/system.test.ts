@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  getInfo,
-  getVolumes,
-  getDisplays,
-  setClipboard,
-  getClipboard,
-  getPath,
-  isDarkMode,
-  getUptime,
-} from './system.js';
 import { ScriptExecutor } from '../executor.js';
+import {
+  getClipboard,
+  getDisplays,
+  getInfo,
+  getPath,
+  getUptime,
+  getVolumes,
+  isDarkMode,
+  setClipboard,
+} from './system.js';
 
 vi.mock('../executor.js', () => ({
   ScriptExecutor: {

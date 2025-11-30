@@ -77,7 +77,7 @@ end tell`,
   if (plainTextValidation.valid) {
     const plainTextResult = await runScript(plainTextScript);
     if (plainTextResult.success && plainTextResult.output) {
-      const result = plainTextResult.output as { noteId: string; noteName: string };
+      const result: { noteId: string; noteName: string } = plainTextResult.output;
       createdNoteIds.push(result.noteId);
       console.log(chalk.green(`✓ Plain text note created successfully: "${result.noteName}"\n`));
     } else {
@@ -136,7 +136,7 @@ end tell`,
   console.log(chalk.gray('Creating HTML formatted note...'));
   const htmlResult = await runScript(htmlScript);
   if (htmlResult.success && htmlResult.output) {
-    const result = htmlResult.output as { noteId: string; noteName: string };
+    const result: { noteId: string; noteName: string } = htmlResult.output;
     createdNoteIds.push(result.noteId);
     console.log(chalk.green(`✓ HTML formatted note created successfully: "${result.noteName}"\n`));
   } else {
@@ -188,7 +188,7 @@ end tell`,
   console.log(chalk.gray('Creating checklist note...'));
   const checklistResult = await runScript(checklistScript);
   if (checklistResult.success && checklistResult.output) {
-    const result = checklistResult.output as { noteId: string; noteName: string };
+    const result: { noteId: string; noteName: string } = checklistResult.output;
     createdNoteIds.push(result.noteId);
     console.log(chalk.green(`✓ Checklist note created successfully: "${result.noteName}"\n`));
   } else {
@@ -254,7 +254,7 @@ end tell`,
   console.log(chalk.gray('Creating table note...'));
   const tableResult = await runScript(tableScript);
   if (tableResult.success && tableResult.output) {
-    const result = tableResult.output as { noteId: string; noteName: string };
+    const result: { noteId: string; noteName: string } = tableResult.output;
     createdNoteIds.push(result.noteId);
     console.log(chalk.green(`✓ Table note created successfully: "${result.noteName}"\n`));
   } else {
@@ -314,7 +314,7 @@ end tell`,
   console.log(chalk.gray('Creating code snippet note...'));
   const codeResult = await runScript(codeScript);
   if (codeResult.success && codeResult.output) {
-    const result = codeResult.output as { noteId: string; noteName: string };
+    const result: { noteId: string; noteName: string } = codeResult.output;
     createdNoteIds.push(result.noteId);
     console.log(chalk.green(`✓ Code snippet note created successfully: "${result.noteName}"\n`));
   } else {
@@ -362,7 +362,12 @@ end tell`,
 
   if (verifyResult.success && verifyResult.output) {
     // The output is automatically parsed from JSON by runScript
-    const notes = verifyResult.output as unknown as Array<{
+    const parsed: unknown = verifyResult.output;
+    if (!Array.isArray(parsed)) {
+      return;
+    }
+    // Type guard: verify structure
+    const notes: {
       title: string;
       noteId: string;
       content: string;
@@ -370,9 +375,30 @@ end tell`,
       modified: string;
       shared: string;
       passwordProtected: string;
-    }>;
+    }[] = parsed.filter(
+      (
+        item,
+      ): item is {
+        title: string;
+        noteId: string;
+        content: string;
+        created: string;
+        modified: string;
+        shared: string;
+        passwordProtected: string;
+      } =>
+        typeof item === 'object' &&
+        item !== null &&
+        'title' in item &&
+        'noteId' in item &&
+        'content' in item &&
+        'created' in item &&
+        'modified' in item &&
+        'shared' in item &&
+        'passwordProtected' in item,
+    );
 
-    if (notes && notes.length > 0) {
+    if (notes.length > 0) {
       console.log(chalk.bold('\n📋 Created Notes:\n'));
 
       const notesTable = new CliTable3({
