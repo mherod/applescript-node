@@ -1,0 +1,82 @@
+---
+title: Getting Started
+description: Type-safe macOS automation from Node.js
+---
+
+# applescript-node
+
+**Type-safe macOS automation from Node.js.** Control apps, manage windows, and automate workflows with a fluent API.
+
+```typescript
+import { sources } from 'applescript-node';
+
+// Get all open windows across apps
+const windows = await sources.windows.getAll();
+console.log(`Found ${windows.length} open windows`);
+
+// Get the frontmost app
+const frontmost = await sources.applications.getFrontmost();
+console.log(`Active: ${frontmost.name}`);
+```
+
+## Install
+
+```bash
+npm install applescript-node
+```
+
+> **Requirements:** macOS 10.10+, Node.js 20+
+
+## Quick Examples
+
+### Get System Info
+
+```typescript
+import { sources } from 'applescript-node';
+
+const info = await sources.system.getInfo();
+console.log(`${info.computerName} running macOS ${info.osVersion}`);
+```
+
+### List Running Apps
+
+```typescript
+import { sources } from 'applescript-node';
+
+const apps = await sources.applications.getAll();
+apps.forEach((app) => {
+  console.log(`${app.name} - ${app.windowCount} windows (PID: ${app.pid})`);
+});
+```
+
+### Control Applications
+
+```typescript
+import { sources } from 'applescript-node';
+
+// Activate an app (bring to front)
+await sources.applications.activate('Finder');
+
+// Check if running
+const isRunning = await sources.applications.isRunning('Safari');
+
+// Quit an app
+await sources.applications.quit('TextEdit');
+```
+
+### Window Management
+
+```typescript
+import { sources } from 'applescript-node';
+
+// Get windows for a specific app
+const safariWindows = await sources.windows.getByApp('Safari');
+
+// Get the frontmost window
+const active = await sources.windows.getFrontmost();
+console.log(`Active: ${active?.name} (${active?.app})`);
+
+// Get window counts per app
+const counts = await sources.windows.getCountByApp();
+// { "Finder": 3, "Safari": 2, ... }
+```

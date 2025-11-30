@@ -1,0 +1,61 @@
+---
+title: Data Extraction
+description: Extract data from macOS apps as JSON
+---
+
+# Data Extraction
+
+## Extract to JSON
+
+The `mapToJson()` method makes data extraction simple:
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+const script = createScript()
+  .tell('Notes')
+  .mapToJson('aNote', 'every note', {
+    id: 'id',
+    name: 'name',
+    content: 'plaintext',
+    created: 'creation date of aNote as string',
+  }, { limit: 10, skipErrors: true })
+  .endtell();
+
+const result = await runScript(script);
+const notes = JSON.parse(result.output);
+```
+
+## Handle Optional Fields
+
+Use `PropertyExtractor` for fields that might not exist:
+
+```typescript
+const script = createScript()
+  .tell('Contacts')
+  .mapToJson(
+    'person',
+    'every person',
+    {
+      // Simple properties
+      id: 'id',
+      name: 'name',
+
+      // Get first email (multi-value field)
+      email: {
+        property: e => e.property('person', 'emails'),
+        firstOf: true
+      },
+
+      // Optional field with type conversion
+      birthday: {
+        property: 'birth date',
+        ifExists: true,
+        asType: 'string'
+      },
+    },
+    { limit: 50, skipErrors: true }
+  )
+  .endtell();
+```
+
