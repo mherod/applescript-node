@@ -4,8 +4,11 @@
 [![npm version](https://badge.fury.io/js/applescript-node.svg)](https://badge.fury.io/js/applescript-node)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://mherod.github.io/applescript-node/)
 
 **Type-safe macOS automation from Node.js.** Control apps, manage windows, and automate workflows with a fluent API.
+
+📖 **[Read the full documentation →](https://mherod.github.io/applescript-node/)**
 
 ```typescript
 import { sources } from 'applescript-node';
