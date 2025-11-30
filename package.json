@@ -65,7 +65,10 @@
     "prepare": "husky",
     "lint-staged": "lint-staged",
     "typecheck": "tsc --noEmit --skipLibCheck",
-    "verify": "pnpm run lint && pnpm run test && pnpm run build"
+    "verify": "pnpm run lint && pnpm run test && pnpm run build",
+    "docs:dev": "cd docs && pnpm dev",
+    "docs:build": "cd docs && pnpm build",
+    "docs:serve": "cd docs && pnpm start"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [

@@ -1,0 +1,114 @@
+---
+title: API Reference
+description: Complete API reference for applescript-node
+---
+
+# API Reference
+
+## High-Level Sources
+
+```typescript
+import { sources } from 'applescript-node';
+
+// System
+sources.system.getInfo();
+
+// Applications
+sources.applications.getAll();
+sources.applications.getFrontmost();
+sources.applications.getByName(name);
+sources.applications.isRunning(name);
+sources.applications.activate(name);
+sources.applications.hide(name);
+sources.applications.quit(name);
+
+// Windows
+sources.windows.getAll();
+sources.windows.getByApp(appName);
+sources.windows.getFrontmost();
+sources.windows.getCountByApp();
+```
+
+## Script Execution
+
+```typescript
+import { runScript, runScriptFile, createScript } from 'applescript-node';
+
+// Run a string
+const result = await runScript('tell app "Finder" to activate');
+
+// Run from file
+const result = await runScriptFile('./my-script.applescript');
+
+// Run a builder
+const script = createScript().tell('Finder').activate().end();
+const result = await runScript(script);
+```
+
+## Builder Methods
+
+| Category      | Methods                                                                                                                      |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Blocks**    | `tell`, `tellApp`, `tellProcess`, `end`, `if`, `then`, `else`, `elseIf`, `repeat`, `repeatWith`, `forEach`, `try`, `onError` |
+| **Apps**      | `activate`, `quit`, `launch`, `running`                                                                                      |
+| **Windows**   | `closeWindow`, `minimizeWindow`, `zoomWindow`, `moveWindow`, `resizeWindow`                                                  |
+| **UI**        | `click`, `keystroke`, `delay`, `pressKey`, `displayDialog`, `displayNotification`                                            |
+| **Variables** | `set`, `setExpression`, `get`, `copy`, `count`, `exists`                                                                     |
+| **Data**      | `mapToJson`, `setEndRecord`, `pickEndRecord`, `returnAsJson`                                                                 |
+| **Utility**   | `raw`, `build`, `reset`                                                                                                      |
+
+## Execution Options
+
+```typescript
+const result = await runScript(script, {
+  language: 'AppleScript', // or 'JavaScript'
+  humanReadable: true, // Format output
+  errorToStdout: false, // Redirect errors
+});
+```
+
+## Type Safety
+
+### Typed Results
+
+```typescript
+interface DiskInfo {
+  name: string;
+  capacity: number;
+}
+
+const result = await runScript<DiskInfo[]>(
+  'tell application "Finder" to get {name, capacity} of every disk',
+);
+
+if (result.success) {
+  result.output.forEach(disk => {
+    console.log(`${disk.name}: ${disk.capacity} bytes`);
+  });
+}
+```
+
+### ExprBuilder for Conditions
+
+Type-safe condition building with autocomplete:
+
+```typescript
+import { createScript } from 'applescript-node';
+
+const script = createScript()
+  .set('count', 10)
+  .ifThen(
+    e => e.and(
+      e.gt('count', 5),
+      e.lt('count', 20)
+    ),
+    then_ => then_.displayDialog('In range!')
+  );
+```
+
+**Available operators:**
+- Comparison: `gt`, `lt`, `gte`, `lte`, `eq`, `ne`
+- Logical: `and`, `or`, `not`
+- String: `contains`, `startsWith`, `endsWith`, `length`
+- Objects: `exists`, `count`, `property`
+

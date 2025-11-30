@@ -1,0 +1,73 @@
+---
+title: Builder API
+description: Fluent builder for custom AppleScript automation
+---
+
+# Builder API
+
+For custom automation scripts, use the fluent builder:
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+const script = createScript()
+  .tellApp('Finder', finder =>
+    finder.get('name of every disk')
+  );
+
+const result = await runScript(script);
+if (result.success) {
+  console.log('Disks:', result.output);
+}
+```
+
+## Keyboard Automation
+
+```typescript
+const script = createScript()
+  .tellApp('System Events', app => app
+    .keystroke('n', ['command'])     // Cmd+N
+    .delay(0.5)
+    .keystroke('Hello World!')
+    .keystroke('s', ['command'])     // Cmd+S
+  );
+
+await runScript(script);
+```
+
+## Conditional Logic
+
+```typescript
+const script = createScript()
+  .set('temp', 75)
+  .ifThenElse(
+    e => e.gt('temp', 80),
+    then_ => then_.displayDialog('Hot!'),
+    else_ => else_.displayDialog('Nice weather')
+  );
+```
+
+## Error Handling
+
+```typescript
+const script = createScript()
+  .tryCatch(
+    try_ => try_
+      .tellApp('Notes', notes =>
+        notes.raw('get name of first note')
+      ),
+    catch_ => catch_
+      .displayDialog('Could not access Notes')
+  );
+```
+
+## Loops
+
+```typescript
+const script = createScript()
+  .set('results', [])
+  .forEach('item', '{1, 2, 3, 4, 5}', loop => loop
+    .setEndRaw('results', 'item * 2')
+  );
+```
+

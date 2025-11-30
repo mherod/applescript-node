@@ -53,3 +53,9 @@ jobs:
 
       - name: Run build
         run: pnpm run build
+
+      - name: Build docs
+        run: |
+          cd docs
+          pnpm install
+          pnpm build

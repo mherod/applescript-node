@@ -96,7 +96,7 @@ const typescript = {
 
 export default [
   {
-    ignores: ['dist/**/*', 'node_modules/**/*'],
+    ignores: ['dist/**/*', 'node_modules/**/*', 'docs/**/*'],
   },
   eslint.configs.recommended,
   typescript,
