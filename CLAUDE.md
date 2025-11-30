@@ -71,7 +71,7 @@ The library enables developers to:
    - Uses Node.js `child_process.exec` with promisified interface
    - Error handling: Captures stderr, exit codes
    - Output processing: Handles human-readable vs raw output
-   - Security: Escapes single quotes in scripts
+   - Security: Properly escapes single quotes in scripts
 
 2. **builder.ts** (`AppleScriptBuilder`)
 
