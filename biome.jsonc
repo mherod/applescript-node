@@ -31,7 +31,7 @@
         "noBarrelFile": "off"
       },
       "suspicious": {
-        "noExplicitAny": "warn",
+        "noExplicitAny": "error",
         "noThenProperty": "off",
         "noEvolvingTypes": "off",
         "noAssignInExpressions": "off",

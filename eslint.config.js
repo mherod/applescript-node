@@ -30,7 +30,19 @@ const typescript = {
     ...tseslint.configs['stylistic-type-checked'].rules,
     ...eslintConfigPrettier.rules,
     'prettier/prettier': 'error',
-    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-explicit-any': 'error',
+    '@typescript-eslint/no-unsafe-argument': 'error',
+    '@typescript-eslint/no-unsafe-assignment': 'error',
+    '@typescript-eslint/no-unsafe-call': 'error',
+    '@typescript-eslint/no-unsafe-member-access': 'error',
+    '@typescript-eslint/no-unsafe-return': 'error',
+    '@typescript-eslint/consistent-type-assertions': [
+      'error',
+      {
+        assertionStyle: 'as',
+        objectLiteralTypeAssertions: 'never',
+      },
+    ],
     '@typescript-eslint/no-unused-vars': [
       'error',
       {
@@ -84,10 +96,7 @@ const typescript = {
 
 export default [
   {
-    ignores: [
-      'dist/**/*',
-      'node_modules/**/*',
-    ],
+    ignores: ['dist/**/*', 'node_modules/**/*'],
   },
   eslint.configs.recommended,
   typescript,
@@ -113,9 +122,19 @@ export default [
   {
     files: ['**/*.test.ts', '**/*.spec.ts', 'vitest.config.ts'],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/consistent-type-assertions': [
+        'error',
+        {
+          assertionStyle: 'as',
+          objectLiteralTypeAssertions: 'allow',
+        },
+      ],
     },
   },
   {
