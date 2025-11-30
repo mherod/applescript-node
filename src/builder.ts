@@ -1,3 +1,4 @@
+import { resolveExpression } from './builder-utils.js';
 import { ExprBuilder } from './expressions.js';
 import type { AppleScriptValue, JsonObjectShape, ScriptBuilder } from './types.js';
 
@@ -438,7 +439,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   if(condition: string | ((expr: ExprBuilder) => string)): this {
-    const conditionStr = typeof condition === 'function' ? condition(new ExprBuilder()) : condition;
+    const conditionStr = resolveExpression(condition);
     this.script.push(`${this.getIndentation()}if ${conditionStr}`);
     this.pushBlock('if');
     return this;
@@ -542,7 +543,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     if (!hasRepeatBlock) {
       throw new ScriptBuilderError('Cannot call exitRepeatIf(): no repeat block is currently open');
     }
-    const cond = typeof condition === 'function' ? condition(new ExprBuilder()) : condition;
+    const cond = resolveExpression(condition);
     this.script.push(`${this.getIndentation()}if ${cond} then`);
     this.indentLevel++;
     this.script.push(`${this.getIndentation()}exit repeat`);
@@ -1129,7 +1130,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   setExpressions(expressions: Record<string, string | ((expr: ExprBuilder) => string)>): this {
     for (const [variable, expression] of Object.entries(expressions)) {
-      const expr = typeof expression === 'function' ? expression(new ExprBuilder()) : expression;
+      const expr = resolveExpression(expression);
       this.script.push(`${this.getIndentation()}set ${variable} to ${expr}`);
     }
     return this;
@@ -1140,7 +1141,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     expression: string | ((expr: ExprBuilder) => string),
     options?: { prependLinefeed?: boolean; appendLinefeed?: boolean },
   ): this {
-    let expr = typeof expression === 'function' ? expression(new ExprBuilder()) : expression;
+    let expr = resolveExpression(expression);
 
     // Add linefeed wrapping if requested
     if (options?.prependLinefeed) {
@@ -1345,11 +1346,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
     trueExpression: string | ((e: ExprBuilder) => string),
     falseExpression: string | ((e: ExprBuilder) => string),
   ): ScriptBuilder<TNewVar> {
-    const cond = typeof condition === 'function' ? condition(new ExprBuilder()) : condition;
-    const trueExpr =
-      typeof trueExpression === 'function' ? trueExpression(new ExprBuilder()) : trueExpression;
-    const falseExpr =
-      typeof falseExpression === 'function' ? falseExpression(new ExprBuilder()) : falseExpression;
+    const cond = resolveExpression(condition);
+    const trueExpr = resolveExpression(trueExpression);
+    const falseExpr = resolveExpression(falseExpression);
 
     // Generate proper if-then-else block (AppleScript doesn't support inline conditionals)
     return this.ifThenElse(
@@ -1395,11 +1394,9 @@ export class AppleScriptBuilder implements ScriptBuilder {
     trueExpression: string | ((e: ExprBuilder) => string),
     falseExpression: string | ((e: ExprBuilder) => string),
   ): ScriptBuilder {
-    const cond = typeof condition === 'function' ? condition(new ExprBuilder()) : condition;
-    const trueExpr =
-      typeof trueExpression === 'function' ? trueExpression(new ExprBuilder()) : trueExpression;
-    const falseExpr =
-      typeof falseExpression === 'function' ? falseExpression(new ExprBuilder()) : falseExpression;
+    const cond = resolveExpression(condition);
+    const trueExpr = resolveExpression(trueExpression);
+    const falseExpr = resolveExpression(falseExpression);
 
     // Generate proper if-then-else block (AppleScript doesn't support inline conditionals)
     return this.ifThenElse(
@@ -1445,9 +1442,8 @@ export class AppleScriptBuilder implements ScriptBuilder {
     collection: string | ((e: ExprBuilder) => string),
     defaultValue: string | ((e: ExprBuilder) => string) = 'missing value',
   ): ScriptBuilder<TNewVar> {
-    const coll = typeof collection === 'function' ? collection(new ExprBuilder()) : collection;
-    const defaultVal =
-      typeof defaultValue === 'function' ? defaultValue(new ExprBuilder()) : defaultValue;
+    const coll = resolveExpression(collection);
+    const defaultVal = resolveExpression(defaultValue);
 
     // Generate proper if-then-else block (AppleScript doesn't support inline conditionals)
     return this.ifThenElse(
@@ -1482,9 +1478,8 @@ export class AppleScriptBuilder implements ScriptBuilder {
     collection: string | ((e: ExprBuilder) => string),
     defaultValue: string | ((e: ExprBuilder) => string) = 'missing value',
   ): ScriptBuilder {
-    const coll = typeof collection === 'function' ? collection(new ExprBuilder()) : collection;
-    const defaultVal =
-      typeof defaultValue === 'function' ? defaultValue(new ExprBuilder()) : defaultValue;
+    const coll = resolveExpression(collection);
+    const defaultVal = resolveExpression(defaultValue);
 
     // Generate proper if-then-else block (AppleScript doesn't support inline conditionals)
     return this.ifThenElse(
@@ -1537,9 +1532,8 @@ export class AppleScriptBuilder implements ScriptBuilder {
     defaultValue: string | ((e: ExprBuilder) => string) = 'missing value',
     asType?: string,
   ): ScriptBuilder<TNewVar> {
-    const prop = typeof property === 'function' ? property(new ExprBuilder()) : property;
-    const defaultVal =
-      typeof defaultValue === 'function' ? defaultValue(new ExprBuilder()) : defaultValue;
+    const prop = resolveExpression(property);
+    const defaultVal = resolveExpression(defaultValue);
 
     // Build the value expression with optional type conversion
     const valueExpr = asType ? `${prop} as ${asType}` : prop;
@@ -1583,9 +1577,8 @@ export class AppleScriptBuilder implements ScriptBuilder {
     defaultValue: string | ((e: ExprBuilder) => string) = 'missing value',
     asType?: string,
   ): ScriptBuilder {
-    const prop = typeof property === 'function' ? property(new ExprBuilder()) : property;
-    const defaultVal =
-      typeof defaultValue === 'function' ? defaultValue(new ExprBuilder()) : defaultValue;
+    const prop = resolveExpression(property);
+    const defaultVal = resolveExpression(defaultValue);
 
     // Build the value expression with optional type conversion
     const valueExpr = asType ? `${prop} as ${asType}` : prop;

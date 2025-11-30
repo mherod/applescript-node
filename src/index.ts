@@ -64,11 +64,13 @@ export async function runScript<T = string>(
     const trimmed = result.output.trim();
     if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
       try {
-        const parsed = JSON.parse(result.output) as T;
-        return {
-          ...result,
+        const parsed = JSON.parse(result.output) as Prettify<T>;
+        const parsedResult: ScriptExecutionResult<T> = {
+          success: result.success,
           output: parsed,
-        } as ScriptExecutionResult<T>;
+          exitCode: result.exitCode,
+        };
+        return parsedResult;
       } catch {
         // If parsing fails, return the string as-is
         // This handles cases where the string happens to start with '[' or '{' but isn't valid JSON

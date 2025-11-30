@@ -1,3 +1,4 @@
+import type { ChildProcess, ExecException } from 'node:child_process';
 import { exec } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -15,6 +16,24 @@ import {
 vi.mock('node:child_process', () => ({
   exec: vi.fn(),
 }));
+
+// Type for exec callback
+type ExecCallback = (
+  error: ExecException | null,
+  result: { stdout: string; stderr: string },
+) => void;
+
+// Helper to create a mock implementation for exec
+function createExecMock(
+  stdout: string,
+  stderr: string,
+  error: ExecException | null = null,
+): (_cmd: string, callback: ExecCallback) => ChildProcess {
+  return (_cmd: string, callback: ExecCallback): ChildProcess => {
+    callback(error, { stdout, stderr });
+    return {} as ChildProcess;
+  };
+}
 
 // Sample sdef XML for testing
 const mockSdefXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -67,13 +86,7 @@ describe('sdef module', () => {
   describe('getSdef', () => {
     it('should execute sdef command and return XML', async () => {
       const mockExec = vi.mocked(exec);
-
-      mockExec.mockImplementation((cmd, callback: any) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        callback(null, { stdout: mockSdefXml, stderr: '' });
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return {} as any;
-      });
+      mockExec.mockImplementation(createExecMock(mockSdefXml, '') as typeof exec);
 
       const result = await getSdef('/System/Applications/Test.app');
       expect(result).toBe(mockSdefXml);
@@ -85,13 +98,9 @@ describe('sdef module', () => {
 
     it('should handle errors from sdef command', async () => {
       const mockExec = vi.mocked(exec);
-
-      mockExec.mockImplementation((cmd, callback: any) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        callback(new Error('sdef failed'), { stdout: '', stderr: 'error' });
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return {} as any;
-      });
+      mockExec.mockImplementation(
+        createExecMock('', 'error', new Error('sdef failed')) as typeof exec,
+      );
 
       await expect(getSdef('/System/Applications/Test.app')).rejects.toThrow('Failed to get sdef');
     });
@@ -188,13 +197,7 @@ describe('sdef module', () => {
   describe('getApplicationDictionary', () => {
     it('should get and parse sdef for an application', async () => {
       const mockExec = vi.mocked(exec);
-
-      mockExec.mockImplementation((cmd, callback: any) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        callback(null, { stdout: mockSdefXml, stderr: '' });
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return {} as any;
-      });
+      mockExec.mockImplementation(createExecMock(mockSdefXml, '') as typeof exec);
 
       const dictionary = await getApplicationDictionary('/System/Applications/Test.app');
 
@@ -207,13 +210,7 @@ describe('sdef module', () => {
 
     it('should cache results by default', async () => {
       const mockExec = vi.mocked(exec);
-
-      mockExec.mockImplementation((cmd, callback: any) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        callback(null, { stdout: mockSdefXml, stderr: '' });
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return {} as any;
-      });
+      mockExec.mockImplementation(createExecMock(mockSdefXml, '') as typeof exec);
 
       const appPath = '/System/Applications/Test.app';
 
@@ -228,13 +225,7 @@ describe('sdef module', () => {
 
     it('should bypass cache when useCache is false', async () => {
       const mockExec = vi.mocked(exec);
-
-      mockExec.mockImplementation((cmd, callback: any) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        callback(null, { stdout: mockSdefXml, stderr: '' });
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return {} as any;
-      });
+      mockExec.mockImplementation(createExecMock(mockSdefXml, '') as typeof exec);
 
       const appPath = '/System/Applications/Test.app';
 
@@ -251,13 +242,7 @@ describe('sdef module', () => {
   describe('clearSdefCache', () => {
     it('should clear the cache', async () => {
       const mockExec = vi.mocked(exec);
-
-      mockExec.mockImplementation((cmd, callback: any) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        callback(null, { stdout: mockSdefXml, stderr: '' });
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return {} as any;
-      });
+      mockExec.mockImplementation(createExecMock(mockSdefXml, '') as typeof exec);
 
       const appPath = '/System/Applications/Test.app';
 
