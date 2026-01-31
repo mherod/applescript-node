@@ -453,5 +453,130 @@ describe('AppleScriptBuilder Coverage Tests', () => {
       expect(script).toContain('tell application "Finder"');
       expect(script).toContain('display dialog "Hello"');
     });
+
+    it('should load script with ignoring block', () => {
+      const builder = new AppleScriptBuilder();
+      const existingScript = 'ignoring case\n  set x to 1\nend ignoring';
+      const script = builder.loadFromScript(existingScript).build();
+
+      expect(script).toBe(existingScript);
+    });
+
+    it('should maintain block stack for ignoring blocks in loaded scripts', () => {
+      const builder = new AppleScriptBuilder();
+      builder.loadFromScript('ignoring case\n  set x to 1');
+      // Need to close the ignoring block
+      const script = builder.endignoring().build();
+
+      expect(script).toContain('ignoring case');
+      expect(script).toContain('end ignoring');
+    });
+  });
+
+  describe('get method', () => {
+    it('should generate get command', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.get('name of window 1').build();
+
+      expect(script).toBe('get name of window 1');
+    });
+
+    it('should work inside tell block', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.tell('Finder').get('every window').endtell().build();
+
+      expect(script).toContain('get every window');
+    });
+  });
+
+  describe('copy method', () => {
+    it('should generate copy command with string value', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.copy('hello', 'myVar').build();
+
+      expect(script).toBe('copy "hello" to myVar');
+    });
+
+    it('should generate copy command with number value', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.copy(42, 'count').build();
+
+      expect(script).toBe('copy 42 to count');
+    });
+
+    it('should generate copy command with array value', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.copy([1, 2, 3], 'myList').build();
+
+      expect(script).toBe('copy {1, 2, 3} to myList');
+    });
+  });
+
+  describe('count method', () => {
+    it('should generate count command', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.count('every window').build();
+
+      expect(script).toBe('count every window');
+    });
+
+    it('should work inside tell block', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.tell('Finder').count('windows').endtell().build();
+
+      expect(script).toContain('count windows');
+    });
+  });
+
+  describe('exists method', () => {
+    it('should generate exists command', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.exists('window "Settings"').build();
+
+      expect(script).toBe('exists window "Settings"');
+    });
+
+    it('should work inside tell block', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.tell('Finder').exists('window 1').endtell().build();
+
+      expect(script).toContain('exists window 1');
+    });
+  });
+
+  describe('setEndRaw with ExprBuilder callback', () => {
+    it('should accept ExprBuilder callback and append result to list', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder
+        .set('results', [])
+        .setEndRaw('results', (e) => e.property('item', 'name'))
+        .build();
+
+      expect(script).toContain('set end of results to name of item');
+    });
+  });
+
+  describe('mapToJson with PropertyExtractor using asType without firstOf/ifExists', () => {
+    it('should handle PropertyExtractor with property and asType only', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder
+        .tell('Contacts')
+        .mapToJson(
+          'aPerson',
+          'every person',
+          {
+            name: 'name',
+            // PropertyExtractor with just property (no firstOf or ifExists)
+            // This triggers the else branch at lines 805-807
+            email: { property: 'email' },
+          },
+          { limit: 3 },
+        )
+        .endtell()
+        .build();
+
+      expect(script).toContain('repeat with aPerson in every person');
+      expect(script).toContain('__temp_email');
+    });
   });
 });
