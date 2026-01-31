@@ -1,6 +1,6 @@
 {
   "name": "applescript-node",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Node.js library for AppleScript integration",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,7 +15,7 @@
   "scripts": {
     "build": "pnpm run build:js && pnpm run build:types",
     "build:js": "tsup",
-    "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly",
+    "build:types": "rm -f tsconfig.build.tsbuildinfo && tsc -p tsconfig.build.json --emitDeclarationOnly",
     "build:types:staged": "tsc --noEmit --skipLibCheck",
     "dev": "tsup --watch",
     "lint": "tsc --noEmit && eslint .",
@@ -84,15 +84,6 @@
     ],
     "*.{json,md,yml,yaml}": [
       "prettier --write"
-    ],
-    "*.{js,jsx,json,jsonc,css,scss,md,mdx}": [
-      "pnpm dlx ultracite fix"
-    ],
-    "src/**/!(*.test).ts": [
-      "pnpm dlx ultracite fix"
-    ],
-    "examples/**/*.ts": [
-      "pnpm dlx ultracite fix"
     ]
   },
   "keywords": [
@@ -134,6 +125,6 @@
   "dependencies": {
     "chalk": "5.6.2",
     "cli-table3": "0.6.5",
-    "fast-xml-parser": "5.3.0"
+    "fast-xml-parser": "5.3.4"
   }
 }

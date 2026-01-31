@@ -75,7 +75,9 @@ async function searchContacts(
     return [];
   }
 
-  const parsed: unknown = JSON.parse(String(result.output));
+  const outputStr =
+    typeof result.output === 'string' ? result.output : JSON.stringify(result.output);
+  const parsed: unknown = JSON.parse(outputStr);
   if (!Array.isArray(parsed)) {
     return [];
   }
@@ -164,7 +166,11 @@ async function demonstrateContactSearch() {
   const advancedResult = await runScript(advancedScript);
 
   if (advancedResult.success && advancedResult.output) {
-    const parsed: unknown = JSON.parse(String(advancedResult.output));
+    const outputStr =
+      typeof advancedResult.output === 'string'
+        ? advancedResult.output
+        : JSON.stringify(advancedResult.output);
+    const parsed: unknown = JSON.parse(outputStr);
     if (!Array.isArray(parsed)) {
       return;
     }

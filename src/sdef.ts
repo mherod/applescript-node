@@ -89,9 +89,9 @@ export function parseSdef(xml: string): ApplicationDictionary {
   for (const suiteData of suitesData) {
     const suite: Suite = {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      name: suiteData['@_name'] || '',
+      name: suiteData['@_name'] ?? '',
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      code: suiteData['@_code'] || '',
+      code: suiteData['@_code'] ?? '',
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       description: suiteData['@_description'],
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -115,8 +115,8 @@ function parseClasses(classesData: unknown): Class[] {
   const classes = Array.isArray(classesData) ? classesData : [classesData];
 
   return classes.map((cls: any) => ({
-    name: cls['@_name'] || '',
-    code: cls['@_code'] || '',
+    name: cls['@_name'] ?? '',
+    code: cls['@_code'] ?? '',
     description: cls['@_description'],
     plural: cls['@_plural'],
     inherits: cls['@_inherits'],
@@ -130,8 +130,8 @@ function parseProperties(propertiesData: unknown): Property[] {
   const properties = Array.isArray(propertiesData) ? propertiesData : [propertiesData];
 
   return properties.map((prop: any) => ({
-    name: prop['@_name'] || '',
-    code: prop['@_code'] || '',
+    name: prop['@_name'] ?? '',
+    code: prop['@_code'] ?? '',
     type: parseTypeInfo(prop['@_type'], prop.type),
     access: (prop['@_access'] as 'r' | 'rw' | undefined) ?? 'rw',
     description: prop['@_description'],
@@ -143,7 +143,7 @@ function parseElements(elementsData: unknown): Element[] {
   const elements = Array.isArray(elementsData) ? elementsData : [elementsData];
 
   return elements.map((elem: any) => ({
-    type: elem['@_type'] || '',
+    type: elem['@_type'] ?? '',
     access: elem['@_access'] as 'r' | 'rw' | undefined,
   }));
 }
@@ -153,19 +153,19 @@ function parseCommands(commandsData: unknown): Command[] {
   const commands = Array.isArray(commandsData) ? commandsData : [commandsData];
 
   return commands.map((cmd: any) => ({
-    name: cmd['@_name'] || '',
-    code: cmd['@_code'] || '',
+    name: cmd['@_name'] ?? '',
+    code: cmd['@_code'] ?? '',
     description: cmd['@_description'],
     directParameter: cmd['direct-parameter']
       ? {
-          type: cmd['direct-parameter']['@_type'] || '',
+          type: cmd['direct-parameter']['@_type'] ?? '',
           description: cmd['direct-parameter']['@_description'],
         }
       : undefined,
     parameters: parseParameters(cmd.parameter),
     result: cmd.result
       ? {
-          type: cmd.result['@_type'] || '',
+          type: cmd.result['@_type'] ?? '',
           description: cmd.result['@_description'],
         }
       : undefined,
@@ -177,8 +177,8 @@ function parseParameters(parametersData: unknown): Parameter[] {
   const parameters = Array.isArray(parametersData) ? parametersData : [parametersData];
 
   return parameters.map((param: any) => ({
-    name: param['@_name'] || '',
-    code: param['@_code'] || '',
+    name: param['@_name'] ?? '',
+    code: param['@_code'] ?? '',
     type: parseTypeInfo(param['@_type'], param.type),
     optional: param['@_optional'] === 'yes',
     description: param['@_description'],
@@ -190,8 +190,8 @@ function parseEnumerations(enumerationsData: unknown): Enumeration[] {
   const enumerations = Array.isArray(enumerationsData) ? enumerationsData : [enumerationsData];
 
   return enumerations.map((enumData: any) => ({
-    name: enumData['@_name'] || '',
-    code: enumData['@_code'] || '',
+    name: enumData['@_name'] ?? '',
+    code: enumData['@_code'] ?? '',
     enumerators: parseEnumerators(enumData.enumerator),
   }));
 }
@@ -201,8 +201,8 @@ function parseEnumerators(enumeratorsData: unknown): Enumerator[] {
   const enumerators = Array.isArray(enumeratorsData) ? enumeratorsData : [enumeratorsData];
 
   return enumerators.map((enumer: any) => ({
-    name: enumer['@_name'] || '',
-    code: enumer['@_code'] || '',
+    name: enumer['@_name'] ?? '',
+    code: enumer['@_code'] ?? '',
     description: enumer['@_description'],
   }));
 }
@@ -219,7 +219,7 @@ function parseTypeInfo(typeAttr: string | undefined, typeElement: any): TypeInfo
     // For now, use the first type if multiple are specified
     const firstType = types[0];
     return {
-      type: firstType['@_type'] || 'any',
+      type: firstType['@_type'] ?? 'any',
       list: firstType['@_list'] === 'yes',
     };
   }

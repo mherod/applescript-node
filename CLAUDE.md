@@ -32,8 +32,10 @@ The library enables developers to:
 
 - `pnpm build` - Full build (JavaScript + types)
 - `pnpm build:js` - Build JavaScript with tsup
-- `pnpm build:types` - Generate TypeScript declarations
+- `pnpm build:types` - Generate TypeScript declarations (includes `--force` flag to ensure regeneration after tsup cleans dist/)
 - `pnpm dev` - Watch mode for development
+
+**DON'T** remove the `rm -f tsconfig.build.tsbuildinfo` from `build:types`. The tsup `clean: true` option wipes the dist/ folder, but tsc's incremental build cache (`tsconfig.build.tsbuildinfo`) persists in the project root. Without deleting this cache, tsc believes the .d.ts files are "up to date" and skips emitting them, causing npm packages to ship without type definitions.
 
 ### Testing
 
@@ -64,7 +66,6 @@ The library enables developers to:
 ### Core Modules
 
 1. **executor.ts** (`ScriptExecutor`)
-
    - Primary execution engine for AppleScript/JavaScript
    - Handles string and file-based execution
    - Manages `osascript` flags and output formatting
@@ -74,7 +75,6 @@ The library enables developers to:
    - Security: Properly escapes single quotes in scripts
 
 2. **builder.ts** (`AppleScriptBuilder`)
-
    - Fluent API for constructing commands
    - Block stack management: Tracks nested blocks
    - Syntax validation: Ensures blocks opened/closed
@@ -84,7 +84,6 @@ The library enables developers to:
    - Block validation prevents malformed scripts
 
 3. **compiler.ts** (`ScriptCompiler`)
-
    - Compilation to `.scpt` or `.scptd` format
    - Uses `osacompile` with flags
    - Stay-open applications: Creates persistent apps
@@ -93,14 +92,12 @@ The library enables developers to:
    - Startup screen support: Adds splash screens
 
 4. **decompiler.ts** (`ScriptDecompiler`)
-
    - Reverse compilation of `.scpt` files
    - Uses `osadecompile`
    - Error handling: Manages decompilation failures
    - Source recovery: Extracts script text
 
 5. **languages.ts** (`LanguageManager`)
-
    - OSA language discovery and querying
    - Uses `osalang` to enumerate languages
    - Capability parsing: Extracts features
@@ -153,6 +150,8 @@ The library enables developers to:
   - Consistent naming
   - Maximum line length 100
   - Trailing commas
+  - **Use `??` not `||`** for default values with potentially falsy values (ESLint: `@typescript-eslint/prefer-nullish-coalescing`)
+  - **Avoid `String()` on objects** - check `typeof value === 'string'` first when parsing JSON output (ESLint: `@typescript-eslint/no-base-to-string`)
 
 ### Pre-commit Quality Gates
 
@@ -164,6 +163,8 @@ The library enables developers to:
 - **Type declaration build** verification
 - **Staged file processing** for performance
 - **Automatic fixes** where possible
+
+**DON'T** add ultracite back to lint-staged. The `pnpm dlx ultracite fix` command was removed because ultracite's extended biome configuration contains deprecated rules (`useConsistentTypeDefinitions`, `noSecrets`, `noNonNullAssertedOptionalChain`) that cause validation failures with newer biome versions (2.2.6+). ESLint already handles linting for this project.
 
 ## Key Implementation Patterns
 
@@ -1062,6 +1063,7 @@ src/
 - **TypeScript errors**: Run `pnpm typecheck` to identify issues
 - **Import errors**: Ensure `.js` extensions
 - **Module resolution**: Check tsconfig.json mappings
+- **Missing type definitions in dist/**: Delete `tsconfig.build.tsbuildinfo` and rebuild. The `build:types` script should already handle this, but if types are missing after build, this is the cause.
 
 ### Runtime Issues
 
@@ -1099,6 +1101,50 @@ src/
 3. Run verification
 4. Publish to npm
 5. Create GitHub release
+
+### npm Release Workflow
+
+**Pre-release checklist:**
+
+1. Ensure working directory is clean (`git status`)
+2. Run `pnpm test` and `pnpm lint` - fix all errors before proceeding
+3. Run `pnpm audit` - fix high/critical vulnerabilities in production dependencies before publishing
+4. Run `pnpm build` and verify dist/ contains .d.ts type definition files
+
+**Version bump requires clean git state:**
+
+- `npm version patch|minor|major` fails if there are uncommitted changes
+- Commit all lint fixes, dependency updates, and config changes before bumping version
+- The version bump creates both a commit and a git tag automatically
+
+**Publishing with 2FA:**
+
+```bash
+# Get OTP from 1Password
+op item get npmjs.com --otp
+
+# Publish with OTP
+npm publish --otp=<code>
+```
+
+**Branch protection handling:**
+
+- Direct push to main is blocked by repository rules requiring PRs and CI checks
+- After publishing to npm, create a release branch and PR:
+  ```bash
+  git checkout -b release/v<version>
+  git push origin release/v<version>
+  gh pr create --title "Release v<version>" --body "..." --base main
+  gh pr merge <PR_NUMBER> --squash --auto
+  ```
+- The tag can be pushed directly even when main is protected
+
+**Dry run inspection:**
+
+- Always run `npm publish --dry-run` before actual publish
+- Verify the tarball contains type definitions (.d.ts files)
+- Verify no private files (.env, credentials) are included
+- Check the `files` field in package.json restricts to `dist/` only
 
 ## CI/CD and PR Merge Guidelines
 
