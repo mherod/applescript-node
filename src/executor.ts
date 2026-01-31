@@ -5,6 +5,23 @@ import type { OsaScriptOptions, Prettify, ScriptExecutionResult } from './types.
 const exec = promisify(execCallback);
 
 /**
+ * Extract error information from an execution error.
+ * Handles various error types (Error, ErrnoException, etc.) and extracts
+ * both the error message and exit code with proper defaults.
+ */
+function extractErrorInfo(error: unknown): { message: string; exitCode: number } {
+  const message = error instanceof Error ? error.message : String(error);
+  const errnoException = error as { code?: string | number | null };
+  const exitCode =
+    typeof errnoException.code === 'string'
+      ? Number.parseInt(errnoException.code, 10) || 1
+      : typeof errnoException.code === 'number'
+        ? errnoException.code
+        : 1;
+  return { message, exitCode };
+}
+
+/**
  * ScriptExecutor - Core execution engine for AppleScript and JavaScript
  *
  * **IMPORTANT: Error Handling**
@@ -106,14 +123,7 @@ export class ScriptExecutor {
         exitCode: 0,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const errnoException = error as { code?: string | number | null };
-      const exitCode =
-        typeof errnoException.code === 'string'
-          ? Number.parseInt(errnoException.code, 10) || 1
-          : typeof errnoException.code === 'number'
-            ? errnoException.code
-            : 1;
+      const { message, exitCode } = extractErrorInfo(error);
       return {
         success: false,
         output: null as Prettify<T>,
@@ -163,14 +173,7 @@ export class ScriptExecutor {
         exitCode: 0,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const errnoException = error as { code?: string | number | null };
-      const exitCode =
-        typeof errnoException.code === 'string'
-          ? Number.parseInt(errnoException.code, 10) || 1
-          : typeof errnoException.code === 'number'
-            ? errnoException.code
-            : 1;
+      const { message, exitCode } = extractErrorInfo(error);
       return {
         success: false,
         output: null as Prettify<T>,

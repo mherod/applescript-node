@@ -2,7 +2,10 @@ import { ScriptExecutor } from '../executor.js';
 import { createScript } from '../index.js';
 
 /**
- * Window information returned from macOS
+ * Window information for system-wide window enumeration.
+ * Used by sources.windows functions like getAll() and getFrontmost().
+ * Includes the application name since windows are enumerated across all apps.
+ * Note: This interface extends the base WindowInfo with app-specific fields.
  */
 export interface WindowInfo {
   name: string;
@@ -207,7 +210,7 @@ export async function getCountByApp(): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
 
   for (const win of allWindows) {
-    counts[win.app] = (counts[win.app] || 0) + 1;
+    counts[win.app] = (counts[win.app] ?? 0) + 1;
   }
 
   return counts;

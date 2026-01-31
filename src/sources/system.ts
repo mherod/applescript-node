@@ -243,9 +243,9 @@ export async function getClipboard(): Promise<string> {
  * await system.setClipboard('Hello, World!');
  */
 export async function setClipboard(text: string): Promise<void> {
-  const script = createScript()
-    .raw(`set the clipboard to "${text.replace(/"/g, '\\"')}"`)
-    .build();
+  // Escape backslashes first (before quotes), then escape double quotes
+  const escapedText = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const script = createScript().raw(`set the clipboard to "${escapedText}"`).build();
 
   const result = await ScriptExecutor.execute(script);
 
@@ -292,7 +292,7 @@ export async function getPath(
     public: 'public folder',
   };
 
-  const folderName = folderMap[folder] || 'home folder';
+  const folderName = folderMap[folder] ?? 'home folder';
 
   const script = `POSIX path of (path to ${folderName})`;
 

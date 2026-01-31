@@ -210,7 +210,7 @@ describe('languages', () => {
       expect(defaultLang.name).toBe('AppleScript');
     });
 
-    it('should handle empty installed languages list', async () => {
+    it('should return fallback language when installed languages list is empty', async () => {
       const mockExec = exec as unknown as MockInstance;
       mockExec.mockImplementation((command: string, callback: ExecCallback) => {
         if (command === 'osalang -d') {
@@ -222,7 +222,10 @@ describe('languages', () => {
 
       const defaultLang = await getDefaultLanguage();
 
-      expect(defaultLang).toBeUndefined();
+      // When no languages are installed, a fallback AppleScript object is returned
+      expect(defaultLang).toBeDefined();
+      expect(defaultLang.name).toBe('AppleScript');
+      expect(defaultLang.description).toBe('Default fallback');
     });
   });
 });

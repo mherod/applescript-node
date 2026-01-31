@@ -35,10 +35,15 @@ export type ScriptExecutionResult<T = unknown> =
       exitCode: number;
     };
 
+/**
+ * Window information for a single application window.
+ * Used by builder methods like getWindowInfo() and getAllWindows().
+ * For system-wide window enumeration, see sources.windows.WindowInfo.
+ */
 export interface WindowInfo {
   name: string;
-  index: number;
-  bounds?: {
+  id: number;
+  bounds: {
     x: number;
     y: number;
     width: number;
@@ -397,7 +402,7 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   runHandler: (explicit?: boolean) => ScriptBuilder<TScope, TReturn>;
   quitHandler: () => ScriptBuilder<TScope, TReturn>;
   openHandler: (parameterName?: string) => ScriptBuilder<TScope, TReturn>;
-  idleHandler: (returnSeconds?: number) => ScriptBuilder<TScope, TReturn>;
+  idleHandler: () => ScriptBuilder<TScope, TReturn>;
   considering: (attributes: string[]) => ScriptBuilder<TScope, TReturn>;
   ignoring: (attributes: string[]) => ScriptBuilder<TScope, TReturn>;
   using: (terms: string[]) => ScriptBuilder<TScope, TReturn>;

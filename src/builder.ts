@@ -284,15 +284,18 @@ export class AppleScriptBuilder implements ScriptBuilder {
   /**
    * Define an 'idle' event handler for stay-open applications.
    * Called periodically in stay-open script apps.
-   * @param returnSeconds Number of seconds to wait before next idle call (default: 30)
+   *
+   * The idle interval is controlled by the return value within the handler,
+   * not by a parameter. Use `.return(seconds)` to set the next idle interval.
+   *
    * @returns This builder instance for method chaining
    * @example
-   * .idleHandler(5)  // Check every 5 seconds
+   * .idleHandler()
    *   .displayDialog('Idle processing')
-   *   .return(5)  // Return 5 seconds for next idle
+   *   .return(30)  // Return 30 seconds for next idle interval
    * .endidle()
    */
-  idleHandler(_returnSeconds = 30): this {
+  idleHandler(): this {
     this.script.push(`${this.getIndentation()}on idle`);
     this.pushBlock('on', 'idle');
     return this;
@@ -2046,10 +2049,16 @@ export class AppleScriptBuilder implements ScriptBuilder {
       const trimmed = line.trim().toLowerCase();
 
       // Detect block starts and update block stack
-      if (trimmed.startsWith('tell ') || /^tell application/.exec(trimmed)) {
+      // Note: Inline tell statements like "tell application X to do Y" are single-line
+      // and should NOT push a block. However, "tell X to tell Y" is a nested tell block.
+      // An inline tell has ` to ` followed by a command, not another `tell`.
+      const isInlineTell = / to (?!tell)/.test(trimmed);
+      const isInlineIf = / then .+/.test(trimmed);
+      if ((trimmed.startsWith('tell ') || /^tell application/.exec(trimmed)) && !isInlineTell) {
         const target = this.extractTarget(line);
         this.pushBlock('tell', target);
-      } else if (trimmed.startsWith('if ')) {
+      } else if (trimmed.startsWith('if ') && !isInlineIf) {
+        // Only push block for multi-line if (not inline "if x then y")
         this.pushBlock('if');
       } else if (
         trimmed.startsWith('repeat ') ||
