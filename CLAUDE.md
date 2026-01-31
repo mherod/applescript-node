@@ -70,7 +70,7 @@ The library enables developers to:
    - Handles string and file-based execution
    - Manages `osascript` flags and output formatting
    - Uses Node.js `child_process.exec` with promisified interface
-   - Error handling: Captures stderr, exit codes
+   - Error handling: Uses `extractErrorInfo()` helper to capture stderr, exit codes from various error types (Error, ErrnoException)
    - Output processing: Handles human-readable vs raw output
    - Security: Properly escapes single quotes in scripts
 
@@ -102,15 +102,16 @@ The library enables developers to:
    - Uses `osalang` to enumerate languages
    - Capability parsing: Extracts features
    - Language info: Provides information
-   - Default language detection: Identifies system default
+   - Default language detection: Identifies system default, returns fallback AppleScript object when no languages installed
 
 6. **types.ts** (`TypeDefinitions`)
    - Central type system
    - Key interfaces: `ScriptBuilder`, `ScriptExecutionResult`, `OsaScriptOptions`
    - AppleScript types: `AppleScriptValue`, `AppleScriptPrimitive`
-   - System types: `WindowInfo`, `ProcessInfo`, `ApplicationTarget`
+   - System types: `WindowInfo` (per-app windows), `ProcessInfo`, `ApplicationTarget`
    - Configuration types: `CompileOptions`, `OsaLanguageInfo`
    - Error types: `ScriptError` with error information
+   - **Note**: `WindowInfo` in types.ts differs from `sources/windows.ts` - types.ts is for per-app windows (builder methods), sources/windows.ts is for system-wide window enumeration (includes `app` field)
 
 ### Build System
 
@@ -144,14 +145,15 @@ The library enables developers to:
 - **Key rules**:
   - Consistent type imports
   - No explicit `any` types
-  - Unused variables with `_` prefix
+  - Unused variables with `_` prefix - **but verify they're truly unused**. Parameters prefixed with `_` that should actually be used indicate incomplete implementations (e.g., `_provideSuggestions` in validator.ts was meant to control suggestion generation but was ignored)
   - Array types use simple syntax
   - Interfaces preferred over type aliases
   - Consistent naming
   - Maximum line length 100
   - Trailing commas
-  - **Use `??` not `||`** for default values with potentially falsy values (ESLint: `@typescript-eslint/prefer-nullish-coalescing`)
+  - **Use `??` not `||`** for default values with potentially falsy values (ESLint: `@typescript-eslint/prefer-nullish-coalescing`). Common locations: `sources/system.ts`, `sources/windows.ts`
   - **Avoid `String()` on objects** - check `typeof value === 'string'` first when parsing JSON output (ESLint: `@typescript-eslint/no-base-to-string`)
+  - **Use `includes()` over regex for simple substring checks** (ESLint: `@typescript-eslint/prefer-includes`). Example: `str.includes(' to ')` not `/ to /.test(str)`
 
 ### Pre-commit Quality Gates
 
@@ -177,6 +179,10 @@ The library enables developers to:
 - **Nesting validation**: Ensures block hierarchy
 - **Context awareness**: `then()` and `else()` validate inside `if`
 - **Build validation**: `build()` ensures all blocks closed
+- **Inline statement detection**: `loadFromScript()` distinguishes inline vs multi-line statements:
+  - Inline tell: `tell app "X" to activate` (has `to` NOT followed by `tell`) - no block push
+  - Nested tell: `tell app "X" to tell process "Y"` (has ` to tell`) - pushes block
+  - Inline if: `if x then return y` (has `then` followed by content) - no block push
 
 Example of proper block usage:
 
@@ -1049,6 +1055,13 @@ src/
 - **Permission handling**: Respects macOS permissions
 - **Sandboxing**: Scripts run in isolated processes
 
+**String escaping order matters**: When escaping user input for AppleScript strings:
+
+1. Escape backslashes FIRST: `text.replace(/\\/g, '\\\\')`
+2. THEN escape quotes: `.replace(/"/g, '\\"')`
+
+**DON'T** escape quotes before backslashes - this corrupts already-escaped backslashes. See `setClipboard()` in `sources/system.ts` for the correct pattern.
+
 ### Code Quality Security
 
 - **Type safety**: Prevents runtime errors
@@ -1076,6 +1089,7 @@ src/
 - **Test failures**: Ensure tests run on macOS with `osascript`
 - **Linting errors**: Run `pnpm format:fix` to auto-fix
 - **Coverage failures**: Add tests for uncovered paths
+- **IDE diagnostics showing "Cannot find name 'Promise'" or similar**: These are TypeScript language server noise (false positives about built-in types). Run `pnpm typecheck` to verify actual type errors - if it passes, ignore the IDE diagnostics
 
 ## Contributing Workflow
 

@@ -253,7 +253,7 @@ export class ScriptValidator {
   private validateProperties(
     content: string,
     issues: ValidationIssue[],
-    _provideSuggestions: boolean,
+    provideSuggestions: boolean,
   ): void {
     // Look for property set operations
     // Pattern: set property [of object] to value
@@ -272,12 +272,17 @@ export class ScriptValidator {
         const readOnlyProp = this.findReadOnlyProperty(propertyName);
 
         if (readOnlyProp) {
-          issues.push({
+          const issue: ValidationIssue = {
             severity: 'error',
             message: `Property '${propertyName}' is read-only and cannot be set`,
             code: 'readonly-property',
-            suggestion: `Property '${propertyName}' in class '${readOnlyProp.className}' has access level 'r' (read-only)`,
-          });
+          };
+
+          if (provideSuggestions) {
+            issue.suggestion = `Property '${propertyName}' in class '${readOnlyProp.className}' has access level 'r' (read-only)`;
+          }
+
+          issues.push(issue);
         }
       }
     }

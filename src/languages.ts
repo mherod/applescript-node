@@ -137,9 +137,42 @@ export async function getInstalledLanguages(): Promise<OsaLanguageInfo[]> {
   });
 }
 
+/**
+ * Get the default OSA language
+ *
+ * **IMPORTANT: Empty Language List Handling**
+ *
+ * When no languages are installed (rare but possible), returns a fallback
+ * AppleScript entry to ensure a valid OsaLanguageInfo is always returned.
+ *
+ * @returns Promise resolving to the default language information
+ */
 export async function getDefaultLanguage(): Promise<OsaLanguageInfo> {
   const { stdout } = await exec('osalang -d');
   const defaultLang = stdout.trim();
   const allLangs = await getInstalledLanguages();
+
+  // Fallback for edge case when no languages are installed
+  const fallbackLanguage: OsaLanguageInfo = {
+    name: 'AppleScript',
+    subtype: 'AppleScript',
+    manufacturer: 'Apple',
+    capabilities: {
+      compiling: true,
+      sourceData: true,
+      coercion: true,
+      eventHandling: true,
+      recording: true,
+      convenience: true,
+      dialects: true,
+      appleEvents: true,
+    },
+    description: 'Default fallback',
+  };
+
+  if (allLangs.length === 0) {
+    return fallbackLanguage;
+  }
+
   return allLangs.find((lang) => lang.name === defaultLang) ?? allLangs[0];
 }
