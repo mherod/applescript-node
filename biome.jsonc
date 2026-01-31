@@ -6,9 +6,7 @@
   },
   "linter": {
     "rules": {
-      "nursery": {
-        "useConsistentTypeDefinitions": "off"
-      },
+      "nursery": {},
       "style": {
         "noMagicNumbers": "off",
         "useBlockStatements": "off",
@@ -63,9 +61,6 @@
           },
           "performance": {
             "useTopLevelRegex": "off"
-          },
-          "nursery": {
-            "useConsistentTypeDefinitions": "off"
           }
         }
       }

@@ -84,15 +84,6 @@
     ],
     "*.{json,md,yml,yaml}": [
       "prettier --write"
-    ],
-    "*.{js,jsx,json,jsonc,css,scss,md,mdx}": [
-      "pnpm dlx ultracite fix"
-    ],
-    "src/**/!(*.test).ts": [
-      "pnpm dlx ultracite fix"
-    ],
-    "examples/**/*.ts": [
-      "pnpm dlx ultracite fix"
     ]
   },
   "keywords": [
@@ -134,6 +125,6 @@
   "dependencies": {
     "chalk": "5.6.2",
     "cli-table3": "0.6.5",
-    "fast-xml-parser": "5.3.0"
+    "fast-xml-parser": "5.3.4"
   }
 }
