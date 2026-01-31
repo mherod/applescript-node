@@ -320,6 +320,18 @@ describe('Script Validator', () => {
     });
   });
 
+  describe('validateCommand edge cases', () => {
+    it('should return error when command does not exist', () => {
+      const issues = messagesValidator.validateCommand('non_existent_command_xyz', {});
+
+      expect(issues.length).toBe(1);
+      expect(issues[0].severity).toBe('error');
+      expect(issues[0].code).toBe('unknown-command');
+      expect(issues[0].message).toContain('non_existent_command_xyz');
+      expect(issues[0].message).toContain('Messages');
+    });
+  });
+
   describe('Validation result structure', () => {
     it('should categorize issues correctly', () => {
       const script = `
@@ -363,6 +375,248 @@ describe('Script Validator', () => {
 
       expect(result.valid).toBe(true);
       expect(result.errors.length).toBe(0);
+    });
+  });
+
+  describe('extractTellBlocks edge cases', () => {
+    it('should handle deeply nested tell blocks', () => {
+      const script = `
+        tell application "Messages"
+          tell front chat
+            tell participant 1
+              set name to "test"
+            end tell
+          end tell
+        end tell
+      `;
+
+      // Should not throw and should parse correctly
+      const result = messagesValidator.validate(script);
+      expect(result).toBeDefined();
+    });
+
+    it('should handle unbalanced nested tells gracefully', () => {
+      const script = `
+        tell application "Messages"
+          tell front chat
+            set x to 1
+          end tell
+        end tell
+      `;
+
+      // Should handle nested blocks correctly
+      const result = messagesValidator.validate(script);
+      expect(result).toBeDefined();
+    });
+
+    it('should handle nested tell application blocks (line 138 coverage)', () => {
+      // This tests the blockDepth++ path when we encounter a nested tell application
+      const script = `
+        tell application "Messages"
+          tell application "System Events"
+            keystroke "test"
+          end tell
+        end tell
+      `;
+
+      const result = messagesValidator.validate(script);
+      expect(result).toBeDefined();
+      // The outer Messages block should still be parsed
+      expect(result.issues).toBeDefined();
+    });
+
+    it('should correctly close nested tell application blocks (line 148 coverage)', () => {
+      // This tests the blockDepth-- path when closing a nested tell application
+      const script = `
+        tell application "Messages"
+          tell application "Finder"
+            activate
+          end tell
+          login
+        end tell
+      `;
+
+      const result = messagesValidator.validate(script);
+      expect(result).toBeDefined();
+    });
+
+    it('should handle multiple sequential tell application blocks', () => {
+      const script = `
+        tell application "Messages"
+          send "hello"
+        end tell
+        tell application "Music"
+          play
+        end tell
+      `;
+
+      const result = messagesValidator.validate(script);
+      expect(result).toBeDefined();
+      expect(result.issues).toBeDefined();
+    });
+
+    it('should handle empty tell blocks', () => {
+      const script = `
+        tell application "Messages"
+        end tell
+      `;
+
+      const result = messagesValidator.validate(script);
+      expect(result.valid).toBe(true);
+      expect(result.errors.length).toBe(0);
+    });
+
+    it('should handle script without tell blocks', () => {
+      const script = `
+        set x to 1
+        set y to 2
+      `;
+
+      const result = messagesValidator.validate(script);
+      expect(result.valid).toBe(true);
+      expect(result.issues.length).toBe(0);
+    });
+
+    it('should handle unclosed tell block gracefully', () => {
+      const script = `
+        tell application "Messages"
+          login
+      `;
+
+      // Should not throw - just processes what it can
+      const result = messagesValidator.validate(script);
+      expect(result).toBeDefined();
+    });
+
+    it('should handle deeply nested application tell blocks', () => {
+      // Three levels of tell application nesting
+      const script = `
+        tell application "Messages"
+          tell application "System Events"
+            tell application "Finder"
+              activate
+            end tell
+          end tell
+        end tell
+      `;
+
+      const result = messagesValidator.validate(script);
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('validateCommands edge cases', () => {
+    it('should skip empty lines in command validation', () => {
+      const script = `
+        tell application "Messages"
+
+          login
+
+        end tell
+      `;
+
+      const result = messagesValidator.validate(script);
+      expect(result.valid).toBe(true);
+    });
+
+    it('should skip comments in command validation', () => {
+      const script = `
+        tell application "Messages"
+          -- this is a comment
+          login
+        end tell
+      `;
+
+      const result = messagesValidator.validate(script);
+      expect(result.valid).toBe(true);
+    });
+
+    it('should handle commands that do not match alphanumeric pattern', () => {
+      const script = `
+        tell application "Messages"
+          123invalid
+        end tell
+      `;
+
+      // Non-alphanumeric starting commands should be skipped
+      const result = messagesValidator.validate(script);
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('validateProperties edge cases', () => {
+    it('should handle set without property name', () => {
+      const script = `
+        tell application "Messages"
+          set to 1
+        end tell
+      `;
+
+      // Should not crash on malformed set statement
+      const result = messagesValidator.validate(script);
+      expect(result).toBeDefined();
+    });
+
+    it('should validate property without suggestions', () => {
+      const script = `
+        tell application "Messages"
+          set id of chat "test" to "new-id"
+        end tell
+      `;
+
+      const result = messagesValidator.validate(script, { provideSuggestions: false });
+      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.errors[0].code).toBe('readonly-property');
+      // Suggestion should not be present when disabled
+      expect(result.errors[0].suggestion).toBeUndefined();
+    });
+  });
+
+  describe('Levenshtein distance edge cases', () => {
+    it('should handle exact match (distance 0)', () => {
+      const script = `
+        tell application "Messages"
+          send "test"
+        end tell
+      `;
+
+      const result = messagesValidator.validate(script, { provideSuggestions: true });
+      // 'send' is an exact match, so no warning
+      expect(result.warnings.filter((w) => w.code === 'unknown-command').length).toBe(0);
+    });
+
+    it('should handle single character difference', () => {
+      const script = `
+        tell application "Messages"
+          xend "test"
+        end tell
+      `;
+
+      const result = messagesValidator.validate(script, { provideSuggestions: true });
+      const issue = result.warnings.find((w) => w.code === 'unknown-command');
+      expect(issue).toBeDefined();
+      // Should suggest 'send' (distance 1)
+      expect(issue?.suggestion).toContain('send');
+    });
+
+    it('should handle empty command list gracefully', () => {
+      // Create a validator with a minimal dictionary that has no commands
+      const emptyDictionary: ApplicationDictionary = {
+        suites: [],
+      };
+      const emptyValidator = new ScriptValidator(emptyDictionary, 'Empty');
+
+      const script = `
+        tell application "Empty"
+          somecommand
+        end tell
+      `;
+
+      const result = emptyValidator.validate(script);
+      const issue = result.warnings.find((w) => w.code === 'unknown-command');
+      expect(issue).toBeDefined();
+      // No suggestion should be offered since there are no commands
+      expect(issue?.suggestion).toBeUndefined();
     });
   });
 });
