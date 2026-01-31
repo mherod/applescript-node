@@ -332,6 +332,200 @@ if (!result.valid) {
 
 ---
 
+## Complex Examples
+
+### Cross-App Data Pipeline
+
+Extract contacts, process them, and create personalized notes:
+
+```typescript
+import { createScript, runScript } from 'applescript-node';
+
+// Extract contacts with birthday information
+const extractScript = createScript()
+  .tell('Contacts')
+  .mapToJson(
+    'person',
+    'every person',
+    {
+      id: 'id',
+      name: 'name',
+      email: {
+        property: (e) => e.property('person', 'emails'),
+        firstOf: true,
+        default: 'missing value',
+      },
+      birthday: {
+        property: 'birth date',
+        ifExists: true,
+        asType: 'string',
+        default: 'missing value',
+      },
+      phone: {
+        property: 'phones',
+        firstOf: true,
+        default: 'missing value',
+      },
+    },
+    { limit: 100, skipErrors: true },
+  )
+  .endtell();
+
+const contactsResult = await runScript(extractScript);
+const contacts = JSON.parse(contactsResult.output);
+
+// Process contacts and create notes for upcoming birthdays
+const upcomingBirthdays = contacts.filter((c) => {
+  if (c.birthday === 'missing value') return false;
+  const birthday = new Date(c.birthday);
+  const today = new Date();
+  const daysUntil = Math.ceil((birthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return daysUntil >= 0 && daysUntil <= 30;
+});
+
+// Create a summary note in Notes.app
+const noteScript = createScript()
+  .tell('Notes')
+  .tryCatch(
+    (try_) =>
+      try_
+        .raw(`set noteText to "Upcoming Birthdays (Next 30 Days)\\n\\n"`)
+        .raw(
+          `set noteText to noteText & "${upcomingBirthdays
+            .map((c) => `${c.name}: ${c.birthday}`)
+            .join('\\n')}"`,
+        )
+        .raw('make new note with properties {body:noteText}'),
+    (catch_) => catch_.displayDialog('Failed to create note'),
+  )
+  .endtell();
+
+await runScript(noteScript);
+console.log(`Created note with ${upcomingBirthdays.length} upcoming birthdays`);
+```
+
+### Automated Workflow Orchestration
+
+Complete workflow demonstrating window management, data extraction, and error handling:
+
+```typescript
+import { createScript, runScript, sources } from 'applescript-node';
+
+async function automatedWorkflow() {
+  // 1. Check if required apps are running
+  const safariRunning = await sources.applications.isRunning('Safari');
+  const notesRunning = await sources.applications.isRunning('Notes');
+
+  if (!safariRunning || !notesRunning) {
+    console.log('Starting required applications...');
+    await sources.applications.activate('Safari');
+    await sources.applications.activate('Notes');
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait for launch
+  }
+
+  // 2. Organize workspace - arrange windows side by side
+  const windows = await sources.windows.getAll();
+  const safariWindow = windows.find((w) => w.app === 'Safari');
+  const notesWindow = windows.find((w) => w.app === 'Notes');
+
+  if (safariWindow && notesWindow) {
+    // Move Safari to left half of screen
+    const moveScript = createScript()
+      .tell('System Events')
+      .tell('application process "Safari"')
+      .raw('set position of window 1 to {0, 23}')
+      .raw('set size of window 1 to {960, 1177}')
+      .endtell()
+      .tell('application process "Notes"')
+      .raw('set position of window 1 to {960, 23}')
+      .raw('set size of window 1 to {960, 1177}')
+      .endtell()
+      .endtell();
+
+    await runScript(moveScript);
+  }
+
+  // 3. Extract browser tabs and create organized notes
+  const tabsScript = createScript()
+    .tell('Safari')
+    .set('tabData', [])
+    .repeatWith('aWindow', 'windows')
+    .repeatWith('aTab', 'tabs of aWindow')
+    .tryCatch(
+      (try_) =>
+        try_.setEndRecord('tabData', {
+          title: 'name of aTab',
+          url: 'URL of aTab',
+        }),
+      (catch_) => catch_.comment('Skip invalid tabs'),
+    )
+    .endrepeat()
+    .endrepeat()
+    .returnAsJson('tabData', {
+      title: 'title',
+      url: 'url',
+    })
+    .endtell();
+
+  const tabsResult = await runScript(tabsScript);
+  const tabs = JSON.parse(tabsResult.output);
+
+  // 4. Create categorized notes based on tab URLs
+  const categories = {
+    development: tabs.filter(
+      (t) => t.url.includes('github.com') || t.url.includes('stackoverflow'),
+    ),
+    documentation: tabs.filter((t) => t.url.includes('docs.') || t.url.includes('developer.')),
+    other: tabs.filter(
+      (t) =>
+        !t.url.includes('github.com') &&
+        !t.url.includes('stackoverflow') &&
+        !t.url.includes('docs.') &&
+        !t.url.includes('developer.'),
+    ),
+  };
+
+  for (const [category, categoryTabs] of Object.entries(categories)) {
+    if (categoryTabs.length === 0) continue;
+
+    const createNoteScript = createScript()
+      .tell('Notes')
+      .raw(
+        `set noteTitle to "Browser Tabs - ${category.charAt(0).toUpperCase() + category.slice(1)}"`,
+      )
+      .raw(
+        `set noteBody to "${categoryTabs
+          .map((t) => `${t.title}\\n${t.url}`)
+          .join('\\n\\n')
+          .replace(/"/g, '\\"')}"`,
+      )
+      .raw('make new note with properties {name:noteTitle, body:noteBody}')
+      .endtell();
+
+    await runScript(createNoteScript);
+  }
+
+  // 5. Show completion notification
+  await runScript(
+    createScript().displayNotification(
+      `Organized ${tabs.length} tabs into ${Object.keys(categories).length} categories`,
+    ),
+  );
+
+  console.log('Workflow completed successfully');
+  return {
+    tabsProcessed: tabs.length,
+    categoriesCreated: Object.keys(categories).length,
+    windows: { safari: safariWindow, notes: notesWindow },
+  };
+}
+
+// Run the workflow
+automatedWorkflow().catch(console.error);
+```
+
+---
+
 ## API Reference
 
 ### High-Level Sources
