@@ -101,7 +101,7 @@ export class ScriptExecutor {
    * ```typescript
    * const result = await ScriptExecutor.execute('tell app "Finder" to get name');
    * if (result.success) {
-   *   console.log(result.output); // "Finder"
+   *   // result.output === "Finder"
    * } else {
    *   console.error(`Failed: ${result.error} (exit code: ${result.exitCode})`);
    * }
@@ -153,7 +153,7 @@ export class ScriptExecutor {
    * ```typescript
    * const result = await ScriptExecutor.executeFile('./scripts/my-script.applescript');
    * if (result.success) {
-   *   console.log(result.output);
+   *   // result.output contains the script output
    * }
    * ```
    */
