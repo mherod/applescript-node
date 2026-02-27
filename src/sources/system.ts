@@ -359,8 +359,8 @@ export async function isDarkMode(): Promise<boolean> {
  * **Usage Example:**
  * ```typescript
  * const uptime = await system.getUptime();
- * console.log(`System has been up for ${uptime} seconds`);
- * console.log(`That's ${Math.floor(uptime / 3600)} hours`);
+ * // uptime === seconds since last boot (e.g. 86400 for one day)
+ * // Math.floor(uptime / 3600) === hours of uptime
  * ```
  *
  * **Edge Cases Handled:**
@@ -384,7 +384,7 @@ export async function isDarkMode(): Promise<boolean> {
  *   const uptime = await getUptime();
  *   // uptime is always a valid positive number
  *   if (uptime > 86400) {
- *     console.log('System has been up for more than a day');
+ *     // uptime > 86400 means more than one day
  *   }
  * } catch (error) {
  *   // Only thrown if osascript execution fails

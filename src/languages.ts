@@ -92,7 +92,8 @@ function parseCapabilityFlags(flags: string): OsaLanguageInfo['capabilities'] {
  * if (languages.length === 0) {
  *   console.warn('No OSA languages found');
  * } else {
- *   languages.forEach(lang => console.log(`${lang.name}: ${lang.capabilities}`));
+ *   // languages[0].name === "AppleScript", languages[0].capabilities contains feature flags
+ *   languages.forEach(lang => `${lang.name}: ${lang.capabilities}`);
  * }
  * ```
  *
