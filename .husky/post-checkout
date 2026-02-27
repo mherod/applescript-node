@@ -1,5 +1,4 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
 
 # Load nvm
 export NVM_DIR="$HOME/.nvm"
