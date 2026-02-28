@@ -457,5 +457,58 @@ describe('system', () => {
       // Should return a large number (current time - 0)
       expect(result).toBeGreaterThan(0);
     });
+
+    it('should handle null output by defaulting boot time to 0', async () => {
+      // Exercises system.ts:404 — (result.output ?? '0').trim()
+      mockExecute.mockResolvedValueOnce({ success: true, output: null, exitCode: 0 });
+
+      const result = await getUptime();
+      expect(result).toBeGreaterThan(0);
+    });
+  });
+
+  describe('null output fallback branches', () => {
+    it('getInfo: should parse empty object when output is null', async () => {
+      // Exercises system.ts:83 — result.output ?? '{}'
+      mockExecute.mockResolvedValueOnce({ success: true, output: null, exitCode: 0 });
+
+      const info = await getInfo();
+      // JSON.parse('{}') gives empty object cast to SystemInfo
+      expect(info).toEqual({});
+    });
+
+    it('getVolumes: should return empty array when output is null', async () => {
+      // Exercises system.ts:139 — result.output ?? '[]'
+      mockExecute.mockResolvedValueOnce({ success: true, output: null, exitCode: 0 });
+
+      const volumes = await getVolumes();
+      expect(volumes).toEqual([]);
+    });
+
+    it('getDisplays: should return default display when output is null', async () => {
+      // Exercises system.ts:176 — result.output ?? ''
+      mockExecute.mockResolvedValueOnce({ success: true, output: null, exitCode: 0 });
+
+      const displays = await getDisplays();
+      // Empty string → no resolution matches → returns default display
+      expect(displays).toHaveLength(1);
+      expect(displays[0].bounds.width).toBe(0);
+    });
+
+    it('getPath: should return empty string when output is null', async () => {
+      // Exercises system.ts:305 — result.output ?? ''
+      mockExecute.mockResolvedValueOnce({ success: true, output: null, exitCode: 0 });
+
+      const path = await getPath('home');
+      expect(path).toBe('');
+    });
+
+    it('isDarkMode: should return false when output is null', async () => {
+      // Exercises system.ts:324 — result.output ?? ''
+      mockExecute.mockResolvedValueOnce({ success: true, output: null, exitCode: 0 });
+
+      const result = await isDarkMode();
+      expect(result).toBe(false);
+    });
   });
 });

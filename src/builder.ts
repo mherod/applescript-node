@@ -49,10 +49,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
     if (Array.isArray(value)) {
       return `{${value.map((v) => this.formatValue(v)).join(', ')}}`;
     }
-    const entries = Object.entries(value as Record<string, AppleScriptValue>)
-      .map(([k, v]) => `${k}:${this.formatValue(v)}`)
-      .join(', ');
-    return `{${entries}}`;
+    return this.makeRecord(value as Record<string, AppleScriptValue>);
   }
 
   private makeRecord(properties: Record<string, AppleScriptValue>): string {
@@ -311,7 +308,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
     // For 'on' blocks, use the handler name if available, otherwise use 'on'
     const endText = block.type === 'on' && block.target ? block.target : block.type;
-    this.script.push(`${this.getIndentation()}end ${endText}`);
+    this.addLine(`end ${endText}`);
     return this;
   }
 
@@ -1703,7 +1700,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
 
   // Raw script and building
   raw(script: string): this {
-    this.script.push(`${this.getIndentation()}${script}`);
+    this.addLine(script);
     return this;
   }
 

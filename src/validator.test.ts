@@ -619,4 +619,40 @@ describe('Script Validator', () => {
       expect(issue?.suggestion).toBeUndefined();
     });
   });
+
+  describe('suggestion without description (line 240 coverage)', () => {
+    it('should produce suggestion with empty description when command has no description field', () => {
+      // Exercises validator.ts:240 — suggestion.description ?? ''
+      // The suggested command has no description, so description is undefined → fallback to ''
+      const dictWithNoDesc: ApplicationDictionary = {
+        suites: [
+          {
+            name: 'Test Suite',
+            code: 'test',
+            commands: [
+              // 'activate' has no description — distance from 'activat' is 1, within threshold
+              { name: 'activate', code: 'actv', parameters: [] },
+            ],
+            classes: [],
+            enumerations: [],
+          },
+        ],
+      };
+      const validator = new ScriptValidator(dictWithNoDesc, 'TestApp');
+
+      const script = `
+        tell application "TestApp"
+          activat
+        end tell
+      `;
+
+      const result = validator.validate(script, { provideSuggestions: true });
+      const issue = result.warnings.find((w) => w.code === 'unknown-command');
+
+      expect(issue).toBeDefined();
+      expect(issue?.suggestion).toBeDefined();
+      // Suggestion contains the command name; description is '' (undefined ?? '')
+      expect(issue?.suggestion).toContain('activate');
+    });
+  });
 });

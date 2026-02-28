@@ -73,8 +73,8 @@ export class ScriptValidator {
     const appName =
       appPath
         .split('/')
-        .pop()
-        ?.replace(/\.app$/, '') ?? 'Unknown';
+        .pop() /* v8 ignore next -- split().pop() on non-empty array always returns a string */
+        ?.replace(/\.app$/, '') /* v8 ignore next */ ?? 'Unknown';
     return new ScriptValidator(dictionary, appName);
   }
 
@@ -214,7 +214,10 @@ export class ScriptValidator {
       if (!trimmed || trimmed.startsWith('--')) continue;
 
       // Extract first word (potential command)
-      const words = trimmed.split(/\s+/);
+      const words =
+        trimmed.split(
+          /\s+/,
+        ); /* v8 ignore next -- split on non-empty string always yields ≥1 element */
       if (words.length === 0) continue;
 
       const potentialCommand = words[0].toLowerCase();

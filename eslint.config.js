@@ -17,6 +17,7 @@ const typescript = {
         './tsconfig.build.json',
         './examples/tsconfig.json',
         './tsconfig.config.json',
+        './scripts/tsconfig.json',
       ],
       tsconfigRootDir: import.meta.dirname,
     },
@@ -117,6 +118,12 @@ export default [
         require: true,
         exports: true,
       },
+    },
+  },
+  {
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      globals: { process: true },
     },
   },
   {

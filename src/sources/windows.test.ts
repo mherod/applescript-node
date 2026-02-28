@@ -324,6 +324,31 @@ describe('windows', () => {
     });
   });
 
+  describe('null output and null field fallback branches', () => {
+    it('getAll: should return empty array when output is null', async () => {
+      // Exercises windows.ts:93 — result.output ?? '[]'
+      mockExecute.mockResolvedValueOnce({ success: true, output: null, exitCode: 0 });
+
+      const result = await getAll();
+      expect(result).toEqual([]);
+    });
+
+    it('getAll: should default name and app to empty string when null in JSON', async () => {
+      // Exercises windows.ts:98-99 — (w.name as string|undefined) ?? '' and (w.app as string|undefined) ?? ''
+      // JSON.stringify preserves null, so w.name === null → null ?? '' === ''
+      const mockWindows = [{ name: null, app: null, id: 1, x: 0, y: 0, width: 0, height: 0 }];
+      mockExecute.mockResolvedValueOnce({
+        success: true,
+        output: JSON.stringify(mockWindows),
+        exitCode: 0,
+      });
+
+      const result = await getAll();
+      expect(result[0].name).toBe('');
+      expect(result[0].app).toBe('');
+    });
+  });
+
   describe('getCountByApp', () => {
     it('should return window counts grouped by app', async () => {
       const mockWindows = [

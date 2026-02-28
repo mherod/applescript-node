@@ -104,6 +104,19 @@ describe('sdef module', () => {
 
       await expect(getSdef('/System/Applications/Test.app')).rejects.toThrow('Failed to get sdef');
     });
+
+    it('should rethrow non-Error objects unchanged', async () => {
+      const mockExec = vi.mocked(exec);
+      // Simulate exec calling back with a non-Error first arg (e.g. a string).
+      // promisify rejects with whatever the first callback arg is.
+      const impl = (_cmd: string, callback: ExecCallback): ChildProcess => {
+        callback('string-error' as unknown as ExecException, { stdout: '', stderr: '' });
+        return {} as ChildProcess;
+      };
+      mockExec.mockImplementation(impl as typeof exec);
+
+      await expect(getSdef('/System/Applications/Test.app')).rejects.toBe('string-error');
+    });
   });
 
   describe('parseSdef', () => {
@@ -376,6 +389,23 @@ describe('sdef module', () => {
       const cls = dictionary.suites[0].classes[0];
       expect(cls.properties).toHaveLength(0);
       expect(cls.elements).toHaveLength(0);
+    });
+
+    it('should default to type "any" when property has no type attribute or type element', () => {
+      // A property with neither @_type attr nor a nested <type> element
+      // exercises the final fallback branch in parseTypeInfo()
+      const noTypeSdef = `<?xml version="1.0" encoding="UTF-8"?>
+<dictionary>
+  <suite name="No-Type Suite" code="noty">
+    <class name="item" code="itmx">
+      <property name="data" code="datt"/>
+    </class>
+  </suite>
+</dictionary>`;
+
+      const dictionary = parseSdef(noTypeSdef);
+      const prop = dictionary.suites[0].classes[0].properties[0];
+      expect(prop.type).toEqual({ type: 'any' });
     });
   });
 });
