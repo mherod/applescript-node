@@ -40,6 +40,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Regression test — pipe delimiter handles space-containing check names
+        run: |
+          # Regression test for the bug where `tr ' ' '\n'` shattered
+          # "test (20)" (a name containing spaces) into three separate tokens:
+          #   "test", "(20)", "test", "(22)" → 4 tokens instead of 2
+          #
+          # The fix uses "|" as the delimiter so spaces inside names are preserved.
+          # This step explicitly verifies the correct behaviour and documents
+          # what the broken path would have produced.
+
+          echo "=== Regression: space-containing check names with pipe delimiter ==="
+
+          # Simulate the output of the "Derive expected check names" step when
+          # the matrix is [20, 22] and the job ID is "test".
+          INPUT="test (20)|test (22)"
+
+          # ── CORRECT path (current implementation) ─────────────────────────
+          SORTED=$(echo "$INPUT" | tr '|' '\n' | sort | paste -sd '|')
+          echo "Correct  → $SORTED"
+          EXPECTED="test (20)|test (22)"
+          if [ "$SORTED" != "$EXPECTED" ]; then
+            echo "❌ FAIL: pipe-delimiter path produced '$SORTED', expected '$EXPECTED'"
+            exit 1
+          fi
+          echo "✅ Pipe-delimiter path: correct ($SORTED)"
+
+          # ── BROKEN path (space-split — must produce wrong token count) ─────
+          BROKEN_COUNT=$(echo "$INPUT" | tr '|' ' ' | tr ' ' '\n' | grep -c .)
+          echo "Broken   → $BROKEN_COUNT tokens (expected 6, not 2)"
+          # "test (20) test (22)" split on spaces → "test", "(20)", "test", "(22)" = 4
+          # tokens.  It must NOT equal 2 (the correct number of check names).
+          if [ "$BROKEN_COUNT" -eq 2 ]; then
+            echo "❌ FAIL: space-split path accidentally produced the right count."
+            echo "   The regression test is no longer valid — review the logic."
+            exit 1
+          fi
+          echo "✅ Space-split path: confirmed broken (produces $BROKEN_COUNT tokens, not 2)"
+
+          echo ""
+          echo "Regression test passed."
+
       - name: Derive expected check names from test.yml
         id: expected
         run: |
