@@ -1,0 +1,112 @@
+name: Validate Branch Protection
+
+# Detects drift between .github/required-checks.txt (the declared required
+# checks) and the job names the test matrix actually generates.  When they
+# diverge, branch protection will either deadlock PRs (stale required check
+# that never runs) or silently under-protect main (new job not yet required).
+#
+# How to keep things in sync when you change the matrix:
+#   1. Update .github/workflows/test.yml  (matrix node-version list)
+#   2. Update .github/required-checks.txt (one check name per line)
+#   3. Update branch protection via GitHub Settings > Branches > main
+#      (or run: gh api repos/OWNER/REPO/branches/main/protection --method PUT ...)
+#
+# This workflow validates steps 1+2 are consistent.  Step 3 is an admin
+# action that cannot be performed with the standard GITHUB_TOKEN.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/test.yml
+      - .github/workflows/validate-branch-protection.yml
+      - .github/required-checks.txt
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/test.yml
+      - .github/workflows/validate-branch-protection.yml
+      - .github/required-checks.txt
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Check required status checks match matrix jobs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive expected check names from test.yml
+        id: expected
+        run: |
+          # Extract job ID: first key under 'jobs:' in test.yml
+          JOB_ID=$(grep -A1 '^jobs:' .github/workflows/test.yml \
+            | tail -1 | sed 's/[: ]//g')
+
+          # Extract node-version matrix values (e.g. [20, 22] → "20 22")
+          VERSIONS=$(grep 'node-version:' .github/workflows/test.yml \
+            | grep '\[' \
+            | sed 's/.*\[//; s/\].*//; s/,/ /g')
+
+          # Build expected check names one per line, then join with | for sorting
+          EXPECTED_SORTED=""
+          for V in $VERSIONS; do
+            V=$(echo "$V" | tr -d ' ')
+            [ -n "$EXPECTED_SORTED" ] && EXPECTED_SORTED="${EXPECTED_SORTED}|"
+            EXPECTED_SORTED="${EXPECTED_SORTED}${JOB_ID} (${V})"
+          done
+          EXPECTED_SORTED=$(echo "$EXPECTED_SORTED" \
+            | tr '|' '\n' | sort | paste -sd '|')
+
+          echo "job_id=$JOB_ID"                 >> "$GITHUB_OUTPUT"
+          echo "versions=$VERSIONS"             >> "$GITHUB_OUTPUT"
+          echo "expected_sorted=$EXPECTED_SORTED" >> "$GITHUB_OUTPUT"
+          echo "Derived job ID  : $JOB_ID"
+          echo "Derived versions: $VERSIONS"
+          echo "Expected (sorted, pipe-delim): $EXPECTED_SORTED"
+
+      - name: Read declared required checks from required-checks.txt
+        id: declared
+        run: |
+          # required-checks.txt is the committed source of truth.
+          # It must be kept in sync with branch protection (admin action) and
+          # with the matrix (validated here in CI).
+          DECLARED_SORTED=$(grep -v '^\s*$' .github/required-checks.txt \
+            | sort | paste -sd '|')
+          echo "declared_sorted=$DECLARED_SORTED" >> "$GITHUB_OUTPUT"
+          echo "Declared (sorted, pipe-delim): $DECLARED_SORTED"
+
+      - name: Compare matrix-derived names vs declared required checks
+        env:
+          EXPECTED_SORTED: ${{ steps.expected.outputs.expected_sorted }}
+          DECLARED_SORTED: ${{ steps.declared.outputs.declared_sorted }}
+          JOB_ID: ${{ steps.expected.outputs.job_id }}
+          VERSIONS: ${{ steps.expected.outputs.versions }}
+        run: |
+          echo "Matrix generates : $EXPECTED_SORTED"
+          echo "required-checks  : $DECLARED_SORTED"
+
+          if [ "$EXPECTED_SORTED" = "$DECLARED_SORTED" ]; then
+            echo "✅ Matrix job names match .github/required-checks.txt."
+            echo ""
+            echo "Reminder: also ensure branch protection on main is in sync."
+            echo "Required checks configured in branch protection must match:"
+            echo "$DECLARED_SORTED" | tr '|' '\n' | sed 's/^/  - /'
+          else
+            echo "❌ MISMATCH detected!"
+            echo ""
+            echo "Matrix generates  : $EXPECTED_SORTED"
+            echo "required-checks   : $DECLARED_SORTED"
+            echo ""
+            echo "To fix, update .github/required-checks.txt to match the job"
+            echo "names the matrix produces, then also update branch protection:"
+            echo ""
+            echo "  Job ID        : $JOB_ID"
+            echo "  Node versions : $VERSIONS"
+            echo "  Expected names: $EXPECTED_SORTED" | tr '|' '\n'
+            exit 1
+          fi
