@@ -40,6 +40,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate — no check names contain the pipe delimiter
+        run: |
+          # The pipe character (|) is used as the internal delimiter when
+          # sorting and comparing check name lists.  A name that itself
+          # contains | would be silently split into extra tokens, corrupting
+          # both the expected and actual lists and producing false match/mismatch.
+          #
+          # This step is a hard gate: if any name in required-checks.txt
+          # contains |, we fail immediately with a clear error before any
+          # comparison logic runs.
+
+          FAIL=0
+
+          echo "Scanning .github/required-checks.txt for pipe characters..."
+          while IFS= read -r line; do
+            # Skip blank / whitespace-only lines
+            [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+            if [[ "$line" == *"|"* ]]; then
+              echo "❌ Invalid check name contains '|': $line"
+              echo "   The pipe character is reserved as the internal delimiter."
+              echo "   GitHub Actions does not permit '|' in job names — remove it."
+              FAIL=$((FAIL + 1))
+            fi
+          done < .github/required-checks.txt
+
+          if [ "$FAIL" -eq 0 ]; then
+            echo "✅ No pipe characters found in required-checks.txt"
+          else
+            echo ""
+            echo "$FAIL invalid name(s) detected. Fix required-checks.txt before proceeding."
+            exit 1
+          fi
+
       - name: Regression test — pipe delimiter handles space-containing check names
         run: |
           # Regression test for the bug where `tr ' ' '\n'` shattered
@@ -180,6 +213,34 @@ jobs:
           else
             echo "  ⚠️  Pipe-name limitation appears to have changed — review delimiter choice."
           fi
+
+          # ── P5: Validator rejects | and accepts clean names ───────────────
+          echo ""
+          echo "P5  Strict validation — validator correctly classifies names"
+
+          validate_name() {
+            # Returns 0 (clean) or 1 (contains pipe) — mirrors the gate step logic
+            [[ "$1" == *"|"* ]] && return 1 || return 0
+          }
+
+          # Must reject: names containing |
+          PIPE_CASES=("a|b" "test (20)|test (22)" "check|1" "|leading" "trailing|")
+          for bad in "${PIPE_CASES[@]}"; do
+            if ! validate_name "$bad"; then
+              pass "rejects '$bad'"
+            else
+              fail "should reject '$bad'" "validator returned clean for a pipe-containing name"
+            fi
+          done
+
+          # Must accept: all atoms in the test set (none contain |)
+          for name in "${ATOMS[@]}"; do
+            if validate_name "$name"; then
+              pass "accepts '$name'"
+            else
+              fail "should accept '$name'" "validator wrongly rejected a pipe-free name"
+            fi
+          done
 
           # ── Summary ───────────────────────────────────────────────────────
           echo ""
