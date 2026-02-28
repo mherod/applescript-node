@@ -1147,18 +1147,37 @@ const itemLines = items.map((t) => `${t.title}`).join('\\n');
 
 **Version bump requires clean git state:**
 
-- `npm version patch|minor|major` fails if there are uncommitted changes
+- `pnpm version patch|minor|major` fails if there are uncommitted changes
 - Commit all lint fixes, dependency updates, and config changes before bumping version
 - The version bump creates both a commit and a git tag automatically
+- **`npm_config_prefix` conflicts with nvm inside husky hooks** — `pnpm version patch`
+  will fail with "husky - pre-commit script failed (code 11)" if `npm_config_prefix` is
+  set. Fix: `unset npm_config_prefix && pnpm version patch`. If the version bump commits
+  but tag creation fails, create the tag manually with `git tag v<version>`.
+- Use `pnpm version` not `npm version` — the pnpm-swizzle hook blocks bare `npm` commands.
 
 **Publishing with 2FA:**
 
 ```bash
-# Get OTP from 1Password
-op item get npmjs.com --otp
+# Get OTP from 1Password (item name is "Npmjs", not "npmjs.com")
+op item get "Npmjs" --otp
 
-# Publish with OTP
-npm publish --otp=<code>
+# Publish atomically — fetch OTP and publish in one step to avoid TOTP expiry
+OTP=$(op item get "Npmjs" --otp) && unset npm_config_prefix && pnpm publish --otp=$OTP
+```
+
+If `pnpm whoami` shows "not logged in" and publish returns 404/401, the token has
+expired. Re-authenticate via the registry REST API:
+
+```bash
+PASSWORD=$(op item get "Npmjs" --fields password --reveal)
+OTP=$(op item get "Npmjs" --otp)
+TOKEN=$(curl -s -X PUT "https://registry.npmjs.org/-/user/org.couchdb.user:mherod" \
+  -H "Content-Type: application/json" -H "npm-otp: $OTP" \
+  -d "{\"name\":\"mherod\",\"password\":\"$PASSWORD\",\"type\":\"user\"}" \
+  | jq -r '.token // empty')
+sed -i '' '/registry.npmjs.org\/:_authToken/d' ~/.npmrc
+echo "//registry.npmjs.org/:_authToken=$TOKEN" >> ~/.npmrc
 ```
 
 **Branch protection handling:**
@@ -1172,13 +1191,52 @@ npm publish --otp=<code>
   gh pr merge <PR_NUMBER> --squash --auto
   ```
 - The tag can be pushed directly even when main is protected
+- When publishing from a non-main branch (e.g., `release/v<version>` or `fix/`), pass
+  `--no-git-checks` to suppress pnpm's interactive branch prompt:
+  `pnpm publish --otp=$OTP --no-git-checks`
 
 **Dry run inspection:**
 
-- Always run `npm publish --dry-run` before actual publish
+- Always run `pnpm publish --dry-run` before actual publish
 - Verify the tarball contains type definitions (.d.ts files)
 - Verify no private files (.env, credentials) are included
 - Check the `files` field in package.json restricts to `dist/` only
+
+**`exports` field is required for ESM consumers:**
+
+The package must have a conditional `exports` field or named ESM imports will fail with
+"does not provide an export named 'X'". The correct structure — note `types` must come
+**first** (before `import`/`require`) for TypeScript resolution:
+
+```json
+"exports": {
+  ".": {
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.mjs",
+    "require": "./dist/index.js"
+  }
+}
+```
+
+Without this field, Node.js ESM falls back to `"main"` → `dist/index.js`. With
+`"type": "module"` in the package, `dist/index.js` is treated as ESM format but contains
+CJS syntax (`exports.X = Y`), causing the named-export resolution to fail.
+
+**Post-release smoke tests:**
+
+Run smoke tests in a fully isolated temp directory. A missing `.npmrc` file in the temp
+dir causes pnpm to treat it as part of the workspace, contaminating the root
+`pnpm-lock.yaml` with the package as its own dependency:
+
+```bash
+SMOKE=$(mktemp -d)
+printf "# isolated\n" > "$SMOKE/.npmrc"   # prevent workspace adoption
+printf '{"name":"smoke-test","version":"1.0.0","type":"module"}\n' > "$SMOKE/package.json"
+pnpm --prefix "$SMOKE" add applescript-node@latest
+```
+
+The `runScript()` result shape uses `output` (not `result`): `result.output`, `result.success`,
+`result.exitCode`. Language discovery is `getInstalledLanguages()` (not `getLanguages()`).
 
 ## CI/CD and PR Merge Guidelines
 
