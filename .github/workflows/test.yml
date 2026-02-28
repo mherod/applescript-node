@@ -59,3 +59,93 @@ jobs:
           cd docs
           pnpm install
           pnpm build
+
+  pack-smoke:
+    name: Pack smoke test
+    runs-on: macos-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.14.4
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm run build
+
+      - name: Pack tarball
+        run: |
+          mkdir -p /tmp/pkg-tarballs
+          pnpm pack --pack-destination /tmp/pkg-tarballs
+          echo "TARBALL=$(ls /tmp/pkg-tarballs/*.tgz)" >> $GITHUB_ENV
+
+      - name: Install packed tarball in isolated directory
+        run: |
+          mkdir -p /tmp/smoke
+          printf '# isolated\n' > /tmp/smoke/.npmrc
+          printf '{"name":"smoke-test","version":"1.0.0","type":"module"}\n' > /tmp/smoke/package.json
+          pnpm --prefix /tmp/smoke add "$TARBALL"
+
+      - name: Verify exports condition ordering in packed manifest
+        run: |
+          node -e "
+            const fs = require('fs');
+            const raw = fs.readFileSync('/tmp/smoke/node_modules/applescript-node/package.json', 'utf8');
+            const pkg = JSON.parse(raw);
+            const entry = pkg.exports['.'];
+            if (!entry) { console.error('FAIL: exports[\".\"] missing'); process.exit(1); }
+            const keys = Object.keys(entry);
+            if (keys[0] !== 'types') {
+              console.error('FAIL: first condition is \"' + keys[0] + '\", expected \"types\"');
+              process.exit(1);
+            }
+            const expected = JSON.stringify(['types', 'import', 'require']);
+            if (JSON.stringify(keys) !== expected) {
+              console.error('FAIL: conditions ' + JSON.stringify(keys) + ', expected ' + expected);
+              process.exit(1);
+            }
+            console.log('OK: exports[\".\"] conditions are ' + JSON.stringify(keys));
+          "
+
+      - name: Verify type declarations present in tarball
+        run: |
+          test -f /tmp/smoke/node_modules/applescript-node/dist/index.d.ts || \
+            { echo 'FAIL: dist/index.d.ts missing from packed tarball'; exit 1; }
+          echo 'OK: dist/index.d.ts present'
+
+      - name: Verify ESM named imports resolve at runtime
+        run: |
+          cat > /tmp/smoke/smoke.mjs << 'SMOKEEOF'
+          import { createScript, runScript, getInstalledLanguages } from 'applescript-node';
+          if (typeof createScript !== 'function') throw new Error('createScript is not a function');
+          if (typeof runScript !== 'function') throw new Error('runScript is not a function');
+          if (typeof getInstalledLanguages !== 'function') throw new Error('getInstalledLanguages is not a function');
+          const script = createScript().raw('return 1').build();
+          if (typeof script !== 'string') throw new Error('createScript().build() did not return a string');
+          console.log('OK: ESM named imports resolve; createScript().build() => ' + JSON.stringify(script.trim()));
+          SMOKEEOF
+          cd /tmp/smoke && node smoke.mjs
