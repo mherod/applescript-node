@@ -157,5 +157,47 @@ describe('Compiler', () => {
 
       await compileScriptFile('source.applescript');
     });
+
+    it('should append .scpt extension when outputPath has no extension', async () => {
+      // Exercises compiler.ts:94 false branch — outputPath does NOT end with .scpt → appends it
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
+        expect(command).toContain('output.scpt"');
+        callback(null, { stdout: '', stderr: '' });
+      });
+
+      const result = await compileScriptFile('source.applescript', { outputPath: 'output' });
+      expect(result.success).toBe(true);
+      expect(result.outputPath).toBe('output.scpt');
+    });
+
+    it('should not double-append extension when outputPath already ends with .scpt', async () => {
+      // Exercises compiler.ts:94 true branch — outputPath already ends with .scpt
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
+        expect(command).toContain('output.scpt"');
+        expect(command).not.toContain('.scpt.scpt');
+        callback(null, { stdout: '', stderr: '' });
+      });
+
+      const result = await compileScriptFile('source.applescript', { outputPath: 'output.scpt' });
+      expect(result.success).toBe(true);
+      expect(result.outputPath).toBe('output.scpt');
+    });
+
+    it('should append .scptd extension for bundle when outputPath has no extension', async () => {
+      const mockExec = exec as unknown as MockInstance;
+      mockExec.mockImplementation((command: string, callback: ExecCallback) => {
+        expect(command).toContain('output.scptd"');
+        callback(null, { stdout: '', stderr: '' });
+      });
+
+      const result = await compileScriptFile('source.applescript', {
+        outputPath: 'output',
+        bundleScript: true,
+      });
+      expect(result.success).toBe(true);
+      expect(result.outputPath).toBe('output.scptd');
+    });
   });
 });

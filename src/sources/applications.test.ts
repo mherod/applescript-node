@@ -416,4 +416,23 @@ describe('applications', () => {
       );
     });
   });
+
+  describe('null output fallback branches', () => {
+    it('getAll: should return empty array when output is null', async () => {
+      // Exercises applications.ts:70 — result.output ?? '[]'
+      mockExecute.mockResolvedValueOnce({ success: true, output: null, exitCode: 0 });
+
+      const apps = await getAll();
+      expect(apps).toEqual([]);
+    });
+
+    it('getFrontmost: should return empty object fields when output is null', async () => {
+      // Exercises applications.ts:103 — result.output ?? '{}'
+      mockExecute.mockResolvedValueOnce({ success: true, output: null, exitCode: 0 });
+
+      const app = await getFrontmost();
+      // JSON.parse('{}') gives an empty object cast to ApplicationInfo
+      expect(app).toEqual({});
+    });
+  });
 });
