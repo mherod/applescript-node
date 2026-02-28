@@ -1,0 +1,25 @@
+# PRs intentionally excluded from CHANGELOG.md coverage.
+# One PR number per line. Lines starting with # are comments.
+#
+# Add a PR here when it is purely internal (CI, tests, refactoring,
+# internal documentation) and has no user-facing impact, OR when it
+# is the terminal changelog-update PR for a release period (to avoid
+# infinite regress where the changelog PR must list itself).
+#
+# Dependabot PRs are excluded automatically by the workflow and do
+# not need to be listed here.
+
+# Pre-publish internal QA (refactoring, JSDoc, lint rules)
+9
+
+# Internal developer guidelines added to CLAUDE.md only
+10
+
+# Test coverage improvements and code quality (no user-facing changes)
+20
+
+# Terminal changelog backfill PR for 28 Feb 2026 series
+38
+
+# Changelog consistency validation workflow (this CI addition)
+39
