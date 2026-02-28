@@ -384,17 +384,15 @@ const upcomingBirthdays = contacts.filter((c) => {
 });
 
 // Create a summary note in Notes.app
+const birthdayLines = upcomingBirthdays.map((c) => `${c.name}: ${c.birthday}`).join('\\n');
+
 const noteScript = createScript()
   .tell('Notes')
   .tryCatch(
     (try_) =>
       try_
         .raw(`set noteText to "Upcoming Birthdays (Next 30 Days)\\n\\n"`)
-        .raw(
-          `set noteText to noteText & "${upcomingBirthdays
-            .map((c) => `${c.name}: ${c.birthday}`)
-            .join('\\n')}"`,
-        )
+        .raw(`set noteText to noteText & "${birthdayLines}"`)
         .raw('make new note with properties {body:noteText}'),
     (catch_) => catch_.displayDialog('Failed to create note'),
   )
@@ -488,17 +486,16 @@ async function automatedWorkflow() {
   for (const [category, categoryTabs] of Object.entries(categories)) {
     if (categoryTabs.length === 0) continue;
 
+    const categoryTitle = category.charAt(0).toUpperCase() + category.slice(1);
+    const tabLines = categoryTabs
+      .map((t) => `${t.title}\\n${t.url}`)
+      .join('\\n\\n')
+      .replace(/"/g, '\\"');
+
     const createNoteScript = createScript()
       .tell('Notes')
-      .raw(
-        `set noteTitle to "Browser Tabs - ${category.charAt(0).toUpperCase() + category.slice(1)}"`,
-      )
-      .raw(
-        `set noteBody to "${categoryTabs
-          .map((t) => `${t.title}\\n${t.url}`)
-          .join('\\n\\n')
-          .replace(/"/g, '\\"')}"`,
-      )
+      .raw(`set noteTitle to "Browser Tabs - ${categoryTitle}"`)
+      .raw(`set noteBody to "${tabLines}"`)
       .raw('make new note with properties {name:noteTitle, body:noteBody}')
       .endtell();
 
