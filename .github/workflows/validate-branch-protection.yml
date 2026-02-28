@@ -1,16 +1,32 @@
 name: Validate Branch Protection
 
+# Detects drift between .github/required-checks.txt (the declared required
+# checks) and the job names the test matrix actually generates.  When they
+# diverge, branch protection will either deadlock PRs (stale required check
+# that never runs) or silently under-protect main (new job not yet required).
+#
+# How to keep things in sync when you change the matrix:
+#   1. Update .github/workflows/test.yml  (matrix node-version list)
+#   2. Update .github/required-checks.txt (one check name per line)
+#   3. Update branch protection via GitHub Settings > Branches > main
+#      (or run: gh api repos/OWNER/REPO/branches/main/protection --method PUT ...)
+#
+# This workflow validates steps 1+2 are consistent.  Step 3 is an admin
+# action that cannot be performed with the standard GITHUB_TOKEN.
+
 on:
   push:
     branches: [main]
     paths:
       - .github/workflows/test.yml
       - .github/workflows/validate-branch-protection.yml
+      - .github/required-checks.txt
   pull_request:
     branches: [main]
     paths:
       - .github/workflows/test.yml
       - .github/workflows/validate-branch-protection.yml
+      - .github/required-checks.txt
   workflow_dispatch:
 
 permissions:
@@ -36,61 +52,61 @@ jobs:
             | grep '\[' \
             | sed 's/.*\[//; s/\].*//; s/,/ /g')
 
-          # Build expected check names: "<job-id> (<version>)" per matrix entry
-          EXPECTED=""
+          # Build expected check names one per line, then join with | for sorting
+          EXPECTED_SORTED=""
           for V in $VERSIONS; do
             V=$(echo "$V" | tr -d ' ')
-            EXPECTED="$EXPECTED $JOB_ID ($V)"
+            [ -n "$EXPECTED_SORTED" ] && EXPECTED_SORTED="${EXPECTED_SORTED}|"
+            EXPECTED_SORTED="${EXPECTED_SORTED}${JOB_ID} (${V})"
           done
-          EXPECTED=$(echo "$EXPECTED" | xargs)
+          EXPECTED_SORTED=$(echo "$EXPECTED_SORTED" \
+            | tr '|' '\n' | sort | paste -sd '|')
 
-          echo "job_id=$JOB_ID"     >> "$GITHUB_OUTPUT"
-          echo "versions=$VERSIONS" >> "$GITHUB_OUTPUT"
-          echo "expected=$EXPECTED" >> "$GITHUB_OUTPUT"
+          echo "job_id=$JOB_ID"                 >> "$GITHUB_OUTPUT"
+          echo "versions=$VERSIONS"             >> "$GITHUB_OUTPUT"
+          echo "expected_sorted=$EXPECTED_SORTED" >> "$GITHUB_OUTPUT"
           echo "Derived job ID  : $JOB_ID"
           echo "Derived versions: $VERSIONS"
-          echo "Expected checks : $EXPECTED"
+          echo "Expected (sorted, pipe-delim): $EXPECTED_SORTED"
 
-      - name: Fetch required checks from branch protection
-        id: actual
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
+      - name: Read declared required checks from required-checks.txt
+        id: declared
         run: |
-          CHECKS=$(gh api "repos/$REPO/branches/main/protection" \
-            --jq '[.required_status_checks.checks[].context] | join(" ")' \
-            2>&1) || CHECKS=""
-          echo "actual=$CHECKS" >> "$GITHUB_OUTPUT"
-          echo "Actual required checks: $CHECKS"
+          # required-checks.txt is the committed source of truth.
+          # It must be kept in sync with branch protection (admin action) and
+          # with the matrix (validated here in CI).
+          DECLARED_SORTED=$(grep -v '^\s*$' .github/required-checks.txt \
+            | sort | paste -sd '|')
+          echo "declared_sorted=$DECLARED_SORTED" >> "$GITHUB_OUTPUT"
+          echo "Declared (sorted, pipe-delim): $DECLARED_SORTED"
 
-      - name: Compare expected vs actual
+      - name: Compare matrix-derived names vs declared required checks
         env:
-          EXPECTED: ${{ steps.expected.outputs.expected }}
-          ACTUAL: ${{ steps.actual.outputs.actual }}
+          EXPECTED_SORTED: ${{ steps.expected.outputs.expected_sorted }}
+          DECLARED_SORTED: ${{ steps.declared.outputs.declared_sorted }}
           JOB_ID: ${{ steps.expected.outputs.job_id }}
           VERSIONS: ${{ steps.expected.outputs.versions }}
         run: |
-          # Sort both lists for order-independent comparison
-          EXPECTED_SORTED=$(echo "$EXPECTED" \
-            | tr ' ' '\n' | grep . | sort | paste -sd '|')
-          ACTUAL_SORTED=$(echo "$ACTUAL" \
-            | tr ' ' '\n' | grep . | sort | paste -sd '|')
+          echo "Matrix generates : $EXPECTED_SORTED"
+          echo "required-checks  : $DECLARED_SORTED"
 
-          echo "Expected (sorted): $EXPECTED_SORTED"
-          echo "Actual   (sorted): $ACTUAL_SORTED"
-
-          if [ "$EXPECTED_SORTED" = "$ACTUAL_SORTED" ]; then
-            echo "✅ Branch protection required checks match workflow matrix jobs."
+          if [ "$EXPECTED_SORTED" = "$DECLARED_SORTED" ]; then
+            echo "✅ Matrix job names match .github/required-checks.txt."
+            echo ""
+            echo "Reminder: also ensure branch protection on main is in sync."
+            echo "Required checks configured in branch protection must match:"
+            echo "$DECLARED_SORTED" | tr '|' '\n' | sed 's/^/  - /'
           else
             echo "❌ MISMATCH detected!"
             echo ""
-            echo "Branch protection requires : $ACTUAL_SORTED"
-            echo "Workflow matrix generates  : $EXPECTED_SORTED"
+            echo "Matrix generates  : $EXPECTED_SORTED"
+            echo "required-checks   : $DECLARED_SORTED"
             echo ""
-            echo "To fix: update the branch protection required checks to match"
-            echo "the matrix job names generated by .github/workflows/test.yml."
+            echo "To fix, update .github/required-checks.txt to match the job"
+            echo "names the matrix produces, then also update branch protection:"
             echo ""
-            echo "Job ID in test.yml           : $JOB_ID"
-            echo "Current matrix node-versions : $VERSIONS"
+            echo "  Job ID        : $JOB_ID"
+            echo "  Node versions : $VERSIONS"
+            echo "  Expected names: $EXPECTED_SORTED" | tr '|' '\n'
             exit 1
           fi
