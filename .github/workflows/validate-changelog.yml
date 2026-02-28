@@ -1,0 +1,132 @@
+name: Validate Changelog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - CHANGELOG.md
+      - .github/changelog-excluded-prs.txt
+      - .github/workflows/validate-changelog.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - CHANGELOG.md
+      - .github/changelog-excluded-prs.txt
+      - .github/workflows/validate-changelog.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate-references:
+    name: Validate — PR references exist and dates are valid
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate all #N references are merged PRs
+        run: |
+          FAIL=0
+          PR_NUMS=$(grep -oE '#[0-9]+' CHANGELOG.md | grep -oE '[0-9]+' | sort -nu)
+
+          for num in $PR_NUMS; do
+            STATE=$(gh pr view "$num" --json state --jq '.state' 2>/dev/null \
+              || echo "NOT_FOUND")
+            if [[ "$STATE" != "MERGED" ]]; then
+              echo "FAIL: CHANGELOG.md references #$num but it is not a merged PR (state: $STATE)"
+              FAIL=$((FAIL + 1))
+            else
+              echo "OK: #$num is a valid merged PR"
+            fi
+          done
+
+          if [ "$FAIL" -gt 0 ]; then
+            echo ""
+            echo "Fix: Remove or correct the invalid PR reference(s) in CHANGELOG.md."
+            exit 1
+          fi
+
+      - name: Validate dated sections are not in the future
+        run: |
+          FAIL=0
+          TODAY=$(date +%s)
+
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^###\ ([0-9]+)\ ([A-Za-z]+)\ ([0-9]{4})$ ]]; then
+              DAY="${BASH_REMATCH[1]}"
+              MONTH="${BASH_REMATCH[2]}"
+              YEAR="${BASH_REMATCH[3]}"
+              SECTION_TS=$(date -d "$DAY $MONTH $YEAR" +%s 2>/dev/null || echo "INVALID")
+
+              if [[ "$SECTION_TS" == "INVALID" ]]; then
+                echo "WARNING: Cannot parse date: $DAY $MONTH $YEAR — check spelling"
+                FAIL=$((FAIL + 1))
+              elif [[ "$SECTION_TS" -gt "$TODAY" ]]; then
+                echo "FAIL: Future date in CHANGELOG.md: $DAY $MONTH $YEAR"
+                FAIL=$((FAIL + 1))
+              else
+                echo "OK: $DAY $MONTH $YEAR"
+              fi
+            fi
+          done < CHANGELOG.md
+
+          [ "$FAIL" -eq 0 ] || exit 1
+
+  validate-coverage:
+    name: Validate — merged PRs covered in changelog
+    runs-on: ubuntu-latest
+    # Coverage check runs after merge so the changelog PR covering
+    # these changes can land before the check fires.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate non-Dependabot PRs appear in CHANGELOG.md or exclusion list
+        run: |
+          FAIL=0
+          CHANGELOG=$(cat CHANGELOG.md)
+          EXCLUDED=$(grep -v '^#' .github/changelog-excluded-prs.txt 2>/dev/null \
+            | grep -E '^[0-9]+$' | sort -n || true)
+
+          # Look back 90 days to catch historical gaps
+          CUTOFF=$(date -u -d '90 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          RECENT_PRS=$(gh pr list --state merged --limit 200 \
+            --json number,author,mergedAt,title \
+            | jq -r --arg cutoff "$CUTOFF" \
+              '.[] | select(
+                (.author.login | contains("dependabot") | not) and
+                .mergedAt > $cutoff
+              ) | [.number, .title] | @tsv')
+
+          if [[ -z "$RECENT_PRS" ]]; then
+            echo "No recent non-Dependabot PRs found within the 90-day window."
+            exit 0
+          fi
+
+          while IFS=$'\t' read -r num title; do
+            [[ -z "$num" ]] && continue
+
+            if echo "$CHANGELOG" | grep -qE "#${num}([^0-9]|$)"; then
+              echo "OK: PR #$num covered in CHANGELOG.md"
+              continue
+            fi
+
+            if echo "$EXCLUDED" | grep -qE "^${num}$"; then
+              echo "SKIP: PR #$num in exclusion list (intentionally omitted)"
+              continue
+            fi
+
+            echo "FAIL: PR #$num not in CHANGELOG.md or exclusion list"
+            FAIL=$((FAIL + 1))
+          done <<< "$RECENT_PRS"
+
+          if [ "$FAIL" -gt 0 ]; then
+            echo ""
+            echo "Fix: Add the PR(s) to a dated entry in CHANGELOG.md, or add the PR"
+            echo "number to .github/changelog-excluded-prs.txt if intentionally omitted."
+            exit 1
+          fi
