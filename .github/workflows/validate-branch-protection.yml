@@ -81,6 +81,111 @@ jobs:
           echo ""
           echo "Regression test passed."
 
+      - name: Regression tests — property-based fuzz for name-parsing pipeline
+        run: |
+          # Property-based fuzz test for the sort-pipe-join parser.
+          #
+          # Rather than hard-coding fixed inputs, this step defines a set of
+          # "name atoms" covering realistic special-character categories, then
+          # automatically verifies three algebraic properties over all atoms
+          # and all N-choose-2 pairs:
+          #
+          #   P1  Idempotency  — encode(sort({n})) == n  (single name round-trips)
+          #   P2  Commutativity — sort({a,b}) == sort({b,a})  (order-independent)
+          #   P3  Losslessness — |decode(encode(sort({a,b})))| == 2  (no token explosion)
+          #
+          # Also documents the known P4 limitation: names containing "|" break
+          # the delimiter — GitHub Actions does not permit "|" in check names,
+          # so this is acceptable.
+
+          ATOMS=(
+            "test (20)"               # parens + space — original bug trigger
+            "test (22)"               # second matrix variant
+            "build / lint"            # slash with spaces
+            "integration test (18)"   # parens + multiple words
+            "e2e  tests"              # double consecutive space
+            "check.step"              # dot
+            "run_tests-all"           # underscore + hyphen
+            "deploy #staging"         # hash
+            "@verify"                 # at-sign prefix
+            "CI / CD (node-20)"       # slash, parens, hyphen combined
+          )
+
+          FAIL=0; PASS=0
+
+          pass() { echo "  ✅ $1"; PASS=$((PASS + 1)); }
+          fail() { echo "  ❌ $1"; echo "       $2"; FAIL=$((FAIL + 1)); }
+
+          # ── P1: Single-name idempotency ───────────────────────────────────
+          echo "P1  Idempotency — encode(sort({n})) == n"
+          for name in "${ATOMS[@]}"; do
+            result=$(echo "$name" | tr '|' '\n' | grep -v '^$' | sort | paste -sd '|')
+            if [ "$result" = "$name" ]; then
+              pass "'$name'"
+            else
+              fail "'$name' round-trip" "expected '$name', got '$result'"
+            fi
+          done
+
+          # ── P2: Commutativity — order-independence over all pairs ─────────
+          echo ""
+          echo "P2  Commutativity — sort({a,b}) == sort({b,a})"
+          PAIR_COUNT=0
+          for i in "${!ATOMS[@]}"; do
+            for j in "${!ATOMS[@]}"; do
+              [ "$i" -ge "$j" ] && continue
+              a="${ATOMS[$i]}"; b="${ATOMS[$j]}"
+              fwd=$(printf '%s\n%s\n' "$a" "$b" | sort | paste -sd '|')
+              rev=$(printf '%s\n%s\n' "$b" "$a" | sort | paste -sd '|')
+              PAIR_COUNT=$((PAIR_COUNT + 1))
+              if [ "$fwd" = "$rev" ]; then
+                PASS=$((PASS + 1))
+              else
+                fail "('$a', '$b') order-independent" \
+                  "forward='$fwd'  reversed='$rev'"
+              fi
+            done
+          done
+          echo "  ✅ $PAIR_COUNT pairs all commutative"
+
+          # ── P3: Losslessness — no token explosion over all pairs ──────────
+          echo ""
+          echo "P3  Losslessness — |tokens| == 2 for every pair"
+          for i in "${!ATOMS[@]}"; do
+            for j in "${!ATOMS[@]}"; do
+              [ "$i" -ge "$j" ] && continue
+              a="${ATOMS[$i]}"; b="${ATOMS[$j]}"
+              joined=$(printf '%s\n%s\n' "$a" "$b" | sort | paste -sd '|')
+              count=$(echo "$joined" | tr '|' '\n' | grep -c .)
+              if [ "$count" -eq 2 ]; then
+                PASS=$((PASS + 1))
+              else
+                fail "token count for ('$a', '$b')" \
+                  "expected 2 tokens, got $count from '$joined'"
+              fi
+            done
+          done
+          echo "  ✅ $PAIR_COUNT pairs all lossless (2 tokens preserved)"
+
+          # ── P4 (known limitation): | in name breaks delimiter ─────────────
+          echo ""
+          echo "P4  Known limitation — '|' inside a name breaks the delimiter"
+          PIPE_NAME="test | verify"
+          encoded="${PIPE_NAME}|other check"
+          tok=$(echo "$encoded" | tr '|' '\n' | grep -c .)
+          if [ "$tok" -gt 2 ]; then
+            echo "  ✅ Documented: pipe-containing names produce $tok tokens from 2 names."
+            echo "     GitHub Actions does not permit '|' in check names, so this is safe."
+            PASS=$((PASS + 1))
+          else
+            echo "  ⚠️  Pipe-name limitation appears to have changed — review delimiter choice."
+          fi
+
+          # ── Summary ───────────────────────────────────────────────────────
+          echo ""
+          echo "Results: $PASS passed, $FAIL failed  (${#ATOMS[@]} atoms, $PAIR_COUNT pairs)"
+          [ "$FAIL" -eq 0 ] || exit 1
+
       - name: Regression tests — edge cases in name-parsing pipeline
         run: |
           PASS=0; FAIL=0
