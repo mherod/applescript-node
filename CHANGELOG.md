@@ -11,7 +11,7 @@ All notable changes to applescript-node are documented in this file.
 - Internal improvements and maintenance. No user-facing changes in this
   period — updates were limited to CI hardening, branch protection
   configuration, build tooling, and release documentation.
-  (#30, #31, #32, #33, #34, #35, #36)
+  (#30, #31, #32, #33, #34, #35, #36, #37)
 
 ### 27 February 2026
 
@@ -19,7 +19,25 @@ All notable changes to applescript-node are documented in this file.
 
 - Internal improvements and maintenance. No user-facing changes in this
   period — updates were limited to CI workflow configuration,
-  build tooling, and code documentation. (#12, #28)
+  build tooling, and code documentation. (#12, #28, #29)
+
+### 31 January 2026
+
+#### Bug Fixes
+
+- Fixed TypeScript type definitions failing to regenerate after build,
+  ensuring `.d.ts` files are always included in published npm
+  packages (#19)
+- Updated `fast-xml-parser` to resolve a security vulnerability
+  (GHSA-37qj-frw5-hhjh) (#19)
+
+### 30 November 2025
+
+#### Documentation
+
+- Added documentation website with Getting Started, Builder API,
+  Data Extraction, and API Reference sections (#11)
+- Rewrote README for improved clarity and scannability (#11)
 
 ### 16 October 2025
 
