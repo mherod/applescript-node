@@ -81,6 +81,75 @@ jobs:
           echo ""
           echo "Regression test passed."
 
+      - name: Regression tests — edge cases in name-parsing pipeline
+        run: |
+          PASS=0; FAIL=0
+
+          assert_eq() {
+            local label="$1" actual="$2" expected="$3"
+            if [ "$actual" = "$expected" ]; then
+              echo "  ✅ $label"
+              PASS=$((PASS + 1))
+            else
+              echo "  ❌ $label"
+              echo "       expected : $expected"
+              echo "       actual   : $actual"
+              FAIL=$((FAIL + 1))
+            fi
+          }
+
+          # ── Case 1: Single check name (no pipe) ───────────────────────────
+          # paste -sd '|' on a single line must not append a trailing |
+          echo "Case 1: single check name"
+          R=$(echo "test (20)" | tr '|' '\n' | sort | paste -sd '|')
+          assert_eq "single name preserved intact" "$R" "test (20)"
+
+          # ── Case 2: Three names, already sorted ───────────────────────────
+          echo "Case 2: three names — already sorted (idempotent)"
+          R=$(echo "test (18)|test (20)|test (22)" | tr '|' '\n' | sort | paste -sd '|')
+          assert_eq "three sorted names unchanged" "$R" "test (18)|test (20)|test (22)"
+
+          # ── Case 3: Three names, reverse order (sort correctness) ─────────
+          echo "Case 3: three names — reverse order sorted correctly"
+          R=$(echo "test (22)|test (20)|test (18)" | tr '|' '\n' | sort | paste -sd '|')
+          assert_eq "reverse input sorts to ascending" "$R" "test (18)|test (20)|test (22)"
+
+          # ── Case 4: Name with multiple consecutive spaces ─────────────────
+          # GitHub check names can include descriptive labels with extra spaces
+          # (e.g. a job named "integration  test (node 20)"). The pipe delimiter
+          # must preserve all internal spaces unchanged.
+          echo "Case 4: multiple consecutive spaces preserved"
+          R=$(echo "test  (node  20)|test  (node  22)" | tr '|' '\n' | sort | paste -sd '|')
+          assert_eq "double-space names preserved" "$R" "test  (node  20)|test  (node  22)"
+
+          # ── Case 5: Blank and whitespace-only lines in required-checks.txt ─
+          # required-checks.txt may contain blank lines for readability.
+          # grep -v '^\s*$' must strip them before sorting.
+          echo "Case 5: blank/whitespace lines filtered from required-checks.txt"
+          MULTILINE=$(printf "test (20)\n\ntest (22)\n   \n\t\n")
+          R=$(echo "$MULTILINE" | grep -v '^\s*$' | sort | paste -sd '|')
+          assert_eq "blank lines stripped" "$R" "test (20)|test (22)"
+
+          # ── Case 6: Name with slash and parens (realistic workflow names) ──
+          # Workflows like "build / lint (node 20)" appear in monorepos.
+          echo "Case 6: slash and parens in check name"
+          R=$(echo "build / lint (node 22)|build / lint (node 20)" \
+              | tr '|' '\n' | sort | paste -sd '|')
+          assert_eq "slash+parens name sorts correctly" \
+            "$R" "build / lint (node 20)|build / lint (node 22)"
+
+          # ── Case 7: Tab characters in required-checks.txt ─────────────────
+          # A tab-indented line must be treated as whitespace-only and filtered.
+          echo "Case 7: tab-only line filtered as blank"
+          TABLINE=$(printf "test (20)\n\t\ntest (22)\n")
+          R=$(echo "$TABLINE" | grep -v '^\s*$' | sort | paste -sd '|')
+          assert_eq "tab-only line filtered" "$R" "test (20)|test (22)"
+
+          # ── Summary ───────────────────────────────────────────────────────
+          echo ""
+          echo "Results: $PASS passed, $FAIL failed"
+          [ "$FAIL" -eq 0 ] || exit 1
+
       - name: Derive expected check names from test.yml
         id: expected
         run: |
