@@ -66,6 +66,7 @@ The library enables developers to:
 ### Core Modules
 
 1. **executor.ts** (`ScriptExecutor`)
+
    - Primary execution engine for AppleScript/JavaScript
    - Handles string and file-based execution
    - Manages `osascript` flags and output formatting
@@ -75,6 +76,7 @@ The library enables developers to:
    - Security: Properly escapes single quotes in scripts
 
 2. **builder.ts** (`AppleScriptBuilder`)
+
    - Fluent API for constructing commands
    - Block stack management: Tracks nested blocks
    - Syntax validation: Ensures blocks opened/closed
@@ -84,6 +86,7 @@ The library enables developers to:
    - Block validation prevents malformed scripts
 
 3. **compiler.ts** (`ScriptCompiler`)
+
    - Compilation to `.scpt` or `.scptd` format
    - Uses `osacompile` with flags
    - Stay-open applications: Creates persistent apps
@@ -92,12 +95,14 @@ The library enables developers to:
    - Startup screen support: Adds splash screens
 
 4. **decompiler.ts** (`ScriptDecompiler`)
+
    - Reverse compilation of `.scpt` files
    - Uses `osadecompile`
    - Error handling: Manages decompilation failures
    - Source recovery: Extracts script text
 
 5. **languages.ts** (`LanguageManager`)
+
    - OSA language discovery and querying
    - Uses `osalang` to enumerate languages
    - Capability parsing: Extracts features
@@ -1062,6 +1067,21 @@ src/
 
 **DON'T** escape quotes before backslashes - this corrupts already-escaped backslashes. See `setClipboard()` in `sources/system.ts` for the correct pattern.
 
+**DON'T** use multi-line TypeScript template literals with `${...}` spanning multiple lines in README code examples. The `claude-code-review` CI workflow runs `gh pr diff` and the bash parser tries to expand `${variableName}` as a shell variable, failing with `Bad substitution: variableName`. This affects any `${expr\n.method()}` pattern where the closing `}` is on a different line than the opening `${`.
+
+**Fix**: Extract the complex expression into a named variable on its own line so that the `${...}` fits on a single line:
+
+```typescript
+// DON'T: multi-line template literal causes CI "Bad substitution" error
+.raw(`set body to "${items
+  .map((t) => `${t.title}`)
+  .join('\\n')}"`)
+
+// DO: extract to variable first
+const itemLines = items.map((t) => `${t.title}`).join('\\n');
+.raw(`set body to "${itemLines}"`)
+```
+
 ### Code Quality Security
 
 - **Type safety**: Prevents runtime errors
@@ -1217,6 +1237,32 @@ If `gh pr merge --squash --auto` is set and checks are pending:
 2. **Monitor** with `gh pr checks <PR_NUMBER>` if needed
 3. **Do not escalate** to `--admin` or other bypass methods
 4. **If checks fail**, investigate and fix the issue - don't bypass
+
+#### When CI Doesn't Trigger After a Push
+
+If `gh run list --branch <branch>` shows only old runs after pushing to a PR branch, the branch likely has merge conflicts. GitHub silently skips firing `pull_request: synchronize` workflow events for PRs in `mergeable_state: dirty`.
+
+**Diagnose:**
+
+```bash
+REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
+gh api "repos/$REPO/pulls/<PR_NUMBER>" --jq '{mergeable, mergeable_state}'
+```
+
+**Fix:** Rebase onto `main`, then force-push:
+
+```bash
+git fetch origin main && git rebase origin/main
+git push --force-with-lease origin <branch>
+```
+
+Confirm CI picked up the new commit by checking the commit's check-runs:
+
+```bash
+gh api "repos/$REPO/commits/<sha>/check-runs" --jq '.check_runs[].name'
+```
+
+An empty result means CI has not yet registered the commit. A non-empty result confirms workflows are running.
 
 #### Summary
 
