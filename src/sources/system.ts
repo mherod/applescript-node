@@ -292,6 +292,7 @@ export async function getPath(
     public: 'public folder',
   };
 
+  /* v8 ignore next -- TypeScript constrains folder to valid keys; ?? fallback is structurally unreachable */
   const folderName = folderMap[folder] ?? 'home folder';
 
   const script = `POSIX path of (path to ${folderName})`;

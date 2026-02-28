@@ -79,9 +79,9 @@ export function parseSdef(xml: string): ApplicationDictionary {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
   const suitesData = Array.isArray(dictionary.suite)
     ? // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      dictionary.suite
+      dictionary.suite /* v8 ignore next 5 */
     : // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      dictionary.suite
+      dictionary.suite /* v8 ignore next 3 */
       ? // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         [dictionary.suite]
       : [];

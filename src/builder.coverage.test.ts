@@ -14,6 +14,16 @@ describe('AppleScriptBuilder Coverage Tests', () => {
       expect(builder.build()).toBe('');
     });
 
+    it('should throw via loadFromScript when end appears without matching open', () => {
+      // Exercises builder.ts:76-77 — popBlock() throw when blockStack is empty.
+      // loadFromScript calls popBlock() directly (no pre-check), so an unmatched
+      // 'end tell' in the loaded script triggers it.
+      const builder = new AppleScriptBuilder();
+      expect(() => {
+        builder.loadFromScript('end tell');
+      }).toThrow('Cannot end block: no blocks are currently open');
+    });
+
     it('should throw error for unclosed blocks on build', () => {
       const builder = new AppleScriptBuilder();
       builder.tell('Finder');
@@ -577,6 +587,44 @@ describe('AppleScriptBuilder Coverage Tests', () => {
 
       expect(script).toContain('repeat with aPerson in every person');
       expect(script).toContain('__temp_email');
+    });
+  });
+
+  describe('my() and ofMe() without parameters — falsy branch at lines 173, 190', () => {
+    it('my() with no parameters produces no argument list', () => {
+      // Exercises builder.ts:173 falsy branch — parameters is undefined → params = ''
+      const builder = new AppleScriptBuilder();
+      const script = builder.tell('Finder').my('processFile').endtell().build();
+      expect(script).toContain('my processFile');
+      expect(script).not.toContain('my processFile ');
+    });
+
+    it('ofMe() with no parameters produces no argument list', () => {
+      // Exercises builder.ts:190 falsy branch — parameters is undefined → params = ''
+      const builder = new AppleScriptBuilder();
+      const script = builder.tell('Finder').ofMe('getCustomData').endtell().build();
+      expect(script).toContain('getCustomData of me');
+      expect(script).not.toContain('getCustomData  of me');
+    });
+  });
+
+  describe('with() transaction flag — truthy branch at line 593', () => {
+    it('with() transaction:true appends "transaction" to command', () => {
+      // Exercises builder.ts:593 truthy branch — if (transaction) adds ' transaction'
+      const builder = new AppleScriptBuilder();
+      const script = builder.with(undefined, true).end().build();
+      expect(script).toContain('with transaction');
+    });
+  });
+
+  describe('extractTarget() regex non-match — undefined return at line 2107', () => {
+    it('loadFromScript with empty-quoted tell target returns undefined from extractTarget', () => {
+      // Exercises builder.ts:2107 falsy branch.
+      // The regex ([^"]+) requires ≥1 non-quote char, so tell "" produces no capture → null → undefined.
+      // loadFromScript('tell ""\nend tell') still processes cleanly via pushBlock('tell', undefined).
+      const builder = new AppleScriptBuilder();
+      builder.loadFromScript('tell ""\nend tell');
+      expect(builder.build()).toContain('tell ""');
     });
   });
 });
