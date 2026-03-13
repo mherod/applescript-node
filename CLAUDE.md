@@ -4,27 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**applescript-node** is a production-ready Node.js library providing a type-safe interface for executing AppleScript and JavaScript through macOS's `osascript`. Bridges Node.js applications and macOS automation.
-
-### Core Purpose
-
-The library enables developers to:
-
-- Automate macOS applications from Node.js
-- Build automation workflows with fluent API
-- Create system administration tools for macOS
-- Develop testing frameworks for macOS applications
-- Integrate macOS scripting into web applications and services
-
-### Key Value Propositions
+**applescript-node** is a production-ready Node.js library providing a type-safe interface for executing AppleScript and JavaScript through macOS's `osascript`.
 
 - **Type Safety**: Full TypeScript support
 - **Developer Experience**: Fluent builder API, intuitive and discoverable
 - **Production Ready**: Extensive testing, error handling
 - **Modern Architecture**: Promise-based, async/await, ESM-first
-- **Comprehensive Coverage**: Complete macOS automation
-
-**Platform requirement**: macOS-only, requires `osascript` (macOS 10.10+).
+- **Platform**: macOS-only, requires `osascript` (macOS 10.10+)
 
 ## Build and Development Commands
 
@@ -53,112 +39,39 @@ The library enables developers to:
 
 ### Running Examples
 
-- `pnpm run example:basic` - Basic script execution
-- `pnpm run example:builder` - Fluent builder API
-- `pnpm run example:compile` - Script compilation
-- `pnpm run example:languages` - Language information
-- `pnpm run example:list-apps` - List running applications
-- `pnpm run example:windows` - Window management
-- `pnpm examples` - Run all examples
+- `pnpm run example:basic|builder|compile|languages|list-apps|windows`
+- `pnpm examples` - Run all
 
 ## Architecture
 
 ### Core Modules
 
-1. **executor.ts** (`ScriptExecutor`)
-
-   - Primary execution engine for AppleScript/JavaScript
-   - Handles string and file-based execution
-   - Manages `osascript` flags and output formatting
-   - Uses Node.js `child_process.exec` with promisified interface
-   - Error handling: Uses `extractErrorInfo()` helper to capture stderr, exit codes from various error types (Error, ErrnoException)
-   - Output processing: Handles human-readable vs raw output
-   - Security: Properly escapes single quotes in scripts
-
-2. **builder.ts** (`AppleScriptBuilder`)
-
-   - Fluent API for constructing commands
-   - Block stack management: Tracks nested blocks
-   - Syntax validation: Ensures blocks opened/closed
-   - Automatic indentation: Maintains formatting
-   - Method chaining: Returns `ScriptBuilder` for fluent interface
-   - Value formatting: Handles data types
-   - Block validation prevents malformed scripts
-
-3. **compiler.ts** (`ScriptCompiler`)
-
-   - Compilation to `.scpt` or `.scptd` format
-   - Uses `osacompile` with flags
-   - Stay-open applications: Creates persistent apps
-   - Bundle creation: Supports `.scptd` format
-   - Execute-only compilation: Creates protected scripts
-   - Startup screen support: Adds splash screens
-
-4. **decompiler.ts** (`ScriptDecompiler`)
-
-   - Reverse compilation of `.scpt` files
-   - Uses `osadecompile`
-   - Error handling: Manages decompilation failures
-   - Source recovery: Extracts script text
-
-5. **languages.ts** (`LanguageManager`)
-
-   - OSA language discovery and querying
-   - Uses `osalang` to enumerate languages
-   - Capability parsing: Extracts features
-   - Language info: Provides information
-   - Default language detection: Identifies system default, returns fallback AppleScript object when no languages installed
-
-6. **types.ts** (`TypeDefinitions`)
-   - Central type system
-   - Key interfaces: `ScriptBuilder`, `ScriptExecutionResult`, `OsaScriptOptions`
-   - AppleScript types: `AppleScriptValue`, `AppleScriptPrimitive`
-   - System types: `WindowInfo` (per-app windows), `ProcessInfo`, `ApplicationTarget`
-   - Configuration types: `CompileOptions`, `OsaLanguageInfo`
-   - Error types: `ScriptError` with error information
-   - **Note**: `WindowInfo` in types.ts differs from `sources/windows.ts` - types.ts is for per-app windows (builder methods), sources/windows.ts is for system-wide window enumeration (includes `app` field)
+1. **executor.ts** (`ScriptExecutor`) - Execution engine for AppleScript/JavaScript. Uses `child_process.exec`. Error handling via `extractErrorInfo()`.
+2. **builder.ts** (`AppleScriptBuilder`) - Fluent API with block stack management and syntax validation.
+3. **compiler.ts** (`ScriptCompiler`) - Compilation to `.scpt`/`.scptd` via `osacompile`. Supports stay-open apps and execute-only scripts.
+4. **decompiler.ts** (`ScriptDecompiler`) - Reverse compilation of `.scpt` files via `osadecompile`.
+5. **languages.ts** (`LanguageManager`) - OSA language discovery via `osalang`. Returns fallback AppleScript object when no languages installed.
+6. **types.ts** (`TypeDefinitions`) - Central types: `ScriptBuilder`, `ScriptExecutionResult`, `OsaScriptOptions`, `WindowInfo`, `ProcessInfo`. Note: `WindowInfo` in types.ts (per-app, for builder methods) differs from `sources/windows.ts` (system-wide, includes `app` field).
 
 ### Build System
 
-- **tsup** for JavaScript bundling
-- **TypeScript** compiler for type declarations
-- **Module system**: NodeNext
-- **Output**: `dist/` with dual package exports
-- **Bundling**: Rollup-based with tree shaking
-- **Source maps**: Generated
-- **Package exports**: Conditional exports
+- **tsup** for JavaScript bundling, **TypeScript** for type declarations
+- **Module system**: NodeNext, **Output**: `dist/` with dual package exports
+- **Bundling**: Rollup-based with tree shaking, source maps generated
 
 ### Testing Strategy
 
-- **Vitest** with node environment
-- **Coverage thresholds**: 80% minimum
-- **Test organization**: Co-located test files (\*.test.ts)
-- **Execution**: Single-threaded with randomized sequence
-- **Mocking**: Comprehensive mocking
-- **Integration tests**: Real `osascript` execution
-- **Test categories**:
-  - Unit tests for methods and classes
-  - Integration tests for workflow validation
-  - Error handling tests for failure scenarios
-  - Type safety tests for TypeScript compliance
+- **Vitest** with node environment, 80% coverage minimum
+- Co-located test files (\*.test.ts), single-threaded with randomized sequence
+- Unit tests, integration tests (real `osascript`), error handling, type safety
 
 ### Code Quality Standards
 
-- **ESLint v9** with flat config
-- **TypeScript strict mode**
-- **Prettier** for formatting
-- **Key rules**:
-  - Consistent type imports
-  - No explicit `any` types
-  - Unused variables with `_` prefix - **but verify they're truly unused**. Parameters prefixed with `_` that should actually be used indicate incomplete implementations (e.g., `_provideSuggestions` in validator.ts was meant to control suggestion generation but was ignored)
-  - Array types use simple syntax
-  - Interfaces preferred over type aliases
-  - Consistent naming
-  - Maximum line length 100
-  - Trailing commas
-  - **Use `??` not `||`** for default values with potentially falsy values (ESLint: `@typescript-eslint/prefer-nullish-coalescing`). Common locations: `sources/system.ts`, `sources/windows.ts`
-  - **Avoid `String()` on objects** - check `typeof value === 'string'` first when parsing JSON output (ESLint: `@typescript-eslint/no-base-to-string`)
-  - **Use `includes()` over regex for simple substring checks** (ESLint: `@typescript-eslint/prefer-includes`). Example: `str.includes(' to ')` not `/ to /.test(str)`
+- **ESLint v9** flat config, **TypeScript strict mode**, **Prettier**
+- **Key rules**: Consistent type imports, no explicit `any`, unused vars use `_` prefix (verify truly unused — e.g., `_provideSuggestions` in validator.ts was ignored despite being functional). Array types use simple syntax, interfaces over type aliases, max line 100, trailing commas.
+- **Use `??` not `||`** for defaults with falsy values (ESLint: `@typescript-eslint/prefer-nullish-coalescing`) in `sources/system.ts`, `sources/windows.ts`
+- **Avoid `String()` on objects** — check `typeof value === 'string'` first (ESLint: `@typescript-eslint/no-base-to-string`)
+- **Use `includes()` over regex** for substring checks (ESLint: `@typescript-eslint/prefer-includes`)
 
 ### Pre-commit Quality Gates
 
@@ -171,7 +84,7 @@ The library enables developers to:
 - **Staged file processing** for performance
 - **Automatic fixes** where possible
 
-**DON'T** add ultracite back to lint-staged. The `pnpm dlx ultracite fix` command was removed because ultracite's extended biome configuration contains deprecated rules (`useConsistentTypeDefinitions`, `noSecrets`, `noNonNullAssertedOptionalChain`) that cause validation failures with newer biome versions (2.2.6+). ESLint already handles linting for this project.
+**DON'T** add ultracite back to lint-staged — its biome config has deprecated rules (`useConsistentTypeDefinitions`, `noSecrets`, `noNonNullAssertedOptionalChain`) that fail on newer biome versions. ESLint handles linting.
 
 ## Key Implementation Patterns
 
