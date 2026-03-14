@@ -259,7 +259,11 @@ function findSuiteItemByName<T extends { name: string }>(
   pickItems: (suite: Suite) => T[],
   itemName: string,
 ): T | undefined {
-  return getSuiteItems(dictionary, pickItems).find((item) => item.name === itemName);
+  for (const suite of dictionary.suites) {
+    const found = pickItems(suite).find((item) => item.name === itemName);
+    if (found) return found;
+  }
+  return undefined;
 }
 
 /**

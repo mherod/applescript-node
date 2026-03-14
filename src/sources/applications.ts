@@ -62,7 +62,7 @@ export async function getAll(includeBackgroundApps = false): Promise<Application
     .endtell();
 
   return executeJsonScript<ApplicationInfo[]>(script.build(), {
-    errorPrefix: 'Failed to get applications',
+    errorContext: 'Failed to get applications',
     fallbackJson: '[]',
   });
 }
@@ -91,7 +91,7 @@ export async function getFrontmost(): Promise<ApplicationInfo> {
     .endtell();
 
   return executeJsonScript<ApplicationInfo>(script.build(), {
-    errorPrefix: 'Failed to get frontmost application',
+    errorContext: 'Failed to get frontmost application',
     fallbackJson: '{}',
   });
 }

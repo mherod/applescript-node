@@ -85,7 +85,7 @@ export async function getAll(): Promise<WindowInfo[]> {
     .endtell();
 
   const windows = await executeJsonScript<unknown[]>(script.build(), {
-    errorPrefix: 'Failed to get windows',
+    errorContext: 'Failed to get windows',
     fallbackJson: '[]',
   });
 

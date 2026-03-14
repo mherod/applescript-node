@@ -6,11 +6,11 @@ import { ScriptExecutor } from '../executor.js';
  * @example
  * await executeScriptOrThrow(script.build(), 'Failed to activate Safari');
  */
-export async function executeScriptOrThrow(script: string, errorPrefix: string): Promise<void> {
+export async function executeScriptOrThrow(script: string, errorContext: string): Promise<void> {
   const result = await ScriptExecutor.execute(script);
 
   if (!result.success) {
-    throw new Error(`${errorPrefix}: ${result.error}`);
+    throw new Error(`${errorContext}: ${result.error}`);
   }
 }
 
@@ -19,25 +19,30 @@ export async function executeScriptOrThrow(script: string, errorPrefix: string):
  *
  * @example
  * const apps = await executeJsonScript<ApplicationInfo[]>(script.build(), {
- *   errorPrefix: 'Failed to get applications',
+ *   errorContext: 'Failed to get applications',
  *   fallbackJson: '[]',
  * });
  */
 export async function executeJsonScript<T>(
   script: string,
   {
-    errorPrefix,
+    errorContext,
     fallbackJson,
   }: {
-    errorPrefix: string;
+    errorContext: string;
     fallbackJson: string;
   },
 ): Promise<T> {
   const result = await ScriptExecutor.execute(script);
 
   if (!result.success) {
-    throw new Error(`${errorPrefix}: ${result.error}`);
+    throw new Error(`${errorContext}: ${result.error}`);
   }
 
-  return JSON.parse(result.output ?? fallbackJson) as T;
+  const raw = result.output ?? fallbackJson;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return JSON.parse(fallbackJson) as T;
+  }
 }

@@ -76,7 +76,7 @@ export async function getInfo(): Promise<SystemInfo> {
   `;
 
   return executeJsonScript<SystemInfo>(script, {
-    errorPrefix: 'Failed to get system info',
+    errorContext: 'Failed to get system info',
     fallbackJson: '{}',
   });
 }
@@ -128,7 +128,7 @@ export async function getVolumes(): Promise<VolumeInfo[]> {
     .endtell();
 
   return executeJsonScript<VolumeInfo[]>(script.build(), {
-    errorPrefix: 'Failed to get volumes',
+    errorContext: 'Failed to get volumes',
     fallbackJson: '[]',
   });
 }

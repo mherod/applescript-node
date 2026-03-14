@@ -52,7 +52,7 @@ describe('sources/shared', () => {
 
       await expect(
         executeJsonScript<{ name: string }>('return "{}"', {
-          errorPrefix: 'Failed to get app',
+          errorContext: 'Failed to get app',
           fallbackJson: '{}',
         }),
       ).resolves.toEqual({ name: 'Finder' });
@@ -67,7 +67,22 @@ describe('sources/shared', () => {
 
       await expect(
         executeJsonScript<unknown[]>('return ""', {
-          errorPrefix: 'Failed to get items',
+          errorContext: 'Failed to get items',
+          fallbackJson: '[]',
+        }),
+      ).resolves.toEqual([]);
+    });
+
+    it('should return fallback when output is malformed JSON', async () => {
+      mockExecute.mockResolvedValueOnce({
+        success: true,
+        output: 'not valid json',
+        exitCode: 0,
+      });
+
+      await expect(
+        executeJsonScript<unknown[]>('return "bad"', {
+          errorContext: 'Failed to get items',
           fallbackJson: '[]',
         }),
       ).resolves.toEqual([]);
@@ -83,7 +98,7 @@ describe('sources/shared', () => {
 
       await expect(
         executeJsonScript('return "{}"', {
-          errorPrefix: 'Failed to get app',
+          errorContext: 'Failed to get app',
           fallbackJson: '{}',
         }),
       ).rejects.toThrow('Failed to get app: Script execution failed');
