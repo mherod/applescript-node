@@ -110,11 +110,13 @@ export function parseSdef(xml: string): ApplicationDictionary {
 // XML parsing helper functions - these work with dynamic XML parser output
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 
-function parseClasses(classesData: unknown): Class[] {
-  if (!classesData) return [];
-  const classes = Array.isArray(classesData) ? classesData : [classesData];
+function normalizeArrayData<T>(data: T | T[] | null | undefined): T[] {
+  if (data == null) return [];
+  return Array.isArray(data) ? data : [data];
+}
 
-  return classes.map((cls: any) => ({
+function parseClasses(classesData: unknown): Class[] {
+  return normalizeArrayData(classesData).map((cls: any) => ({
     name: cls['@_name'] ?? '',
     code: cls['@_code'] ?? '',
     description: cls['@_description'],
@@ -126,10 +128,7 @@ function parseClasses(classesData: unknown): Class[] {
 }
 
 function parseProperties(propertiesData: unknown): Property[] {
-  if (!propertiesData) return [];
-  const properties = Array.isArray(propertiesData) ? propertiesData : [propertiesData];
-
-  return properties.map((prop: any) => ({
+  return normalizeArrayData(propertiesData).map((prop: any) => ({
     name: prop['@_name'] ?? '',
     code: prop['@_code'] ?? '',
     type: parseTypeInfo(prop['@_type'], prop.type),
@@ -139,20 +138,14 @@ function parseProperties(propertiesData: unknown): Property[] {
 }
 
 function parseElements(elementsData: unknown): Element[] {
-  if (!elementsData) return [];
-  const elements = Array.isArray(elementsData) ? elementsData : [elementsData];
-
-  return elements.map((elem: any) => ({
+  return normalizeArrayData(elementsData).map((elem: any) => ({
     type: elem['@_type'] ?? '',
     access: elem['@_access'] as 'r' | 'rw' | undefined,
   }));
 }
 
 function parseCommands(commandsData: unknown): Command[] {
-  if (!commandsData) return [];
-  const commands = Array.isArray(commandsData) ? commandsData : [commandsData];
-
-  return commands.map((cmd: any) => ({
+  return normalizeArrayData(commandsData).map((cmd: any) => ({
     name: cmd['@_name'] ?? '',
     code: cmd['@_code'] ?? '',
     description: cmd['@_description'],
@@ -173,10 +166,7 @@ function parseCommands(commandsData: unknown): Command[] {
 }
 
 function parseParameters(parametersData: unknown): Parameter[] {
-  if (!parametersData) return [];
-  const parameters = Array.isArray(parametersData) ? parametersData : [parametersData];
-
-  return parameters.map((param: any) => ({
+  return normalizeArrayData(parametersData).map((param: any) => ({
     name: param['@_name'] ?? '',
     code: param['@_code'] ?? '',
     type: parseTypeInfo(param['@_type'], param.type),
@@ -186,10 +176,7 @@ function parseParameters(parametersData: unknown): Parameter[] {
 }
 
 function parseEnumerations(enumerationsData: unknown): Enumeration[] {
-  if (!enumerationsData) return [];
-  const enumerations = Array.isArray(enumerationsData) ? enumerationsData : [enumerationsData];
-
-  return enumerations.map((enumData: any) => ({
+  return normalizeArrayData(enumerationsData).map((enumData: any) => ({
     name: enumData['@_name'] ?? '',
     code: enumData['@_code'] ?? '',
     enumerators: parseEnumerators(enumData.enumerator),
@@ -197,10 +184,7 @@ function parseEnumerations(enumerationsData: unknown): Enumeration[] {
 }
 
 function parseEnumerators(enumeratorsData: unknown): Enumerator[] {
-  if (!enumeratorsData) return [];
-  const enumerators = Array.isArray(enumeratorsData) ? enumeratorsData : [enumeratorsData];
-
-  return enumerators.map((enumer: any) => ({
+  return normalizeArrayData(enumeratorsData).map((enumer: any) => ({
     name: enumer['@_name'] ?? '',
     code: enumer['@_code'] ?? '',
     description: enumer['@_description'],
@@ -215,9 +199,8 @@ function parseTypeInfo(typeAttr: string | undefined, typeElement: any): TypeInfo
 
   // If type is specified as a nested element
   if (typeElement) {
-    const types = Array.isArray(typeElement) ? typeElement : [typeElement];
     // For now, use the first type if multiple are specified
-    const firstType = types[0];
+    const [firstType] = normalizeArrayData(typeElement);
     return {
       type: firstType['@_type'] ?? 'any',
       list: firstType['@_list'] === 'yes',
@@ -264,13 +247,28 @@ export function clearSdefCache(): void {
   sdefCache.clear();
 }
 
+function getSuiteItems<T>(
+  dictionary: ApplicationDictionary,
+  pickItems: (suite: Suite) => T[],
+): T[] {
+  return dictionary.suites.flatMap((suite) => pickItems(suite));
+}
+
+function findSuiteItemByName<T extends { name: string }>(
+  dictionary: ApplicationDictionary,
+  pickItems: (suite: Suite) => T[],
+  itemName: string,
+): T | undefined {
+  return getSuiteItems(dictionary, pickItems).find((item) => item.name === itemName);
+}
+
 /**
  * Get a list of all commands in an application dictionary
  * @param dictionary - The application dictionary
  * @returns Array of all commands from all suites
  */
 export function getAllCommands(dictionary: ApplicationDictionary): Command[] {
-  return dictionary.suites.flatMap((suite) => suite.commands);
+  return getSuiteItems(dictionary, (suite) => suite.commands);
 }
 
 /**
@@ -279,7 +277,7 @@ export function getAllCommands(dictionary: ApplicationDictionary): Command[] {
  * @returns Array of all classes from all suites
  */
 export function getAllClasses(dictionary: ApplicationDictionary): Class[] {
-  return dictionary.suites.flatMap((suite) => suite.classes);
+  return getSuiteItems(dictionary, (suite) => suite.classes);
 }
 
 /**
@@ -292,11 +290,7 @@ export function findCommand(
   dictionary: ApplicationDictionary,
   commandName: string,
 ): Command | undefined {
-  for (const suite of dictionary.suites) {
-    const command = suite.commands.find((cmd) => cmd.name === commandName);
-    if (command) return command;
-  }
-  return;
+  return findSuiteItemByName(dictionary, (suite) => suite.commands, commandName);
 }
 
 /**
@@ -306,9 +300,5 @@ export function findCommand(
  * @returns The class if found, undefined otherwise
  */
 export function findClass(dictionary: ApplicationDictionary, className: string): Class | undefined {
-  for (const suite of dictionary.suites) {
-    const cls = suite.classes.find((c) => c.name === className);
-    if (cls) return cls;
-  }
-  return;
+  return findSuiteItemByName(dictionary, (suite) => suite.classes, className);
 }

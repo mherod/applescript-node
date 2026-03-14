@@ -1,15 +1,12 @@
 import { compileScript, compileScriptFile, runScriptFile } from 'applescript-node';
-import { writeFile, mkdir } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-
-async function ensureOutputDir() {
-  await mkdir('examples/output', { recursive: true });
-}
+import { ensureExamplesOutputDir } from './utils/output.js';
 
 async function main() {
   console.log('\nCompiling scripts...\n');
 
-  await ensureOutputDir();
+  await ensureExamplesOutputDir();
 
   // Compile a script string to a .scpt file
   const script = `tell application "Finder"
