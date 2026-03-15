@@ -1,7 +1,4 @@
-import { exec as execCallback } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const exec = promisify(execCallback);
+import { runtime } from './runtime/node.js';
 
 export interface OsaLanguageInfo {
   name: string;
@@ -110,7 +107,7 @@ function parseCapabilityFlags(flags: string): OsaLanguageInfo['capabilities'] {
  * @see {@link parseCapabilityFlags} for capability flag parsing
  */
 export async function getInstalledLanguages(): Promise<OsaLanguageInfo[]> {
-  const { stdout } = await exec('osalang -L');
+  const { stdout } = await runtime.exec('osalang -L');
   // CRITICAL: Filter empty lines to handle empty output gracefully
   // Empty output can occur in test environments or edge cases
   const lines = stdout
@@ -149,7 +146,7 @@ export async function getInstalledLanguages(): Promise<OsaLanguageInfo[]> {
  * @returns Promise resolving to the default language information
  */
 export async function getDefaultLanguage(): Promise<OsaLanguageInfo> {
-  const { stdout } = await exec('osalang -d');
+  const { stdout } = await runtime.exec('osalang -d');
   const defaultLang = stdout.trim();
   const allLangs = await getInstalledLanguages();
 

@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises';
 import { AppleScriptBuilder } from './builder.js';
+import { runtime } from './runtime/node.js';
 
 /**
  * Load an AppleScript file and return a builder instance that can be edited further.
@@ -25,7 +25,7 @@ import { AppleScriptBuilder } from './builder.js';
  */
 export async function loadScript(filePath: string): Promise<AppleScriptBuilder> {
   try {
-    const content = await readFile(filePath, 'utf-8');
+    const content = await runtime.readFile(filePath);
     const builder = new AppleScriptBuilder();
     builder.loadFromScript(content);
     return builder;

@@ -1,11 +1,4 @@
-import { exec as execCallback } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
-import { writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { promisify } from 'node:util';
-
-const exec = promisify(execCallback);
+import { runtime } from './runtime/node.js';
 
 export interface CompileOptions {
   language?: 'AppleScript' | 'JavaScript';
@@ -50,12 +43,13 @@ export async function compileScript(
 ): Promise<CompileResult> {
   try {
     // Create a temporary file for the source script
-    const tmpId = randomBytes(8).toString('hex');
-    const sourcePath = join(tmpdir(), `script_${tmpId}.applescript`);
-    await writeFile(sourcePath, script, 'utf8');
+    const tmpId = runtime.randomBytes(8).toString('hex');
+    const sourcePath = runtime.joinPath(runtime.tmpdir(), `script_${tmpId}.applescript`);
+    await runtime.writeFile(sourcePath, script);
 
     // Determine output path
-    const outputPath = options.outputPath ?? join(tmpdir(), `script_${tmpId}.scpt`);
+    const outputPath =
+      options.outputPath ?? runtime.joinPath(runtime.tmpdir(), `script_${tmpId}.scpt`);
     const outputExt = options.bundleScript ? '.scptd' : '.scpt';
     const finalOutputPath = outputPath.endsWith(outputExt)
       ? outputPath
@@ -65,7 +59,7 @@ export async function compileScript(
     const flags = buildCompileFlags(options);
     const command = `osacompile ${flags.join(' ')} -o "${finalOutputPath}" "${sourcePath}"`;
 
-    await exec(command);
+    await runtime.exec(command);
 
     return {
       success: true,
@@ -97,7 +91,7 @@ export async function compileScriptFile(
     const flags = buildCompileFlags(options);
     const command = `osacompile ${flags.join(' ')} -o "${finalOutputPath}" "${filePath}"`;
 
-    await exec(command);
+    await runtime.exec(command);
 
     return {
       success: true,

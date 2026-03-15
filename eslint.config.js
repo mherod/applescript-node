@@ -4,6 +4,15 @@ import tseslintParser from '@typescript-eslint/parser';
 import eslintConfigPrettier from 'eslint-config-prettier';
 import prettier from 'eslint-plugin-prettier';
 
+// TypeScript itself handles undefined-name checking; no-undef is redundant
+// and incorrectly flags TypeScript global types like BufferEncoding.
+const typescriptNoUndef = {
+  files: ['**/*.ts'],
+  rules: {
+    'no-undef': 'off',
+  },
+};
+
 const typescript = {
   files: ['**/*.ts'],
   languageOptions: {
@@ -101,6 +110,7 @@ export default [
   },
   eslint.configs.recommended,
   typescript,
+  typescriptNoUndef,
   {
     files: ['**/*.ts'],
     languageOptions: {
