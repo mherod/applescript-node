@@ -1,5 +1,6 @@
 import { ScriptExecutor } from '../executor.js';
 import { createScript } from '../index.js';
+import { executeJsonScript } from './shared.js';
 
 /**
  * Window information for system-wide window enumeration.
@@ -83,14 +84,10 @@ export async function getAll(): Promise<WindowInfo[]> {
     })
     .endtell();
 
-  const result = await ScriptExecutor.execute(script.build());
-
-  if (!result.success) {
-    throw new Error(`Failed to get windows: ${result.error}`);
-  }
-
-  // Parse JSON output
-  const windows = JSON.parse(result.output ?? '[]') as unknown[];
+  const windows = await executeJsonScript<unknown[]>(script.build(), {
+    errorContext: 'Failed to get windows',
+    fallbackJson: '[]',
+  });
 
   return windows.map((win: unknown) => {
     const w = win as Record<string, unknown>;

@@ -1,5 +1,6 @@
 import { ScriptExecutor } from '../executor.js';
 import { createScript } from '../index.js';
+import { executeJsonScript, executeScriptOrThrow } from './shared.js';
 
 /**
  * Application information returned from macOS
@@ -60,14 +61,10 @@ export async function getAll(includeBackgroundApps = false): Promise<Application
     })
     .endtell();
 
-  const result = await ScriptExecutor.execute(script.build());
-
-  if (!result.success) {
-    throw new Error(`Failed to get applications: ${result.error}`);
-  }
-
-  // Parse JSON output
-  return JSON.parse(result.output ?? '[]') as ApplicationInfo[];
+  return executeJsonScript<ApplicationInfo[]>(script.build(), {
+    errorContext: 'Failed to get applications',
+    fallbackJson: '[]',
+  });
 }
 
 /**
@@ -93,14 +90,10 @@ export async function getFrontmost(): Promise<ApplicationInfo> {
     })
     .endtell();
 
-  const result = await ScriptExecutor.execute(script.build());
-
-  if (!result.success) {
-    throw new Error(`Failed to get frontmost application: ${result.error}`);
-  }
-
-  // Parse JSON output
-  return JSON.parse(result.output ?? '{}') as ApplicationInfo;
+  return executeJsonScript<ApplicationInfo>(script.build(), {
+    errorContext: 'Failed to get frontmost application',
+    fallbackJson: '{}',
+  });
 }
 
 /**
@@ -115,7 +108,7 @@ export async function getFrontmost(): Promise<ApplicationInfo> {
  * }
  */
 export async function isRunning(appName: string): Promise<boolean> {
-  const escapedAppName = appName.replace(/"/g, '\\"');
+  const escapedAppName = escapeAppleScriptString(appName);
   const script = `
     tell application "System Events"
       return exists (processes where name is "${escapedAppName}")
@@ -153,12 +146,7 @@ export async function getByName(appName: string): Promise<ApplicationInfo | null
  */
 export async function activate(appName: string): Promise<void> {
   const script = createScript().tell(appName).activate().endtell();
-
-  const result = await ScriptExecutor.execute(script.build());
-
-  if (!result.success) {
-    throw new Error(`Failed to activate ${appName}: ${result.error}`);
-  }
+  await executeScriptOrThrow(script.build(), `Failed to activate ${appName}`);
 }
 
 /**
@@ -171,12 +159,7 @@ export async function activate(appName: string): Promise<void> {
  */
 export async function launch(appName: string): Promise<void> {
   const script = createScript().tell(appName).launch().endtell();
-
-  const result = await ScriptExecutor.execute(script.build());
-
-  if (!result.success) {
-    throw new Error(`Failed to launch ${appName}: ${result.error}`);
-  }
+  await executeScriptOrThrow(script.build(), `Failed to launch ${appName}`);
 }
 
 /**
@@ -189,12 +172,7 @@ export async function launch(appName: string): Promise<void> {
  */
 export async function quit(appName: string): Promise<void> {
   const script = createScript().tell(appName).quit().endtell();
-
-  const result = await ScriptExecutor.execute(script.build());
-
-  if (!result.success) {
-    throw new Error(`Failed to quit ${appName}: ${result.error}`);
-  }
+  await executeScriptOrThrow(script.build(), `Failed to quit ${appName}`);
 }
 
 /**
@@ -206,18 +184,7 @@ export async function quit(appName: string): Promise<void> {
  * await applications.hide('Safari');
  */
 export async function hide(appName: string): Promise<void> {
-  const script = createScript()
-    .tell('System Events')
-    .tell(`process "${appName.replace(/"/g, '\\"')}"`)
-    .raw('set visible to false')
-    .endtell()
-    .endtell();
-
-  const result = await ScriptExecutor.execute(script.build());
-
-  if (!result.success) {
-    throw new Error(`Failed to hide ${appName}: ${result.error}`);
-  }
+  await setApplicationVisibility(appName, false);
 }
 
 /**
@@ -229,16 +196,28 @@ export async function hide(appName: string): Promise<void> {
  * await applications.show('Safari');
  */
 export async function show(appName: string): Promise<void> {
+  await setApplicationVisibility(appName, true);
+}
+
+function escapeAppleScriptString(value: string): string {
+  return value.replace(/"/g, '\\"');
+}
+
+function buildVisibilityScript(appName: string, visible: boolean): string {
   const script = createScript()
     .tell('System Events')
-    .tell(`process "${appName.replace(/"/g, '\\"')}"`)
-    .raw('set visible to true')
+    .tell(`process "${escapeAppleScriptString(appName)}"`)
+    .raw(`set visible to ${visible}`)
     .endtell()
     .endtell();
 
-  const result = await ScriptExecutor.execute(script.build());
+  return script.build();
+}
 
-  if (!result.success) {
-    throw new Error(`Failed to show ${appName}: ${result.error}`);
-  }
+async function setApplicationVisibility(appName: string, visible: boolean): Promise<void> {
+  const action = visible ? 'show' : 'hide';
+  await executeScriptOrThrow(
+    buildVisibilityScript(appName, visible),
+    `Failed to ${action} ${appName}`,
+  );
 }

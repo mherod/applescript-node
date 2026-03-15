@@ -1,14 +1,10 @@
 import { compileScript, decompileScript } from 'applescript-node';
-import { mkdir } from 'node:fs/promises';
-
-async function ensureOutputDir() {
-  await mkdir('examples/output', { recursive: true });
-}
+import { ensureExamplesOutputDir } from './utils/output.js';
 
 async function main() {
   console.log('\nDecompiling scripts...\n');
 
-  await ensureOutputDir();
+  await ensureExamplesOutputDir();
 
   // First compile a script
   const script = `tell application "Finder"

@@ -1,5 +1,6 @@
 import { ScriptExecutor } from '../executor.js';
 import { createScript } from '../index.js';
+import { executeJsonScript } from './shared.js';
 
 /**
  * System information returned from macOS
@@ -74,13 +75,10 @@ export async function getInfo(): Promise<SystemInfo> {
       "}"
   `;
 
-  const result = await ScriptExecutor.execute(script);
-
-  if (!result.success) {
-    throw new Error(`Failed to get system info: ${result.error}`);
-  }
-
-  return JSON.parse(result.output ?? '{}') as SystemInfo;
+  return executeJsonScript<SystemInfo>(script, {
+    errorContext: 'Failed to get system info',
+    fallbackJson: '{}',
+  });
 }
 
 /**
@@ -129,14 +127,10 @@ export async function getVolumes(): Promise<VolumeInfo[]> {
     })
     .endtell();
 
-  const result = await ScriptExecutor.execute(script.build());
-
-  if (!result.success) {
-    throw new Error(`Failed to get volumes: ${result.error}`);
-  }
-
-  // Parse JSON output
-  return JSON.parse(result.output ?? '[]') as VolumeInfo[];
+  return executeJsonScript<VolumeInfo[]>(script.build(), {
+    errorContext: 'Failed to get volumes',
+    fallbackJson: '[]',
+  });
 }
 
 /**
