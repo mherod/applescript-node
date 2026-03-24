@@ -1,8 +1,5 @@
-import { exec as execCallback } from 'node:child_process';
-import { promisify } from 'node:util';
 import type { OsaScriptOptions, Prettify, ScriptExecutionResult } from './types.js';
-
-const exec = promisify(execCallback);
+import { runtime } from './runtime/node.js';
 
 /**
  * Extract error information from an execution error.
@@ -115,7 +112,7 @@ export class ScriptExecutor {
       const flags = ScriptExecutor.buildFlags(options);
       const command = `osascript ${flags} -e '${script.replace(/'/g, "'\"'\"'")}'`;
 
-      const { stdout } = await exec(command);
+      const { stdout } = await runtime.exec(command);
 
       return {
         success: true,
@@ -165,7 +162,7 @@ export class ScriptExecutor {
       const flags = ScriptExecutor.buildFlags(options);
       const command = `osascript ${flags} "${filePath}"`;
 
-      const { stdout } = await exec(command);
+      const { stdout } = await runtime.exec(command);
 
       return {
         success: true,

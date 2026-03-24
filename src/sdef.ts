@@ -1,6 +1,5 @@
-import { exec as execCallback } from 'node:child_process';
-import { promisify } from 'node:util';
 import { XMLParser } from 'fast-xml-parser';
+import { runtime } from './runtime/node.js';
 import type {
   ApplicationDictionary,
   Class,
@@ -14,8 +13,6 @@ import type {
   TypeInfo,
 } from './types.js';
 
-const exec = promisify(execCallback);
-
 // Cache for sdef results to avoid repeated parsing
 const sdefCache = new Map<string, ApplicationDictionary>();
 
@@ -26,7 +23,7 @@ const sdefCache = new Map<string, ApplicationDictionary>();
  */
 export async function getSdef(appPath: string): Promise<string> {
   try {
-    const { stdout } = await exec(`sdef "${appPath}"`);
+    const { stdout } = await runtime.exec(`sdef "${appPath}"`);
     return stdout;
   } catch (error) {
     if (error instanceof Error) {

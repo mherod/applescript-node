@@ -1,7 +1,4 @@
-import { exec as execCallback } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const exec = promisify(execCallback);
+import { runtime } from './runtime/node.js';
 
 export interface DecompileResult {
   success: boolean;
@@ -11,7 +8,7 @@ export interface DecompileResult {
 
 export async function decompileScript(scriptPath: string): Promise<DecompileResult> {
   try {
-    const { stdout, stderr } = await exec(`osadecompile "${scriptPath}"`);
+    const { stdout, stderr } = await runtime.exec(`osadecompile "${scriptPath}"`);
 
     if (stderr) {
       return {
