@@ -4,6 +4,14 @@ All notable changes to applescript-node are documented in this file.
 
 ## [Unreleased]
 
+### 15 March 2026
+
+#### Maintenance
+
+- Internal improvements and maintenance. No user-facing changes in this
+  period — updates were limited to code organisation, shared helper
+  extraction, and developer documentation. (#49, #50)
+
 ### 28 February 2026
 
 #### Maintenance
