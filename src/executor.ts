@@ -1,5 +1,5 @@
 import type { OsaScriptOptions, Prettify, ScriptExecutionResult } from './types.js';
-import { runtime } from './runtime/node.js';
+import { runtime } from './runtime/active.js';
 
 /**
  * Extract error information from an execution error.

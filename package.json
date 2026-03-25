@@ -13,14 +13,14 @@
       "require": "./dist/index.js"
     },
     "./node": {
-      "types": "./dist/node.d.ts",
-      "import": "./dist/node.mjs",
-      "require": "./dist/node.js"
+      "types": "./dist/index.node.d.ts",
+      "import": "./dist/index.node.mjs",
+      "require": "./dist/index.node.js"
     },
     "./bun": {
-      "types": "./dist/bun.d.ts",
-      "import": "./dist/bun.mjs",
-      "require": "./dist/bun.js"
+      "types": "./dist/index.bun.d.ts",
+      "import": "./dist/index.bun.mjs",
+      "require": "./dist/index.bun.js"
     }
   },
   "files": [

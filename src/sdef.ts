@@ -1,5 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
-import { runtime } from './runtime/node.js';
+import { runtime } from './runtime/active.js';
 import type {
   ApplicationDictionary,
   Class,

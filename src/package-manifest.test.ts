@@ -49,8 +49,8 @@ describe('package.json manifest', () => {
     });
 
     assertSubpathExport('.', 'index');
-    assertSubpathExport('./node', 'node');
-    assertSubpathExport('./bun', 'bun');
+    assertSubpathExport('./node', 'index.node');
+    assertSubpathExport('./bun', 'index.bun');
   });
 
   describe('top-level type fields', () => {
