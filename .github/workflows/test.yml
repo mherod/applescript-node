@@ -116,26 +116,31 @@ jobs:
             const fs = require('fs');
             const raw = fs.readFileSync('/tmp/smoke/node_modules/applescript-node/package.json', 'utf8');
             const pkg = JSON.parse(raw);
-            const entry = pkg.exports['.'];
-            if (!entry) { console.error('FAIL: exports[\".\"] missing'); process.exit(1); }
-            const keys = Object.keys(entry);
-            if (keys[0] !== 'types') {
-              console.error('FAIL: first condition is \"' + keys[0] + '\", expected \"types\"');
-              process.exit(1);
-            }
+            const subpaths = ['.', './node', './bun'];
             const expected = JSON.stringify(['types', 'import', 'require']);
-            if (JSON.stringify(keys) !== expected) {
-              console.error('FAIL: conditions ' + JSON.stringify(keys) + ', expected ' + expected);
-              process.exit(1);
+            for (const sp of subpaths) {
+              const entry = pkg.exports[sp];
+              if (!entry) { console.error('FAIL: exports[\"' + sp + '\"] missing'); process.exit(1); }
+              const keys = Object.keys(entry);
+              if (keys[0] !== 'types') {
+                console.error('FAIL: exports[\"' + sp + '\"] first condition is \"' + keys[0] + '\", expected \"types\"');
+                process.exit(1);
+              }
+              if (JSON.stringify(keys) !== expected) {
+                console.error('FAIL: exports[\"' + sp + '\"] conditions ' + JSON.stringify(keys) + ', expected ' + expected);
+                process.exit(1);
+              }
+              console.log('OK: exports[\"' + sp + '\"] conditions are ' + JSON.stringify(keys));
             }
-            console.log('OK: exports[\".\"] conditions are ' + JSON.stringify(keys));
           "
 
       - name: Verify type declarations present in tarball
         run: |
-          test -f /tmp/smoke/node_modules/applescript-node/dist/index.d.ts || \
-            { echo 'FAIL: dist/index.d.ts missing from packed tarball'; exit 1; }
-          echo 'OK: dist/index.d.ts present'
+          for f in index.d.ts index.node.d.ts index.bun.d.ts; do
+            test -f "/tmp/smoke/node_modules/applescript-node/dist/$f" || \
+              { echo "FAIL: dist/$f missing from packed tarball"; exit 1; }
+            echo "OK: dist/$f present"
+          done
 
       - name: Verify ESM named imports resolve at runtime
         run: |
@@ -149,3 +154,23 @@ jobs:
           console.log('OK: ESM named imports resolve; createScript().build() => ' + JSON.stringify(script.trim()));
           SMOKEEOF
           cd /tmp/smoke && node smoke.mjs
+
+      - name: Verify ESM resolution for ./node entry point
+        run: |
+          cat > /tmp/smoke/smoke-node.mjs << 'SMOKEEOF'
+          import { runtime } from 'applescript-node/node';
+          if (!runtime) throw new Error('runtime is not exported from applescript-node/node');
+          if (typeof runtime !== 'object') throw new Error('runtime is not an object');
+          console.log('OK: applescript-node/node ESM import resolves');
+          SMOKEEOF
+          cd /tmp/smoke && node smoke-node.mjs
+
+      - name: Verify ESM resolution for ./bun entry point
+        run: |
+          cat > /tmp/smoke/smoke-bun.mjs << 'SMOKEEOF'
+          import { runtime } from 'applescript-node/bun';
+          if (!runtime) throw new Error('runtime is not exported from applescript-node/bun');
+          if (typeof runtime !== 'object') throw new Error('runtime is not an object');
+          console.log('OK: applescript-node/bun ESM import resolves');
+          SMOKEEOF
+          cd /tmp/smoke && node smoke-bun.mjs
