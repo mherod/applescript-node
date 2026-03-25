@@ -10,6 +10,37 @@ const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as {
   module?: string;
 };
 
+function assertSubpathExport(subpath: string, distBase: string) {
+  describe(`exports["${subpath}"]`, () => {
+    it('is defined', () => {
+      expect(pkg.exports?.[subpath]).toBeDefined();
+    });
+
+    it('has "types" as the first condition', () => {
+      const entry = pkg.exports?.[subpath];
+      const firstKey = Object.keys(entry ?? {})[0];
+      expect(firstKey).toBe('types');
+    });
+
+    it('.types points to the declaration file', () => {
+      expect(pkg.exports?.[subpath]?.types).toBe(`./dist/${distBase}.d.ts`);
+    });
+
+    it('.import points to the ESM bundle', () => {
+      expect(pkg.exports?.[subpath]?.import).toBe(`./dist/${distBase}.mjs`);
+    });
+
+    it('.require points to the CJS bundle', () => {
+      expect(pkg.exports?.[subpath]?.require).toBe(`./dist/${distBase}.js`);
+    });
+
+    it('contains exactly types, import, require conditions', () => {
+      const keys = Object.keys(pkg.exports?.[subpath] ?? {});
+      expect(keys).toEqual(['types', 'import', 'require']);
+    });
+  });
+}
+
 describe('package.json manifest', () => {
   describe('exports map', () => {
     it('has a "." entry in exports', () => {
@@ -17,29 +48,9 @@ describe('package.json manifest', () => {
       expect(pkg.exports?.['.']).toBeDefined();
     });
 
-    it('has "types" as the first condition in exports["."]', () => {
-      const entry = pkg.exports?.['.'];
-      expect(entry).toBeDefined();
-      const firstKey = Object.keys(entry ?? {})[0];
-      expect(firstKey).toBe('types');
-    });
-
-    it('exports["."].types points to the declaration file', () => {
-      expect(pkg.exports?.['.']?.types).toBe('./dist/index.d.ts');
-    });
-
-    it('exports["."].import points to the ESM bundle', () => {
-      expect(pkg.exports?.['.']?.import).toBe('./dist/index.mjs');
-    });
-
-    it('exports["."].require points to the CJS bundle', () => {
-      expect(pkg.exports?.['.']?.require).toBe('./dist/index.js');
-    });
-
-    it('exports["."] contains exactly types, import, require conditions', () => {
-      const keys = Object.keys(pkg.exports?.['.'] ?? {});
-      expect(keys).toEqual(['types', 'import', 'require']);
-    });
+    assertSubpathExport('.', 'index');
+    assertSubpathExport('./node', 'node');
+    assertSubpathExport('./bun', 'bun');
   });
 
   describe('top-level type fields', () => {
