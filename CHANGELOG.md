@@ -4,6 +4,26 @@ All notable changes to applescript-node are documented in this file.
 
 ## [Unreleased]
 
+### 25 March 2026
+
+#### New Features
+
+- Added Bun runtime support with dedicated `applescript-node/bun`
+  subpath export. The default import continues to use Node.js, and
+  a new `applescript-node/node` explicit entry is also available.
+  Both runtimes satisfy the same interface. (#67, #69, #72)
+- Added iTerm2 scripting methods to the builder API: create
+  windows, tabs, split panes, write text, manage sessions, and
+  control hotkey windows — all with full method chaining. (#70)
+- Added `withApplicationActivated` closure method to the builder
+  API, which activates a target app, runs a block, then restores
+  focus to the previously active app. (#68)
+
+#### Maintenance
+
+- Updated dependencies: fast-xml-parser 5.4.1 → 5.5.7, rollup
+  4.28.0 → 4.59.0, next 16.0.7 → 16.1.7. (#25, #57, #59, #62)
+
 ### 15 March 2026
 
 #### Maintenance
