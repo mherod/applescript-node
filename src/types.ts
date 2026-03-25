@@ -762,6 +762,17 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   itermWriteText: (text: string, options?: { newline?: boolean }) => ScriptBuilder<TScope, TReturn>;
   itermWriteContentsOfFile: (path: string) => ScriptBuilder<TScope, TReturn>;
   itermSetSessionVariable: (name: string, value: string) => ScriptBuilder<TScope, TReturn>;
+  itermCloseSession: () => ScriptBuilder<TScope, TReturn>;
+  itermCloseTab: () => ScriptBuilder<TScope, TReturn>;
+  itermCloseCurrentWindow: () => ScriptBuilder<TScope, TReturn>;
+  itermRevealHotkeyWindow: () => ScriptBuilder<TScope, TReturn>;
+  itermHideHotkeyWindow: () => ScriptBuilder<TScope, TReturn>;
+  itermToggleHotkeyWindow: () => ScriptBuilder<TScope, TReturn>;
+  itermSelectPreviousSession: () => ScriptBuilder<TScope, TReturn>;
+  itermSelectNextSession: () => ScriptBuilder<TScope, TReturn>;
+  itermSetSessionName: (name: string) => ScriptBuilder<TScope, TReturn>;
+  itermGetSessionName: (variableName: string) => ScriptBuilder<TScope, TReturn>;
+  itermGetSessionTty: (variableName: string) => ScriptBuilder<TScope, TReturn>;
 
   // Dialog and alerts
   displayDialog: (

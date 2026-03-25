@@ -205,6 +205,74 @@ describe('AppleScriptBuilder', () => {
           'set variable named "user.badge" to "build ok"',
       );
     });
+
+    it('should emit close helpers for session, tab, and window', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder
+        .tellITerm2((b) => {
+          b.itermTellCurrentWindow((w) => {
+            w.itermTellCurrentSession((s) => {
+              s.itermCloseSession();
+            });
+            w.itermCloseTab();
+          });
+          b.itermCloseCurrentWindow();
+        })
+        .build();
+
+      expect(script).toBe(
+        [
+          'tell application "iTerm2"',
+          '  tell current window',
+          '    tell current session of current window',
+          '      close',
+          '    end tell',
+          '    close current tab',
+          '  end tell',
+          '  close current window',
+          'end tell',
+        ].join('\n'),
+      );
+    });
+
+    it('should emit hotkey window reveal, hide, and toggle', () => {
+      const builder = new AppleScriptBuilder();
+      const revealScript = builder.itermRevealHotkeyWindow().build();
+      const hideScript = new AppleScriptBuilder().itermHideHotkeyWindow().build();
+      const toggleScript = new AppleScriptBuilder().itermToggleHotkeyWindow().build();
+
+      expect(revealScript).toBe('reveal hotkey window');
+      expect(hideScript).toBe('hide hotkey window');
+      expect(toggleScript).toBe('toggle hotkey window');
+    });
+
+    it('should emit selectPreviousSession and selectNextSession', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.itermSelectPreviousSession().itermSelectNextSession().build();
+
+      expect(script).toBe('select previous session\nselect next session');
+    });
+
+    it('should emit itermSetSessionName', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.itermSetSessionName('Build Output').build();
+
+      expect(script).toBe('set name to "Build Output"');
+    });
+
+    it('should emit itermGetSessionName and itermGetSessionTty', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.itermGetSessionName('myName').itermGetSessionTty('myTty').build();
+
+      expect(script).toBe('set myName to name\nset myTty to tty');
+    });
+
+    it('should escape special characters in itermSetSessionName', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.itermSetSessionName('My "App" Session').build();
+
+      expect(script).toBe('set name to "My \\"App\\" Session"');
+    });
   });
 
   describe('Value formatting', () => {
