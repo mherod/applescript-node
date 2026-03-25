@@ -3,6 +3,21 @@ import { tmpdir as osTmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { RuntimeInterop } from './interop.js';
 
+// Minimal type declarations for Bun globals used in this file.
+// Scoped here to avoid polluting the Node.js-targeted type environment.
+declare const Bun: {
+  spawn(
+    command: string[],
+    opts?: { stdout?: 'pipe' | 'inherit' | 'ignore'; stderr?: 'pipe' | 'inherit' | 'ignore' },
+  ): {
+    stdout: ReadableStream<Uint8Array>;
+    stderr: ReadableStream<Uint8Array>;
+    readonly exited: Promise<number>;
+  };
+  file(path: string): { text(): Promise<string> };
+  write(path: string, data: string): Promise<void>;
+};
+
 /**
  * Bun implementation of the runtime interop layer.
  *
