@@ -524,6 +524,10 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
     errorVarName: string,
     catchBlock: (builder: ScriptBuilder<TScope, TReturn>) => void,
   ) => ScriptBuilder<TScope, TReturn>;
+  withApplicationActivated: (
+    appName: string,
+    body: (builder: ScriptBuilder<TScope, TReturn>) => void,
+  ) => ScriptBuilder<TScope, TReturn>;
   /**
    * Iterate over a list with a loop variable, executing a block for each item.
    *

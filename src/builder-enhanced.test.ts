@@ -125,6 +125,54 @@ describe('Builder - Convenience Helpers', () => {
     expect(script).toContain('end try');
   });
 
+  it('should generate save/activate/restore pattern with withApplicationActivated', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .withApplicationActivated('iTerm', (b) => {
+        b.tell('iTerm').raw('keystroke "hello"').endtell();
+      })
+      .build();
+
+    expect(script).toContain('tell application "System Events"');
+    expect(script).toContain('set _prevFrontApp to name of first process where frontmost is true');
+    expect(script).toContain('end tell');
+    expect(script).toContain('tell application "iTerm" to activate');
+    expect(script).toContain('keystroke "hello"');
+    expect(script).toContain('if _prevFrontApp is not "iTerm" then');
+    expect(script).toContain('tell application _prevFrontApp');
+    expect(script).toContain('activate');
+  });
+
+  it('should emit sections in the correct order for withApplicationActivated', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .withApplicationActivated('Finder', (b) => {
+        b.raw('open home folder');
+      })
+      .build();
+
+    const saveIdx = script.indexOf('set _prevFrontApp');
+    const activateIdx = script.indexOf('tell application "Finder" to activate');
+    const bodyIdx = script.indexOf('open home folder');
+    const restoreIdx = script.indexOf('if _prevFrontApp is not "Finder"');
+
+    expect(saveIdx).toBeLessThan(activateIdx);
+    expect(activateIdx).toBeLessThan(bodyIdx);
+    expect(bodyIdx).toBeLessThan(restoreIdx);
+  });
+
+  it('should escape app name with special characters in withApplicationActivated', () => {
+    const builder = new AppleScriptBuilder();
+    const script = builder
+      .withApplicationActivated('My "App"', (b) => {
+        b.raw('activate');
+      })
+      .build();
+
+    expect(script).toContain('tell application "My \\"App\\"" to activate');
+    expect(script).toContain('if _prevFrontApp is not "My \\"App\\""');
+  });
+
   it('should support nested convenience helpers', () => {
     const builder = new AppleScriptBuilder();
     const script = builder
