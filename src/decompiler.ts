@@ -1,4 +1,4 @@
-import { runtime } from './runtime/node.js';
+import { runtime } from './runtime/active.js';
 
 export interface DecompileResult {
   success: boolean;

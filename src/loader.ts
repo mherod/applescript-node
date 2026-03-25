@@ -1,5 +1,5 @@
 import { AppleScriptBuilder } from './builder.js';
-import { runtime } from './runtime/node.js';
+import { runtime } from './runtime/active.js';
 
 /**
  * Load an AppleScript file and return a builder instance that can be edited further.
