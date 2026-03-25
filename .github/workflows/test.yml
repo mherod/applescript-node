@@ -158,19 +158,19 @@ jobs:
       - name: Verify ESM resolution for ./node entry point
         run: |
           cat > /tmp/smoke/smoke-node.mjs << 'SMOKEEOF'
-          import { runtime } from 'applescript-node/node';
-          if (!runtime) throw new Error('runtime is not exported from applescript-node/node');
-          if (typeof runtime !== 'object') throw new Error('runtime is not an object');
-          console.log('OK: applescript-node/node ESM import resolves');
+          import { createScript, runScript } from 'applescript-node/node';
+          if (typeof createScript !== 'function') throw new Error('createScript is not a function');
+          if (typeof runScript !== 'function') throw new Error('runScript is not a function');
+          console.log('OK: applescript-node/node ESM imports resolve');
           SMOKEEOF
           cd /tmp/smoke && node smoke-node.mjs
 
       - name: Verify ESM resolution for ./bun entry point
         run: |
           cat > /tmp/smoke/smoke-bun.mjs << 'SMOKEEOF'
-          import { runtime } from 'applescript-node/bun';
-          if (!runtime) throw new Error('runtime is not exported from applescript-node/bun');
-          if (typeof runtime !== 'object') throw new Error('runtime is not an object');
-          console.log('OK: applescript-node/bun ESM import resolves');
+          import { createScript, runScript } from 'applescript-node/bun';
+          if (typeof createScript !== 'function') throw new Error('createScript is not a function');
+          if (typeof runScript !== 'function') throw new Error('runScript is not a function');
+          console.log('OK: applescript-node/bun ESM imports resolve');
           SMOKEEOF
           cd /tmp/smoke && node smoke-bun.mjs
