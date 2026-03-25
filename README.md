@@ -28,7 +28,30 @@ console.log(`Active: ${frontmost.name}`);
 npm install applescript-node
 ```
 
-> **Requirements:** macOS 10.10+, Node.js 20+
+> **Requirements:** macOS 10.10+ (requires `osascript`), Node.js 20+ or Bun 1.0+
+
+## Runtime Support
+
+`applescript-node` works with both Node.js and Bun. The default import selects the
+Node.js runtime automatically:
+
+```typescript
+// Works on Node.js and Bun — no extra config needed
+import { createScript, runScript } from 'applescript-node';
+```
+
+If you need explicit runtime control, use the dedicated subpath exports:
+
+```typescript
+// Node.js runtime (child_process + fs)
+import { runtime } from 'applescript-node/node';
+
+// Bun runtime (Bun.spawn + Bun.file)
+import { runtime } from 'applescript-node/bun';
+```
+
+Both exports satisfy the same `RuntimeInterop` interface and can be passed to
+internal APIs that accept a runtime parameter.
 
 ## Quick Examples
 
