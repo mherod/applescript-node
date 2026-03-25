@@ -704,6 +704,76 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   clickButton: (buttonName: string) => ScriptBuilder<TScope, TReturn>;
   clickMenuItem: (menuName: string, itemName: string) => ScriptBuilder<TScope, TReturn>;
 
+  /**
+   * iTerm2 (terminal) scripting via its AppleScript dictionary.
+   * Deprecated upstream in favor of the Python API, but still widely used.
+   * Default application name is `iTerm2`; pass `applicationName` if your install
+   * exposes a different scripting name (e.g. legacy `iTerm`).
+   */
+  tellITerm2: (
+    block: (builder: ScriptBuilder<TScope, TReturn>) => void,
+    options?: { applicationName?: string },
+  ) => ScriptBuilder<TScope, TReturn>;
+  itermTellCurrentWindow: (
+    block: (builder: ScriptBuilder<TScope, TReturn>) => void,
+  ) => ScriptBuilder<TScope, TReturn>;
+  itermTellCurrentSession: (
+    block: (builder: ScriptBuilder<TScope, TReturn>) => void,
+  ) => ScriptBuilder<TScope, TReturn>;
+  itermTellSession: (
+    sessionRef: string,
+    block: (builder: ScriptBuilder<TScope, TReturn>) => void,
+  ) => ScriptBuilder<TScope, TReturn>;
+  itermCreateWindowWithDefaultProfile: (options?: {
+    command?: string;
+  }) => ScriptBuilder<TScope, TReturn>;
+  itermCreateWindowWithProfile: (
+    profileName: string,
+    options?: { command?: string },
+  ) => ScriptBuilder<TScope, TReturn>;
+  itermCreateHotkeyWindowWithProfile: (profileName: string) => ScriptBuilder<TScope, TReturn>;
+  itermCreateTabWithDefaultProfile: (options?: {
+    command?: string;
+  }) => ScriptBuilder<TScope, TReturn>;
+  itermCreateTabWithProfile: (
+    profileName: string,
+    options?: { command?: string },
+  ) => ScriptBuilder<TScope, TReturn>;
+  itermSplitHorizontallyWithDefaultProfile: (options?: {
+    command?: string;
+  }) => ScriptBuilder<TScope, TReturn>;
+  itermSplitVerticallyWithDefaultProfile: (options?: {
+    command?: string;
+  }) => ScriptBuilder<TScope, TReturn>;
+  itermSplitHorizontallyWithProfile: (
+    profileName: string,
+    options?: { command?: string },
+  ) => ScriptBuilder<TScope, TReturn>;
+  itermSplitVerticallyWithProfile: (
+    profileName: string,
+    options?: { command?: string },
+  ) => ScriptBuilder<TScope, TReturn>;
+  itermSplitHorizontallyWithSameProfile: (options?: {
+    command?: string;
+  }) => ScriptBuilder<TScope, TReturn>;
+  itermSplitVerticallyWithSameProfile: (options?: {
+    command?: string;
+  }) => ScriptBuilder<TScope, TReturn>;
+  itermWriteText: (text: string, options?: { newline?: boolean }) => ScriptBuilder<TScope, TReturn>;
+  itermWriteContentsOfFile: (path: string) => ScriptBuilder<TScope, TReturn>;
+  itermSetSessionVariable: (name: string, value: string) => ScriptBuilder<TScope, TReturn>;
+  itermCloseSession: () => ScriptBuilder<TScope, TReturn>;
+  itermCloseTab: () => ScriptBuilder<TScope, TReturn>;
+  itermCloseCurrentWindow: () => ScriptBuilder<TScope, TReturn>;
+  itermRevealHotkeyWindow: () => ScriptBuilder<TScope, TReturn>;
+  itermHideHotkeyWindow: () => ScriptBuilder<TScope, TReturn>;
+  itermToggleHotkeyWindow: () => ScriptBuilder<TScope, TReturn>;
+  itermSelectPreviousSession: () => ScriptBuilder<TScope, TReturn>;
+  itermSelectNextSession: () => ScriptBuilder<TScope, TReturn>;
+  itermSetSessionName: (name: string) => ScriptBuilder<TScope, TReturn>;
+  itermGetSessionName: (variableName: string) => ScriptBuilder<TScope, TReturn>;
+  itermGetSessionTty: (variableName: string) => ScriptBuilder<TScope, TReturn>;
+
   // Dialog and alerts
   displayDialog: (
     text: string,

@@ -8,7 +8,8 @@ import { createScript, runScript } from 'applescript-node';
  *
  * 1. **Native Application Scripting** (recommended)
  *    - Terminal.app: `do script` — sends commands directly via the app's API
- *    - iTerm2: `write text` — targets specific sessions, tabs, or panes
+ *    - iTerm2: first-party helpers (`tellITerm2`, `itermWriteText`, tab/split helpers)
+ *      map to `write text`, `create tab`, `split … with profile`, etc.
  *    - Works in the background, doesn't steal focus, no input collision
  *
  * 2. **UI Scripting via System Events** (fallback)
@@ -116,16 +117,18 @@ async function main() {
   // iTerm2 exposes a rich scripting dictionary. `write text` sends
   // input to a specific session — it can target individual tabs,
   // split panes, and windows without requiring focus.
+  //
+  // `tellITerm2` defaults to application name "iTerm2". If your install
+  // only responds to "iTerm", use: tellITerm2(block, { applicationName: 'iTerm' }).
 
   out('--- Example 5: iTerm2 — write text (current session) ---');
-  const itermBasic = createScript()
-    .tell('iTerm')
-    .activate()
-    .comment('Send text to the current session of the current window')
-    .tellTarget('current session of current window')
-    .raw('write text "echo \\"Hello from iTerm2 scripting\\""')
-    .end()
-    .end();
+  const itermBasic = createScript().tellITerm2((b) => {
+    b.activate();
+    b.comment('Send text to the current session of the current window');
+    b.itermTellCurrentSession((s) => {
+      s.itermWriteText('echo "Hello from iTerm2 scripting"');
+    });
+  });
 
   const itermBasicScript = itermBasic.build();
   writeFileSync('examples/output/iterm-write-text.applescript', itermBasicScript);
@@ -138,20 +141,19 @@ async function main() {
   // ──────────────────────────────────────────────────────────────────
 
   out('--- Example 6: iTerm2 — new tab with commands ---');
-  const itermNewTab = createScript()
-    .tell('iTerm')
-    .activate()
-    .comment('Create a new tab in the current window')
-    .tellTarget('current window')
-    .raw('set newTab to (create tab with default profile)')
-    .comment('Send commands to the new tab session')
-    .tellTarget('current session of newTab')
-    .raw('write text "echo \\"Running in a new tab\\""')
-    .delay(0.5)
-    .raw('write text "date"')
-    .end()
-    .end()
-    .end();
+  const itermNewTab = createScript().tellITerm2((b) => {
+    b.activate();
+    b.comment('Create a new tab in the current window');
+    b.itermTellCurrentWindow((w) => {
+      w.setExpression('newTab', '(create tab with default profile)');
+      w.comment('Send commands to the new tab session');
+      w.itermTellSession('current session of newTab', (s) => {
+        s.itermWriteText('echo "Running in a new tab"');
+        s.delay(0.5);
+        s.itermWriteText('date');
+      });
+    });
+  });
 
   const itermNewTabScript = itermNewTab.build();
   writeFileSync('examples/output/iterm-new-tab.applescript', itermNewTabScript);
@@ -166,20 +168,19 @@ async function main() {
   // target each independently — useful for side-by-side monitoring.
 
   out('--- Example 7: iTerm2 — split pane automation ---');
-  const itermSplit = createScript()
-    .tell('iTerm')
-    .activate()
-    .tellTarget('current session of current window')
-    .comment('Send a command to the existing pane')
-    .raw('write text "echo \\"Left pane\\""')
-    .comment('Split the pane vertically and capture the new session')
-    .raw('set rightPane to (split vertically with default profile)')
-    .end()
-    .comment('Send a command to the new right pane')
-    .tellTarget('rightPane')
-    .raw('write text "echo \\"Right pane\\""')
-    .end()
-    .end();
+  const itermSplit = createScript().tellITerm2((b) => {
+    b.activate();
+    b.itermTellCurrentSession((s) => {
+      s.comment('Send a command to the existing pane');
+      s.itermWriteText('echo "Left pane"');
+      s.comment('Split the pane vertically and capture the new session');
+      s.setExpression('rightPane', '(split vertically with default profile)');
+    });
+    b.comment('Send a command to the new right pane');
+    b.itermTellSession('rightPane', (s) => {
+      s.itermWriteText('echo "Right pane"');
+    });
+  });
 
   const itermSplitScript = itermSplit.build();
   writeFileSync('examples/output/iterm-split-panes.applescript', itermSplitScript);
