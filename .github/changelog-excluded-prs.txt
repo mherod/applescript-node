@@ -23,3 +23,10 @@
 
 # Changelog consistency validation workflow (this CI addition)
 39
+
+# Terminal changelog-update PRs (self-referential)
+41
+63
+
+# Release commit (v1.0.2)
+42

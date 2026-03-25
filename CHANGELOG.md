@@ -23,6 +23,8 @@ All notable changes to applescript-node are documented in this file.
 
 - Updated dependencies: fast-xml-parser 5.4.1 → 5.5.7, rollup
   4.28.0 → 4.59.0, next 16.0.7 → 16.1.7. (#25, #57, #59, #62)
+- Extracted Node.js interop layer from runtime-bound modules into a
+  dedicated internal abstraction. (#55)
 
 ### 15 March 2026
 
@@ -41,6 +43,17 @@ All notable changes to applescript-node are documented in this file.
   configuration, build tooling, release documentation, and developer
   guidance. (#21, #30, #31, #32, #33, #34, #35, #36, #37, #38, #39,
   #40)
+
+#### Bug Fixes
+
+- Fixed `exports` field in `package.json` for correct ESM/CJS
+  resolution, and moved `types` condition first to satisfy bundler
+  requirements. (#43, #44)
+
+#### CI & Testing
+
+- Added exports map assertion test and pack smoke test for ESM
+  resolution. (#45, #46)
 
 ### 27 February 2026
 
