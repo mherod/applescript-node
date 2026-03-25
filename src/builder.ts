@@ -1936,6 +1936,41 @@ export class AppleScriptBuilder implements ScriptBuilder {
   }
 
   /**
+   * Activate an application, execute a block, then restore the previously frontmost app.
+   *
+   * If the target app is already frontmost when the script runs, no focus-restore step
+   * is emitted. Otherwise the original frontmost app is re-activated after the body.
+   *
+   * Generates AppleScript that:
+   * 1. Captures the current frontmost application name into `_prevFrontApp`
+   * 2. Activates the target application
+   * 3. Executes the body block
+   * 4. Conditionally restores focus to the original app (only if it differed)
+   *
+   * @param appName The application name to activate (e.g. "iTerm", "Finder")
+   * @param body Callback that builds the block to execute while the app is active
+   * @example
+   * createScript()
+   *   .withApplicationActivated("iTerm", (b) => {
+   *     b.tell("iTerm")
+   *       .raw('keystroke "hello"')
+   *       .endtell()
+   *   })
+   */
+  withApplicationActivated(appName: string, body: (builder: ScriptBuilder) => void): this {
+    const escaped = this.escapeString(appName);
+    this.tell('System Events')
+      .setExpression('_prevFrontApp', 'name of first process where frontmost is true')
+      .endtell();
+    this.activateApplication(appName);
+    body(this as ScriptBuilder);
+    this.ifThen(`_prevFrontApp is not "${escaped}"`, (b) =>
+      b.tellTarget('application _prevFrontApp').activate().endtell(),
+    );
+    return this;
+  }
+
+  /**
    * Iterate over items with automatic block closing.
    * More intuitive name for repeatWith that uses callback pattern.
    * @param variable Loop variable name
