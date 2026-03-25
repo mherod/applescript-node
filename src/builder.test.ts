@@ -74,6 +74,139 @@ describe('AppleScriptBuilder', () => {
     });
   });
 
+  describe('iTerm2 scripting', () => {
+    it('should wrap tellITerm2 with default application name', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.tellITerm2((b) => b.activate()).build();
+
+      expect(script).toBe('tell application "iTerm2"\n  activate\nend tell');
+    });
+
+    it('should allow tellITerm2 applicationName override', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.tellITerm2((b) => b.activate(), { applicationName: 'iTerm' }).build();
+
+      expect(script).toBe('tell application "iTerm"\n  activate\nend tell');
+    });
+
+    it('should nest itermTellCurrentWindow and itermTellCurrentSession', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder
+        .tellITerm2((b) => {
+          b.itermTellCurrentWindow((w) => {
+            w.itermCreateTabWithDefaultProfile();
+            w.itermTellCurrentSession((s) => {
+              s.itermWriteText('date');
+            });
+          });
+        })
+        .build();
+
+      expect(script).toBe(
+        [
+          'tell application "iTerm2"',
+          '  tell current window',
+          '    create tab with default profile',
+          '    tell current session of current window',
+          '      write text "date"',
+          '    end tell',
+          '  end tell',
+          'end tell',
+        ].join('\n'),
+      );
+    });
+
+    it('should emit itermWriteText with newline NO', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.itermWriteText('pwd', { newline: false }).build();
+
+      expect(script).toBe('write text "pwd" newline NO');
+    });
+
+    it('should escape quotes in itermWriteText', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder.itermWriteText('say "hi"').build();
+
+      expect(script).toBe('write text "say \\"hi\\""');
+    });
+
+    it('should emit window and tab create helpers with optional command', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder
+        .itermCreateWindowWithDefaultProfile()
+        .itermCreateWindowWithDefaultProfile({ command: 'ls' })
+        .itermCreateWindowWithProfile('Prod', { command: 'top' })
+        .itermCreateHotkeyWindowWithProfile('Hotkey Window')
+        .itermCreateTabWithDefaultProfile({ command: 'whoami' })
+        .itermCreateTabWithProfile('Default', { command: 'uptime' })
+        .build();
+
+      expect(script).toBe(
+        [
+          'create window with default profile',
+          'create window with default profile command "ls"',
+          'create window with profile "Prod" command "top"',
+          'create hotkey window with profile "Hotkey Window"',
+          'create tab with default profile command "whoami"',
+          'create tab with profile "Default" command "uptime"',
+        ].join('\n'),
+      );
+    });
+
+    it('should emit split helpers with and without command', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder
+        .itermSplitHorizontallyWithDefaultProfile()
+        .itermSplitVerticallyWithProfile('Logs')
+        .itermSplitHorizontallyWithSameProfile({ command: 'bash' })
+        .itermSplitVerticallyWithSameProfile()
+        .build();
+
+      expect(script).toBe(
+        [
+          'split horizontally with default profile',
+          'split vertically with profile "Logs"',
+          'split horizontally with same profile command "bash"',
+          'split vertically with same profile',
+        ].join('\n'),
+      );
+    });
+
+    it('should wrap itermTellSession for arbitrary session references', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder
+        .tellITerm2((b) => {
+          b.itermTellSession('rightPane', (s) => {
+            s.itermWriteText('echo right');
+          });
+        })
+        .build();
+
+      expect(script).toBe(
+        [
+          'tell application "iTerm2"',
+          '  tell rightPane',
+          '    write text "echo right"',
+          '  end tell',
+          'end tell',
+        ].join('\n'),
+      );
+    });
+
+    it('should emit itermWriteContentsOfFile and itermSetSessionVariable', () => {
+      const builder = new AppleScriptBuilder();
+      const script = builder
+        .itermWriteContentsOfFile('/tmp/commands.txt')
+        .itermSetSessionVariable('user.badge', 'build ok')
+        .build();
+
+      expect(script).toBe(
+        'write contents of file "/tmp/commands.txt"\n' +
+          'set variable named "user.badge" to "build ok"',
+      );
+    });
+  });
+
   describe('Value formatting', () => {
     it('should format string values with quotes', () => {
       const builder = new AppleScriptBuilder();
@@ -1495,7 +1628,7 @@ describe('AppleScriptBuilder', () => {
 
       it('should define idle handler', () => {
         const builder = new AppleScriptBuilder();
-        const script = builder.idleHandler(10).log('Idle check').endidle().build();
+        const script = builder.idleHandler().log('Idle check').endidle().build();
 
         expect(script).toBe('on idle\n  log "Idle check"\nend idle');
       });

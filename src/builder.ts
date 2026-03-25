@@ -1853,6 +1853,187 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 
+  /**
+   * `tell application "iTerm2" … end tell` with automatic closing.
+   * @param block Commands to run while iTerm2 is targeted
+   * @param options.applicationName Override if your app registers another name (e.g. `"iTerm"`)
+   */
+  tellITerm2(
+    block: (builder: ScriptBuilder) => void,
+    options?: { applicationName?: string },
+  ): this {
+    const appName = options?.applicationName ?? 'iTerm2';
+    this.tell(appName);
+    block(this as ScriptBuilder);
+    return this.end();
+  }
+
+  /** `tell current window … end tell` (use inside {@link tellITerm2}). */
+  itermTellCurrentWindow(block: (builder: ScriptBuilder) => void): this {
+    this.tellTarget('current window');
+    block(this as ScriptBuilder);
+    return this.end();
+  }
+
+  /** `tell current session of current window … end tell` (use inside {@link tellITerm2}). */
+  itermTellCurrentSession(block: (builder: ScriptBuilder) => void): this {
+    this.tellTarget('current session of current window');
+    block(this as ScriptBuilder);
+    return this.end();
+  }
+
+  /**
+   * `tell <sessionRef> … end tell` for a session reference (e.g. `rightPane`,
+   * `current session of newTab`).
+   */
+  itermTellSession(sessionRef: string, block: (builder: ScriptBuilder) => void): this {
+    this.tellTarget(sessionRef);
+    block(this as ScriptBuilder);
+    return this.end();
+  }
+
+  itermCreateWindowWithDefaultProfile(options?: { command?: string }): this {
+    if (options?.command !== undefined) {
+      this.raw(
+        `create window with default profile command "${this.escapeString(options.command)}"`,
+      );
+    } else {
+      this.raw('create window with default profile');
+    }
+    return this;
+  }
+
+  itermCreateWindowWithProfile(profileName: string, options?: { command?: string }): this {
+    const p = this.escapeString(profileName);
+    if (options?.command !== undefined) {
+      this.raw(`create window with profile "${p}" command "${this.escapeString(options.command)}"`);
+    } else {
+      this.raw(`create window with profile "${p}"`);
+    }
+    return this;
+  }
+
+  itermCreateHotkeyWindowWithProfile(profileName: string): this {
+    this.raw(`create hotkey window with profile "${this.escapeString(profileName)}"`);
+    return this;
+  }
+
+  itermCreateTabWithDefaultProfile(options?: { command?: string }): this {
+    if (options?.command !== undefined) {
+      this.raw(`create tab with default profile command "${this.escapeString(options.command)}"`);
+    } else {
+      this.raw('create tab with default profile');
+    }
+    return this;
+  }
+
+  itermCreateTabWithProfile(profileName: string, options?: { command?: string }): this {
+    const p = this.escapeString(profileName);
+    if (options?.command !== undefined) {
+      this.raw(`create tab with profile "${p}" command "${this.escapeString(options.command)}"`);
+    } else {
+      this.raw(`create tab with profile "${p}"`);
+    }
+    return this;
+  }
+
+  itermSplitHorizontallyWithDefaultProfile(options?: { command?: string }): this {
+    if (options?.command !== undefined) {
+      this.raw(
+        `split horizontally with default profile command "${this.escapeString(options.command)}"`,
+      );
+    } else {
+      this.raw('split horizontally with default profile');
+    }
+    return this;
+  }
+
+  itermSplitVerticallyWithDefaultProfile(options?: { command?: string }): this {
+    if (options?.command !== undefined) {
+      this.raw(
+        `split vertically with default profile command "${this.escapeString(options.command)}"`,
+      );
+    } else {
+      this.raw('split vertically with default profile');
+    }
+    return this;
+  }
+
+  itermSplitHorizontallyWithProfile(profileName: string, options?: { command?: string }): this {
+    const p = this.escapeString(profileName);
+    if (options?.command !== undefined) {
+      this.raw(
+        `split horizontally with profile "${p}" command "${this.escapeString(options.command)}"`,
+      );
+    } else {
+      this.raw(`split horizontally with profile "${p}"`);
+    }
+    return this;
+  }
+
+  itermSplitVerticallyWithProfile(profileName: string, options?: { command?: string }): this {
+    const p = this.escapeString(profileName);
+    if (options?.command !== undefined) {
+      this.raw(
+        `split vertically with profile "${p}" command "${this.escapeString(options.command)}"`,
+      );
+    } else {
+      this.raw(`split vertically with profile "${p}"`);
+    }
+    return this;
+  }
+
+  itermSplitHorizontallyWithSameProfile(options?: { command?: string }): this {
+    if (options?.command !== undefined) {
+      this.raw(
+        `split horizontally with same profile command "${this.escapeString(options.command)}"`,
+      );
+    } else {
+      this.raw('split horizontally with same profile');
+    }
+    return this;
+  }
+
+  itermSplitVerticallyWithSameProfile(options?: { command?: string }): this {
+    if (options?.command !== undefined) {
+      this.raw(
+        `split vertically with same profile command "${this.escapeString(options.command)}"`,
+      );
+    } else {
+      this.raw('split vertically with same profile');
+    }
+    return this;
+  }
+
+  /**
+   * Sends keystrokes to the current session (use inside {@link itermTellCurrentSession} or similar).
+   * @param options.newline Set false to append `newline NO` (omit trailing newline).
+   */
+  itermWriteText(text: string, options?: { newline?: boolean }): this {
+    const escaped = this.escapeString(text);
+    if (options?.newline === false) {
+      this.raw(`write text "${escaped}" newline NO`);
+    } else {
+      this.raw(`write text "${escaped}"`);
+    }
+    return this;
+  }
+
+  /** Pipe a file into the session as typed input (iTerm2 `write contents of file`). */
+  itermWriteContentsOfFile(path: string): this {
+    this.raw(`write contents of file "${this.escapeString(path)}"`);
+    return this;
+  }
+
+  /**
+   * Sets a session variable (badge / user vars use names like `user.foo`).
+   * @see https://www.iterm2.com/documentation-variables.html
+   */
+  itermSetSessionVariable(name: string, value: string): this {
+    this.raw(`set variable named "${this.escapeString(name)}" to "${this.escapeString(value)}"`);
+    return this;
+  }
+
   // Convenience helpers for cleaner API
   /**
    * Simplified tell application pattern with automatic block closing.
