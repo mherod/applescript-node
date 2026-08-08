@@ -1,5 +1,5 @@
+import { createScript } from '../builder.js';
 import { ScriptExecutor } from '../executor.js';
-import { createScript } from '../index.js';
 import { executeJsonScript, executeScriptOrThrow } from './shared.js';
 
 /**
