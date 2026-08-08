@@ -845,7 +845,7 @@ export class AppleScriptBuilder implements ScriptBuilder {
       acc[key] = key; // JSON key maps to record property with same name
       return acc;
     }, {});
-    return this.returnAsJson(listVar, recordPropertyMap);
+    return this.returnAsJson(listVar, recordPropertyMap, { skipErrors: options.skipErrors });
   }
 
   /**
@@ -854,10 +854,14 @@ export class AppleScriptBuilder implements ScriptBuilder {
    * Handles proper escaping of strings, booleans, numbers, and null values.
    * @param listVariable Name of the variable containing a list of records
    * @param propertyMap Mapping of JSON keys to AppleScript property names (e.g., {id: 'noteId', name: 'noteName'})
+   * @param options.skipErrors When true, records that fail to serialize are omitted from the
+   * array. Defaults to false, so a failing record raises the underlying AppleScript error
+   * rather than disappearing from the result.
    */
   returnAsJson<TProperties extends Record<string, string>>(
     listVariable: string,
     propertyMap: TProperties,
+    options: { skipErrors?: boolean } = {},
   ): ScriptBuilder<never, JsonObjectShape<TProperties>[]> {
     // Prepend handlers to the beginning of the script (they must be at top level)
     const handlers = [
@@ -903,23 +907,32 @@ export class AppleScriptBuilder implements ScriptBuilder {
     this.script.unshift(...handlers);
 
     // Build JSON array from list of records (at current position in script)
+    // Records that fail to serialize propagate the AppleScript error by default, so a
+    // dropped record is never silent. Pass { skipErrors: true } for lenient behaviour.
+    const skipErrors = options.skipErrors ?? false;
+    const pad = skipErrors ? '  ' : '';
+
     this.raw('set jsonParts to {}');
     this.raw(`repeat with rec in ${listVariable}`);
-    this.raw('  try');
-    this.raw(`    set itemJson to "{"`);
+    if (skipErrors) {
+      this.raw('  try');
+    }
+    this.raw(`  ${pad}set itemJson to "{"`);
 
     // Generate property access for each key in the property map
     const entries = Object.entries(propertyMap);
     entries.forEach(([jsonKey, appleScriptProp], index) => {
       const comma = index > 0 ? ',' : '';
       this.raw(
-        `    set itemJson to itemJson & "${comma}\\"${jsonKey}\\":" & my valueToJson(${appleScriptProp} of rec)`,
+        `  ${pad}set itemJson to itemJson & "${comma}\\"${jsonKey}\\":" & my valueToJson(${appleScriptProp} of rec)`,
       );
     });
 
-    this.raw(`    set itemJson to itemJson & "}"`);
-    this.raw('    set end of jsonParts to itemJson');
-    this.raw('  end try');
+    this.raw(`  ${pad}set itemJson to itemJson & "}"`);
+    this.raw(`  ${pad}set end of jsonParts to itemJson`);
+    if (skipErrors) {
+      this.raw('  end try');
+    }
     this.raw('end repeat');
     this.raw('');
     this.raw(`set AppleScript's text item delimiters to ","`);

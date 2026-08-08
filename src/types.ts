@@ -448,6 +448,7 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
   returnAsJson: <TProperties extends Record<string, string>>(
     listVariable: string,
     propertyMap: TProperties,
+    options?: { skipErrors?: boolean },
   ) => ScriptBuilder<TScope, JsonObjectShape<TProperties>[]>;
   /**
    * Map a collection to JSON with automatic iteration, property extraction, and type inference.
