@@ -401,9 +401,48 @@ describe('applications', () => {
       await hide('App with "quotes"');
 
       const scriptCall = mockExecute.mock.calls.at(-1);
-      // The script contains: process "App with \"quotes\""
-      // In the string representation, backslashes are escaped, so we check for the escaped version
-      expect(scriptCall?.[0]).toMatch(/App with .*quotes/);
+      expect(scriptCall?.[0]).toContain(
+        String.raw`set visible of process "App with \"quotes\"" to false`,
+      );
+    });
+
+    /**
+     * The name must be escaped exactly once. The previous nested-tell form fed
+     * an already-escaped name back through the builder's own escaping, so a
+     * single quote arrived as `\\\"` in the emitted script.
+     */
+    it('should address the app as a process inside System Events', async () => {
+      mockExecute.mockResolvedValueOnce({
+        success: true,
+        output: '',
+        exitCode: 0,
+      });
+
+      await hide('Safari');
+
+      const scriptCall = mockExecute.mock.calls.at(-1);
+      expect(scriptCall?.[0]).toContain('set visible of process "Safari" to false');
+      expect(scriptCall?.[0]).not.toContain('tell application "process');
+    });
+
+    /**
+     * Escaping quotes without escaping backslashes first leaves `a\"b` as
+     * `a\\"b`, whose `\\` is a literal backslash — so the `"` terminates the
+     * string and the rest of the name becomes code. Verified against live
+     * osascript: the unescaped form fails with "Expected \" but found unknown
+     * token. (-2741)".
+     */
+    it('should escape backslashes before quotes in app name', async () => {
+      mockExecute.mockResolvedValueOnce({
+        success: true,
+        output: '',
+        exitCode: 0,
+      });
+
+      await hide(String.raw`back\slash"quote`);
+
+      const scriptCall = mockExecute.mock.calls.at(-1);
+      expect(scriptCall?.[0]).toContain(String.raw`process "back\\slash\"quote"`);
     });
   });
 
