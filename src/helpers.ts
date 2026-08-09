@@ -40,15 +40,21 @@ export function escapeAppleScriptString(str: string): string {
 /**
  * Convert a JavaScript value into its AppleScript literal form.
  *
- * Strings become quoted literals, `null` becomes `missing value`, arrays become
- * AppleScript lists, and plain objects become records.
+ * Strings become quoted literals, arrays become AppleScript lists, and plain
+ * objects become records. Both `null` and `undefined` become `missing value` —
+ * `undefined` is outside `AppleScriptValue`, but it reaches this function from
+ * plain-JS callers and from optional properties that are absent at runtime, and
+ * `missing value` is what AppleScript calls the same idea. Without the guard
+ * those cases fall through to the record branch and throw from
+ * `Object.entries(undefined)`.
  *
  * @example
  * toAppleScriptLiteral(['a', 1, true]); // '{"a", 1, true}'
  * toAppleScriptLiteral({ name: 'Finder' }); // '{name:"Finder"}'
+ * toAppleScriptLiteral({ name: 'Finder', note: undefined }); // '{name:"Finder", note:missing value}'
  */
-export function toAppleScriptLiteral(value: AppleScriptValue): string {
-  if (value === null) return 'missing value';
+export function toAppleScriptLiteral(value: AppleScriptValue | undefined): string {
+  if (value === null || value === undefined) return 'missing value';
   if (typeof value === 'string') return `"${escapeAppleScriptString(value)}"`;
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   if (Array.isArray(value)) return `{${value.map((v) => toAppleScriptLiteral(v)).join(', ')}}`;
@@ -69,7 +75,10 @@ export function toAppleScriptLiteral(value: AppleScriptValue): string {
  * const script = osa`tell application ${name} to get name of front window`;
  * // tell application "Finder" to get name of front window
  */
-export function osa(strings: TemplateStringsArray, ...values: AppleScriptValue[]): string {
+export function osa(
+  strings: TemplateStringsArray,
+  ...values: (AppleScriptValue | undefined)[]
+): string {
   return strings.reduce(
     (acc, part, index) =>
       index === 0 ? part : `${acc}${toAppleScriptLiteral(values[index - 1])}${part}`,
@@ -135,17 +144,26 @@ const normaliseNewlines = (message: string): string => message.replace(/\r\n?/g,
 /**
  * Pull the structured diagnostic out of a failed run's error text.
  *
- * osascript writes the shell command on the first line and its own diagnostic
- * after it, so the first line is skipped. Returns `undefined` when no line has
- * the diagnostic shape — a missing script file, for instance, reports
- * `osascript: <path>: No such file or directory` and nothing else.
+ * The two runtimes hand us different shapes. Node's `promisify(exec)` prefixes
+ * the thrown message with `Command failed: <command>` and puts the diagnostic
+ * after it; Bun throws the raw stderr, so the diagnostic is the very first line.
+ * Rather than assume a position, drop the command echo and scan what remains
+ * from the end — the diagnostic always trails the command it describes, and a
+ * script whose own source happens to contain `... error: ... (-1)` cannot be
+ * mistaken for it.
+ *
+ * Returns `undefined` when no line has the diagnostic shape — a missing script
+ * file, for instance, reports `osascript: <path>: No such file or directory`.
  *
  * @example
  * const diagnostic = parseAppleScriptError(result.error);
  * if (diagnostic?.errorNumber === -1728) { ... }
  */
 export function parseAppleScriptError(errorText: string): AppleScriptDiagnostic | undefined {
-  const lines = errorText.split('\n').slice(1);
+  const lines = errorText
+    .split('\n')
+    .filter((line) => !line.startsWith('Command failed:'))
+    .reverse();
 
   for (const line of lines) {
     const trimmed = line.trim();
