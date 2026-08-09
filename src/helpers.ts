@@ -11,6 +11,7 @@
 import { AppleScriptBuilder } from './builder.js';
 import { ScriptExecutor } from './executor.js';
 import type {
+  AppleScriptDiagnostic,
   AppleScriptValue,
   OsaScriptOptions,
   Prettify,
@@ -107,19 +108,107 @@ export function parseScriptOutput<T>(
 }
 
 /**
+ * osascript diagnostics look like:
+ *
+ *   32:40: execution error: Can't get application "NoSuchApp". (-1728)
+ *   execution error: Error: Error: jxa boom (-2700)      <- JXA omits the offsets
+ *   6:32: execution error: failed (twice) (already) (7)  <- message may hold parens
+ *
+ * The message is matched greedily so a trailing `(number)` wins over any
+ * parentheses inside the message itself, and it is matched with `[\s\S]` rather
+ * than `.` because an AppleScript `error "a" & return & "b"` puts a carriage
+ * return inside the message, which `.` does not match.
+ */
+const DIAGNOSTIC_WITH_NUMBER = /^(?:(\d+):(\d+):\s*)?(.+? error):\s*([\s\S]*)\s\((-?\d+)\)$/;
+const DIAGNOSTIC_WITHOUT_NUMBER = /^(?:(\d+):(\d+):\s*)?(.+? error):\s*([\s\S]*)$/;
+
+const toOffset = (value: string | undefined): number | undefined =>
+  value === undefined ? undefined : Number.parseInt(value, 10);
+
+/**
+ * AppleScript's `return` is a carriage return, so multi-line messages arrive
+ * CR-separated and would overprint themselves in a terminal. `raw` keeps the
+ * original bytes; `message` gets newlines.
+ */
+const normaliseNewlines = (message: string): string => message.replace(/\r\n?/g, '\n');
+
+/**
+ * Pull the structured diagnostic out of a failed run's error text.
+ *
+ * osascript writes the shell command on the first line and its own diagnostic
+ * after it, so the first line is skipped. Returns `undefined` when no line has
+ * the diagnostic shape — a missing script file, for instance, reports
+ * `osascript: <path>: No such file or directory` and nothing else.
+ *
+ * @example
+ * const diagnostic = parseAppleScriptError(result.error);
+ * if (diagnostic?.errorNumber === -1728) { ... }
+ */
+export function parseAppleScriptError(errorText: string): AppleScriptDiagnostic | undefined {
+  const lines = errorText.split('\n').slice(1);
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) continue;
+
+    const withNumber = DIAGNOSTIC_WITH_NUMBER.exec(trimmed);
+    if (withNumber) {
+      const [, start, end, kind, message, errorNumber] = withNumber;
+      return {
+        kind,
+        message: normaliseNewlines(message),
+        errorNumber: Number.parseInt(errorNumber, 10),
+        start: toOffset(start),
+        end: toOffset(end),
+        raw: trimmed,
+      };
+    }
+
+    const withoutNumber = DIAGNOSTIC_WITHOUT_NUMBER.exec(trimmed);
+    if (withoutNumber) {
+      const [, start, end, kind, message] = withoutNumber;
+      return {
+        kind,
+        message: normaliseNewlines(message),
+        start: toOffset(start),
+        end: toOffset(end),
+        raw: trimmed,
+      };
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Error thrown by the `*OrThrow` helpers when osascript reports a failure.
  *
- * Carries the exit code and the script that produced it so callers can log or retry.
+ * `message` is the AppleScript diagnostic where one could be parsed, so logging
+ * the error shows `Can't get application "NoSuchApp".` rather than the shell
+ * command osascript was invoked with. The untouched text stays on `stderr`, and
+ * `diagnostic` carries the parsed fields when they are available.
  */
 export class ScriptExecutionError extends Error {
   readonly exitCode: number;
   readonly script: string;
+  /** Complete error text as reported, including the `Command failed:` line. */
+  readonly stderr: string;
+  /** Parsed diagnostic, absent when osascript did not emit one. */
+  readonly diagnostic?: AppleScriptDiagnostic;
 
-  constructor(message: string, exitCode: number, script: string) {
-    super(message);
+  constructor(stderr: string, exitCode: number, script: string) {
+    const diagnostic = parseAppleScriptError(stderr);
+    super(diagnostic?.message ?? stderr.trim());
     this.name = 'ScriptExecutionError';
     this.exitCode = exitCode;
     this.script = script;
+    this.stderr = stderr;
+    this.diagnostic = diagnostic;
+  }
+
+  /** AppleScript error number, e.g. `-1728`, when osascript reported one. */
+  get errorNumber(): number | undefined {
+    return this.diagnostic?.errorNumber;
   }
 }
 

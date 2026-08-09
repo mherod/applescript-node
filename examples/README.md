@@ -92,7 +92,7 @@ Tours the top-level helpers that shortcut the common cases.
 - `tell` with a raw string body or a builder callback
 - `isRunning` (via System Events, so it never launches the app) and `activate`
 - `runJxa` for JavaScript for Automation, with the same automatic JSON parsing
-- `runScriptOrThrow` and reading the AppleScript diagnostic off `ScriptExecutionError`
+- `runScriptOrThrow`, and branching on `ScriptExecutionError.errorNumber` rather than message text
 
 ### 6. Safe Interpolation (`safe-interpolation.ts`)
 

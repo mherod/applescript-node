@@ -6,6 +6,7 @@ import {
   escapeAppleScriptString,
   isRunning,
   osa,
+  parseAppleScriptError,
   parseScriptOutput,
   runJxa,
   runScriptOrThrow,
@@ -69,6 +70,108 @@ describe('parseScriptOutput', () => {
 
   it('passes failures through', () => {
     expect(parseScriptOutput(fail('boom')).success).toBe(false);
+  });
+});
+
+/**
+ * Every fixture below is real osascript stderr, captured by
+ * scripts/debug-script-error-shape.ts rather than written by hand.
+ */
+describe('parseAppleScriptError', () => {
+  const stderr = (diagnostic: string) => `Command failed: osascript -s h -e 'x'\n${diagnostic}\n`;
+
+  it('parses offsets, kind, message, and error number', () => {
+    expect(
+      parseAppleScriptError(
+        stderr('32:40: execution error: Can’t get application "NoSuchApp". (-1728)'),
+      ),
+    ).toEqual({
+      kind: 'execution error',
+      message: 'Can’t get application "NoSuchApp".',
+      errorNumber: -1728,
+      start: 32,
+      end: 40,
+      raw: '32:40: execution error: Can’t get application "NoSuchApp". (-1728)',
+    });
+  });
+
+  it('parses a syntax error with a custom error number', () => {
+    const parsed = parseAppleScriptError(stderr('6:26: execution error: deliberate failure (42)'));
+    expect(parsed?.errorNumber).toBe(42);
+    expect(parsed?.message).toBe('deliberate failure');
+  });
+
+  it('keeps parentheses that belong to the message', () => {
+    const parsed = parseAppleScriptError(
+      stderr('6:32: execution error: failed (twice) (already) (7)'),
+    );
+    expect(parsed?.message).toBe('failed (twice) (already)');
+    expect(parsed?.errorNumber).toBe(7);
+  });
+
+  it('handles JXA errors, which carry no offsets', () => {
+    const parsed = parseAppleScriptError(stderr('execution error: Error: Error: jxa boom (-2700)'));
+    expect(parsed?.start).toBeUndefined();
+    expect(parsed?.end).toBeUndefined();
+    expect(parsed?.message).toBe('Error: Error: jxa boom');
+  });
+
+  it('normalises carriage returns in the message but not in raw', () => {
+    const parsed = parseAppleScriptError(
+      stderr('6:38: execution error: line one\rline two (-2700)'),
+    );
+    expect(parsed?.message).toBe('line one\nline two');
+    expect(parsed?.raw).toBe('6:38: execution error: line one\rline two (-2700)');
+  });
+
+  it('parses a diagnostic that omits the error number', () => {
+    const parsed = parseAppleScriptError(stderr('12:29: syntax error: something went wrong'));
+    expect(parsed?.errorNumber).toBeUndefined();
+    expect(parsed?.message).toBe('something went wrong');
+  });
+
+  it('returns undefined when no line has the diagnostic shape', () => {
+    expect(
+      parseAppleScriptError(
+        'Command failed: osascript -s h "/tmp/nope.scpt"\nosascript: /tmp/nope.scpt: No such file or directory\n',
+      ),
+    ).toBeUndefined();
+  });
+
+  it('returns undefined for empty input', () => {
+    expect(parseAppleScriptError('')).toBeUndefined();
+  });
+
+  it('ignores the command line, even when the script itself looks like a diagnostic', () => {
+    expect(
+      parseAppleScriptError(`Command failed: osascript -s h -e 'log "execution error: nope (-1)"'`),
+    ).toBeUndefined();
+  });
+});
+
+describe('ScriptExecutionError', () => {
+  const stderr =
+    'Command failed: osascript -s h -e \'x\'\n32:40: execution error: Can’t get application "NoSuchApp". (-1728)\n';
+
+  it('uses the diagnostic as its message and keeps the raw text', () => {
+    const error = new ScriptExecutionError(stderr, 1, 'x');
+    expect(error.message).toBe('Can’t get application "NoSuchApp".');
+    expect(error.errorNumber).toBe(-1728);
+    expect(error.diagnostic?.kind).toBe('execution error');
+    expect(error.stderr).toBe(stderr);
+    expect(error.script).toBe('x');
+    expect(error.exitCode).toBe(1);
+  });
+
+  it('falls back to the full text when there is no diagnostic', () => {
+    const error = new ScriptExecutionError('osascript: nope: No such file or directory\n', 1, 'x');
+    expect(error.message).toBe('osascript: nope: No such file or directory');
+    expect(error.diagnostic).toBeUndefined();
+    expect(error.errorNumber).toBeUndefined();
+  });
+
+  it('is catchable as an Error', () => {
+    expect(new ScriptExecutionError(stderr, 1, 'x')).toBeInstanceOf(Error);
   });
 });
 

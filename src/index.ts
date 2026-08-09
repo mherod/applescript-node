@@ -14,6 +14,7 @@ export * from './sdef.js';
 // High-level data source APIs
 export * as sources from './sources/index.js';
 export type {
+  AppleScriptDiagnostic,
   AppleScriptValue,
   ApplicationDictionary,
   ApplicationTarget,

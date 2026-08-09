@@ -71,22 +71,34 @@ async function main() {
     await runScriptOrThrow('this is not valid applescript at all');
   } catch (error) {
     if (error instanceof ScriptExecutionError) {
-      // The error carries the script that produced it, so a failure deep in a
-      // helper chain still tells you exactly what osascript was asked to run.
+      // `message` is the AppleScript diagnostic, not the shell command that
+      // wrapped it, so plain logging already says something useful.
       console.log('caught ScriptExecutionError');
-      console.log(
-        '  exitCode:',
-        error.exitCode,
-        '(always 1 — osascript does not map error numbers)',
-      );
-      console.log('  script:  ', error.script);
+      console.log('  message: ', error.message);
 
-      // osascript writes two useful lines: the shell command it ran, then the
-      // AppleScript diagnostic with source offsets and the AppleScript error
-      // number. The second line is the one worth surfacing to a user.
-      const [command, diagnostic] = error.message.split('\n');
-      console.log('  command: ', command);
-      console.log('  detail:  ', diagnostic);
+      // The parsed diagnostic carries the parts worth branching on. `exitCode`
+      // is always 1 — osascript does not map AppleScript error numbers onto it,
+      // so `errorNumber` is what you actually want.
+      console.log('  errorNumber:', error.errorNumber, `(exitCode is always ${error.exitCode})`);
+      console.log('  kind:       ', error.diagnostic?.kind);
+      console.log('  offsets:    ', error.diagnostic?.start, '->', error.diagnostic?.end);
+
+      // The script that failed and the untouched osascript text are both kept.
+      console.log('  script:  ', error.script);
+      console.log('  stderr:  ', JSON.stringify(error.stderr));
+    } else {
+      throw error;
+    }
+  }
+
+  // The payoff: branch on the AppleScript error number instead of matching on
+  // message text, which changes with the user's language and macOS version.
+  console.log('\n--- branching on the error number ---');
+  try {
+    await runScriptOrThrow('tell application "NoSuchApp" to activate');
+  } catch (error) {
+    if (error instanceof ScriptExecutionError && error.errorNumber === -1728) {
+      console.log('-1728: application not found — recoverable, so carry on');
     } else {
       throw error;
     }
