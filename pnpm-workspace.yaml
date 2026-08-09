@@ -1,6 +1,14 @@
 # pnpm 11 requires an explicit decision for every dependency with an install
 # script. Without this file pnpm halts with ERR_PNPM_IGNORED_BUILDS before
 # running any script, which breaks `pnpm test` and the husky hooks.
+#
+# CI pins pnpm 9.14.4, which reads this file strictly as a workspace manifest
+# and fails with "packages field missing or empty" unless `packages` is present.
+# This repo is a single package, so the root is the only entry; pnpm 9 ignores
+# allowBuilds, and pnpm 11 honours it.
+packages:
+  - .
+
 allowBuilds:
   # tsup and vitest both need esbuild's platform binary.
   esbuild: true
