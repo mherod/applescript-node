@@ -10,6 +10,7 @@
 
 import { AppleScriptBuilder } from './builder.js';
 import { ScriptExecutor } from './executor.js';
+import { toAppleScriptLiteral } from './literals.js';
 import type {
   AppleScriptDiagnostic,
   AppleScriptValue,
@@ -19,51 +20,10 @@ import type {
   ScriptExecutionResult,
 } from './types.js';
 
-/**
- * Escape a JavaScript string for safe embedding inside an AppleScript string literal.
- *
- * Backslashes are escaped first, then quotes, so an input backslash never combines
- * with a following quote to produce an unterminated literal.
- *
- * @example
- * escapeAppleScriptString('say "hi"\\now'); // 'say \\"hi\\"\\\\now'
- */
-export function escapeAppleScriptString(str: string): string {
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t');
-}
-
-/**
- * Convert a JavaScript value into its AppleScript literal form.
- *
- * Strings become quoted literals, arrays become AppleScript lists, and plain
- * objects become records. Both `null` and `undefined` become `missing value` —
- * `undefined` is outside `AppleScriptValue`, but it reaches this function from
- * plain-JS callers and from optional properties that are absent at runtime, and
- * `missing value` is what AppleScript calls the same idea. Without the guard
- * those cases fall through to the record branch and throw from
- * `Object.entries(undefined)`.
- *
- * @example
- * toAppleScriptLiteral(['a', 1, true]); // '{"a", 1, true}'
- * toAppleScriptLiteral({ name: 'Finder' }); // '{name:"Finder"}'
- * toAppleScriptLiteral({ name: 'Finder', note: undefined }); // '{name:"Finder", note:missing value}'
- */
-export function toAppleScriptLiteral(value: AppleScriptValue | undefined): string {
-  if (value === null || value === undefined) return 'missing value';
-  if (typeof value === 'string') return `"${escapeAppleScriptString(value)}"`;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (Array.isArray(value)) return `{${value.map((v) => toAppleScriptLiteral(v)).join(', ')}}`;
-
-  const entries = Object.entries(value as Record<string, AppleScriptValue>)
-    .map(([key, val]) => `${key}:${toAppleScriptLiteral(val)}`)
-    .join(', ');
-  return `{${entries}}`;
-}
+// Escaping and literal formatting are defined in literals.ts, which the builder
+// and the sources/* modules import too. Re-exported here because they are part
+// of this module's published surface.
+export { escapeAppleScriptString, toAppleScriptLiteral } from './literals.js';
 
 /**
  * Tagged template that builds an AppleScript source string with safely escaped
@@ -303,31 +263,32 @@ export async function tell<T = string>(
 /**
  * Activate (bring to the front) the named application.
  *
+ * @throws {ScriptExecutionError} If osascript reports a failure — most often
+ * error `-1728` when no such application exists.
+ *
  * @example
  * await activate('Safari');
  */
 export async function activate(application: string): Promise<void> {
-  const script = osa`tell application ${application} to activate`;
-  const result = await ScriptExecutor.execute(script);
-
-  if (!result.success) {
-    throw new ScriptExecutionError(result.error, result.exitCode, script);
-  }
+  await runScriptOrThrow(osa`tell application ${application} to activate`);
 }
 
 /**
  * Report whether the named application is currently running, without launching it.
  *
+ * The check goes through System Events rather than the application itself,
+ * because addressing an app directly would launch it to answer the question.
+ *
+ * @throws {ScriptExecutionError} If osascript reports a failure, for instance
+ * when System Events has not been granted automation access.
+ *
  * @example
  * if (await isRunning('Music')) { ... }
  */
 export async function isRunning(application: string): Promise<boolean> {
-  const script = osa`tell application "System Events" to (name of processes) contains ${application}`;
-  const result = await ScriptExecutor.execute(script);
+  const output = await runScriptOrThrow(
+    osa`tell application "System Events" to (name of processes) contains ${application}`,
+  );
 
-  if (!result.success) {
-    throw new ScriptExecutionError(result.error, result.exitCode, script);
-  }
-
-  return result.output?.trim() === 'true';
+  return output.trim() === 'true';
 }

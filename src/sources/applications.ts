@@ -1,5 +1,6 @@
 import { createScript } from '../builder.js';
 import { ScriptExecutor } from '../executor.js';
+import { escapeAppleScriptString } from '../literals.js';
 import { executeJsonScript, executeScriptOrThrow } from './shared.js';
 
 /**
@@ -205,16 +206,20 @@ export async function show(appName: string): Promise<void> {
   await setApplicationVisibility(appName, true);
 }
 
-function escapeAppleScriptString(value: string): string {
-  return value.replace(/"/g, '\\"');
-}
-
+/**
+ * Build the script that shows or hides an application.
+ *
+ * The target must be addressed as a process *inside* System Events. Passing
+ * `process "X"` to the builder's `tell()` produced
+ * `tell application "process \"X\""` — a nested application lookup that always
+ * failed with `-1728`, and which double-escaped the name on the way. Verified
+ * against live osascript: that form errors with
+ * `Can't get application "process \"Finder\""`, while this one returns.
+ */
 function buildVisibilityScript(appName: string, visible: boolean): string {
   const script = createScript()
     .tell('System Events')
-    .tell(`process "${escapeAppleScriptString(appName)}"`)
-    .raw(`set visible to ${visible}`)
-    .endtell()
+    .raw(`set visible of process "${escapeAppleScriptString(appName)}" to ${visible}`)
     .endtell();
 
   return script.build();
