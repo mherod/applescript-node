@@ -70,18 +70,24 @@ export async function getAll(): Promise<WindowInfo[]> {
           ),
         ),
     )
-    .returnAsJson('windowsList', {
-      name: 'name',
-      app: 'app',
-      id: 'id',
-      x: 'x',
-      y: 'y',
-      width: 'width',
-      height: 'height',
-      minimized: 'minimized',
-      zoomed: 'zoomed',
-      visible: 'visible',
-    })
+    .returnAsJson(
+      'windowsList',
+      {
+        name: 'name',
+        app: 'app',
+        id: 'id',
+        x: 'x',
+        y: 'y',
+        width: 'width',
+        height: 'height',
+        minimized: 'minimized',
+        zoomed: 'zoomed',
+        visible: 'visible',
+      },
+      // Match the tryCatch above: a window we cannot serialize is skipped,
+      // not fatal to the whole enumeration.
+      { skipErrors: true },
+    )
     .endtell();
 
   const windows = await executeJsonScript<unknown[]>(script.build(), {

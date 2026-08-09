@@ -159,6 +159,20 @@ describe('system', () => {
       const volumes = await getVolumes();
       expect(volumes).toEqual([]);
     });
+
+    it('should serialize leniently so one unreadable disk does not fail the batch', async () => {
+      mockExecute.mockResolvedValueOnce({
+        success: true,
+        output: '[]',
+        exitCode: 0,
+      });
+
+      await getVolumes();
+
+      const script = mockExecute.mock.calls[0][0];
+      const serializationLoop = script.slice(script.indexOf('set jsonParts to {}'));
+      expect(serializationLoop).toContain('try');
+    });
   });
 
   describe('getDisplays', () => {

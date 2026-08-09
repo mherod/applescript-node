@@ -201,12 +201,17 @@ const integrationScript = createScript()
       (catchBlock) => catchBlock.comment('Skip notes with errors'),
     ),
   )
-  .returnAsJson('notesList', {
-    name: 'name',
-    plaintext: 'plaintext',
-    created: 'created',
-    modified: 'modified',
-  })
+  .returnAsJson(
+    'notesList',
+    {
+      name: 'name',
+      plaintext: 'plaintext',
+      created: 'created',
+      modified: 'modified',
+    },
+    // Match the tryCatch above: skip notes that cannot be serialized.
+    { skipErrors: true },
+  )
   .endtell();
 
 console.log(chalk.white('Integration with forEach and tryCatch:'));

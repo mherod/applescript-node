@@ -117,14 +117,20 @@ export async function getVolumes(): Promise<VolumeInfo[]> {
         (catchBlock) => catchBlock.comment('Skip disks with errors'),
       ),
     )
-    .returnAsJson('volumesList', {
-      name: 'name',
-      capacity: 'capacity',
-      freeSpace: 'freeSpace',
-      usedSpace: 'usedSpace',
-      format: 'format',
-      ejectable: 'ejectable',
-    })
+    .returnAsJson(
+      'volumesList',
+      {
+        name: 'name',
+        capacity: 'capacity',
+        freeSpace: 'freeSpace',
+        usedSpace: 'usedSpace',
+        format: 'format',
+        ejectable: 'ejectable',
+      },
+      // Match the tryCatch above: a disk we cannot serialize is skipped,
+      // not fatal to the whole enumeration.
+      { skipErrors: true },
+    )
     .endtell();
 
   return executeJsonScript<VolumeInfo[]>(script.build(), {

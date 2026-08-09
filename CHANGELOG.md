@@ -16,6 +16,12 @@ All notable changes to applescript-node are documented in this file.
   now threaded through to this stage, so it controls both record
   building and serialization.
 
+  The `sources` APIs are unaffected: `windows.getAll()`,
+  `applications.getAll()`, and `system.getVolumes()` now pass
+  `{ skipErrors: true }` explicitly, preserving their existing
+  behaviour of returning partial results when an individual window,
+  process, or disk cannot be read.
+
 ### 25 March 2026
 
 #### New Features

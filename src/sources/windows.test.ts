@@ -161,6 +161,20 @@ describe('windows', () => {
       const result = await getAll();
       expect(result).toEqual([]);
     });
+
+    it('should serialize leniently so one unreadable window does not fail the batch', async () => {
+      mockExecute.mockResolvedValueOnce({
+        success: true,
+        output: '[]',
+        exitCode: 0,
+      });
+
+      await getAll();
+
+      const script = mockExecute.mock.calls[0][0];
+      const serializationLoop = script.slice(script.indexOf('set jsonParts to {}'));
+      expect(serializationLoop).toContain('try');
+    });
   });
 
   describe('getByApp', () => {
