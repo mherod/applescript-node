@@ -51,14 +51,20 @@ export async function getAll(includeBackgroundApps = false): Promise<Application
         (catchBlock) => catchBlock.comment('Skip processes with errors'),
       ),
     )
-    .returnAsJson('appsList', {
-      name: 'name',
-      bundleId: 'bundleId',
-      pid: 'pid',
-      visible: 'visible',
-      frontmost: 'frontmost',
-      windowCount: 'windowCount',
-    })
+    .returnAsJson(
+      'appsList',
+      {
+        name: 'name',
+        bundleId: 'bundleId',
+        pid: 'pid',
+        visible: 'visible',
+        frontmost: 'frontmost',
+        windowCount: 'windowCount',
+      },
+      // Match the tryCatch above: a process we cannot serialize is skipped,
+      // not fatal to the whole enumeration.
+      { skipErrors: true },
+    )
     .endtell();
 
   return executeJsonScript<ApplicationInfo[]>(script.build(), {

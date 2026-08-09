@@ -4,6 +4,24 @@ All notable changes to applescript-node are documented in this file.
 
 ## [Unreleased]
 
+### 8 August 2026
+
+#### Breaking Changes
+
+- `returnAsJson()` no longer wraps per-record serialization in a
+  silent `try`. A record that cannot be serialized now raises the
+  underlying AppleScript error instead of disappearing from the
+  result array. Pass `{ skipErrors: true }` to restore the previous
+  lenient behaviour. `mapToJson()`'s existing `skipErrors` option is
+  now threaded through to this stage, so it controls both record
+  building and serialization.
+
+  The `sources` APIs are unaffected: `windows.getAll()`,
+  `applications.getAll()`, and `system.getVolumes()` now pass
+  `{ skipErrors: true }` explicitly, preserving their existing
+  behaviour of returning partial results when an individual window,
+  process, or disk cannot be read.
+
 ### 25 March 2026
 
 #### New Features

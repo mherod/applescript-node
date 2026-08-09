@@ -1713,4 +1713,44 @@ describe('Builder - mapToJson() Ultra-Shorthand', () => {
     expect(script).toContain('set jsonArray to "[" & (jsonParts as text) & "]"');
     expect(script).toContain('return jsonArray');
   });
+
+  describe('returnAsJson error visibility', () => {
+    it('does not wrap serialization in try by default, so failures surface', () => {
+      const script = new AppleScriptBuilder()
+        .set('rows', [])
+        .returnAsJson('rows', { id: 'id', name: 'name' })
+        .build();
+
+      const serializationLoop = script.slice(script.indexOf('set jsonParts to {}'));
+      expect(serializationLoop).not.toContain('try');
+      expect(serializationLoop).toContain('set end of jsonParts to itemJson');
+    });
+
+    it('wraps serialization in try when skipErrors is true', () => {
+      const script = new AppleScriptBuilder()
+        .set('rows', [])
+        .returnAsJson('rows', { id: 'id', name: 'name' }, { skipErrors: true })
+        .build();
+
+      const serializationLoop = script.slice(script.indexOf('set jsonParts to {}'));
+      expect(serializationLoop).toContain('  try');
+      expect(serializationLoop).toContain('  end try');
+    });
+
+    it('threads mapToJson skipErrors through to the serialization loop', () => {
+      const lenient = new AppleScriptBuilder()
+        .tell('Notes')
+        .mapToJson('aNote', 'every note', { id: 'id' }, { skipErrors: true })
+        .endtell()
+        .build();
+      const strict = new AppleScriptBuilder()
+        .tell('Notes')
+        .mapToJson('aNote', 'every note', { id: 'id' })
+        .endtell()
+        .build();
+
+      expect(lenient.slice(lenient.indexOf('set jsonParts to {}'))).toContain('try');
+      expect(strict.slice(strict.indexOf('set jsonParts to {}'))).not.toContain('try');
+    });
+  });
 });

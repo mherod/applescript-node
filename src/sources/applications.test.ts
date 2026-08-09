@@ -139,6 +139,20 @@ describe('applications', () => {
       await expect(getAll()).rejects.toThrow('Failed to get applications: Script execution failed');
     });
 
+    it('should serialize leniently so one unreadable process does not fail the batch', async () => {
+      mockExecute.mockResolvedValueOnce({
+        success: true,
+        output: '[]',
+        exitCode: 0,
+      });
+
+      await getAll();
+
+      const script = mockExecute.mock.calls[0][0];
+      const serializationLoop = script.slice(script.indexOf('set jsonParts to {}'));
+      expect(serializationLoop).toContain('try');
+    });
+
     it('should handle empty result', async () => {
       mockExecute.mockResolvedValueOnce({
         success: true,

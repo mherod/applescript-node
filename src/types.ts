@@ -429,6 +429,9 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
    * @template TProperties - Property map type (inferred)
    * @param listVariable - Variable containing the list of records
    * @param propertyMap - Mapping of JSON keys to AppleScript properties
+   * @param options.skipErrors - When true, records that fail to serialize are omitted
+   * from the array. Defaults to false, so a failing record raises the underlying
+   * AppleScript error rather than disappearing from the result.
    * @returns Builder with return type set to Array<JsonObjectShape<TProperties>>
    *
    * @example
@@ -444,10 +447,15 @@ export interface ScriptBuilder<TScope extends string = never, TReturn = unknown>
    * // Type is inferred as: Array<{ id: string; name: string; email: string }>
    * const result = await runScript(script);
    * result.output[0].name; // TypeScript knows 'name' exists!
+   *
+   * @example
+   * // Tolerate individual records that cannot be serialized
+   * .returnAsJson('results', { id: 'id', name: 'name' }, { skipErrors: true })
    */
   returnAsJson: <TProperties extends Record<string, string>>(
     listVariable: string,
     propertyMap: TProperties,
+    options?: { skipErrors?: boolean },
   ) => ScriptBuilder<TScope, JsonObjectShape<TProperties>[]>;
   /**
    * Map a collection to JSON with automatic iteration, property extraction, and type inference.
