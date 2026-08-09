@@ -1,4 +1,3 @@
-import { AppleScriptBuilder } from './builder.js';
 import { ScriptExecutor } from './executor.js';
 import type { OsaScriptOptions, Prettify, ScriptBuilder, ScriptExecutionResult } from './types.js';
 
@@ -35,8 +34,6 @@ export type {
   WindowInfo,
 } from './types.js';
 export * from './validator.js';
-
-export const createScript = () => new AppleScriptBuilder();
 
 export function runScript<TScope extends string, TReturn>(
   script: ScriptBuilder<TScope, TReturn>,

@@ -22,6 +22,17 @@ All notable changes to applescript-node are documented in this file.
   behaviour of returning partial results when an individual window,
   process, or disk cannot be read.
 
+#### Maintenance
+
+- Moved `createScript` from `index.ts` into `builder.ts`, alongside the
+  `AppleScriptBuilder` it constructs. This removes three import cycles
+  between the package barrel and the `sources/` modules, which had to
+  import `createScript` back out of the barrel. The public API is
+  unchanged — `index.ts` already re-exports everything from `builder.ts`.
+- Removed the unused `src/bun.ts` and `src/node.ts` re-export shims. The
+  `./bun` and `./node` package entry points are served by `index.bun.ts`
+  and `index.node.ts`; these two files had no importers.
+
 ### 25 March 2026
 
 #### New Features

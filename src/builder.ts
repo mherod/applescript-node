@@ -2440,3 +2440,14 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this;
   }
 }
+
+/**
+ * Create a new AppleScript builder.
+ * Preferred entry point for the fluent API — equivalent to `new AppleScriptBuilder()`.
+ *
+ * @example
+ * import { createScript, runScript } from 'applescript-node';
+ * const script = createScript().tell('Finder').get('name of front window').endtell();
+ * const result = await runScript(script);
+ */
+export const createScript = (): AppleScriptBuilder => new AppleScriptBuilder();
