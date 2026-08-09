@@ -84,6 +84,25 @@ Demonstrates the language information utilities.
 - Get default language
 - Display detailed information
 
+### 5. Top-Level Helpers (`helpers-quickstart.ts`)
+
+Tours the top-level helpers that shortcut the common cases.
+
+- `osa` tagged template and `toAppleScriptLiteral` for building safe sources
+- `tell` with a raw string body or a builder callback
+- `isRunning` (via System Events, so it never launches the app) and `activate`
+- `runJxa` for JavaScript for Automation, with the same automatic JSON parsing
+- `runScriptOrThrow`, and branching on `ScriptExecutionError.errorNumber` rather than message text
+
+### 6. Safe Interpolation (`safe-interpolation.ts`)
+
+Runs the same inputs through naive string concatenation and through `osa`, side by side.
+
+- Shows concatenation breaking on quotes and backslashes
+- Shows a crafted input escaping its literal and executing under concatenation
+- Shows `osa` returning every input verbatim
+- Side-effect free: the demonstration payload is `echo`
+
 ## Output Directory
 
 The `output` directory is used by the compilation examples to store compiled scripts and applications.

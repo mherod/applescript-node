@@ -1,4 +1,5 @@
 import { ScriptExecutor } from './executor.js';
+import { parseScriptOutput } from './helpers.js';
 import type { OsaScriptOptions, Prettify, ScriptBuilder, ScriptExecutionResult } from './types.js';
 
 export * from './builder.js';
@@ -6,12 +7,14 @@ export * from './compiler.js';
 export * from './decompiler.js';
 export * from './executor.js';
 export * from './expressions.js';
+export * from './helpers.js';
 export * from './languages.js';
 export * from './loader.js';
 export * from './sdef.js';
 // High-level data source APIs
 export * as sources from './sources/index.js';
 export type {
+  AppleScriptDiagnostic,
   AppleScriptValue,
   ApplicationDictionary,
   ApplicationTarget,
@@ -53,29 +56,10 @@ export async function runScript<T = string>(
   options?: OsaScriptOptions,
 ): Promise<ScriptExecutionResult<T>> {
   const scriptString = typeof script === 'string' ? script : script.build();
-  const result = await ScriptExecutor.execute(scriptString, options);
 
-  // If the output looks like JSON (starts with '[' or '{'), parse it automatically
-  // This handles returnAsJson, mapToJson, and returnJsonObject which return JSON strings
-  if (result.success && result.output) {
-    const trimmed = result.output.trim();
-    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
-      try {
-        const parsed = JSON.parse(result.output) as Prettify<T>;
-        const parsedResult: ScriptExecutionResult<T> = {
-          success: result.success,
-          output: parsed,
-          exitCode: result.exitCode,
-        };
-        return parsedResult;
-      } catch {
-        // If parsing fails, return the string as-is
-        // This handles cases where the string happens to start with '[' or '{' but isn't valid JSON
-      }
-    }
-  }
-
-  return result as ScriptExecutionResult<T>;
+  // If the output looks like JSON (starts with '[' or '{'), it is parsed automatically.
+  // This handles returnAsJson, mapToJson, and returnJsonObject which return JSON strings.
+  return parseScriptOutput<T>(await ScriptExecutor.execute(scriptString, options));
 }
 
 export const runScriptFile = async <T = string>(

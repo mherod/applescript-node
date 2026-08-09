@@ -239,6 +239,32 @@ export interface ScriptError {
   source?: string;
 }
 
+/**
+ * A single diagnostic line parsed out of osascript's stderr.
+ *
+ * osascript reports failures as `[start:end: ]<kind> error: <message> (<number>)`,
+ * for example `32:40: execution error: Can't get application "NoSuchApp". (-1728)`.
+ * The offsets are absent for JXA runtime errors, and some failures (a missing
+ * script file, for instance) produce no diagnostic of this shape at all.
+ */
+export interface AppleScriptDiagnostic {
+  /** Error class as osascript names it, e.g. `syntax error` or `execution error`. */
+  kind: string;
+  /** Human-readable message with the offsets and error number stripped. */
+  message: string;
+  /**
+   * AppleScript error number, e.g. `-1728` or a custom number from
+   * `error "..." number 42`. Absent when osascript omits it.
+   */
+  errorNumber?: number;
+  /** Character offset into the source where the offending range starts. */
+  start?: number;
+  /** Character offset into the source where the offending range ends. */
+  end?: number;
+  /** The unmodified diagnostic line, for logging or when parsing loses nuance. */
+  raw: string;
+}
+
 // Scripting definition (sdef) types for application introspection
 export interface TypeInfo {
   type: string;
