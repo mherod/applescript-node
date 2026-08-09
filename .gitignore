@@ -41,3 +41,11 @@ Thumbs.db
 # Husky
 .husky/_
 .claude/settings.local.json
+
+# pnpm build-script approvals. Local-only: this is needed by pnpm 10+, which
+# refuses to run install scripts until each is approved, but CI pins pnpm 9.14.4
+# which reads this file strictly as a workspace manifest and aborts without a
+# `packages` key. Adding that key makes the repo a workspace, which breaks
+# `cd docs && pnpm install` — docs/ is a separate project with its own lockfile.
+# Keep it out of git until the local and CI pnpm versions are aligned.
+pnpm-workspace.yaml
