@@ -1,5 +1,6 @@
 import { resolveExpression } from './builder-utils.js';
 import { ExprBuilder } from './expressions.js';
+import { escapeAppleScriptString, toAppleScriptLiteral } from './literals.js';
 import type { AppleScriptValue, JsonObjectShape, ScriptBuilder } from './types.js';
 
 type BlockType =
@@ -30,33 +31,20 @@ export class AppleScriptBuilder implements ScriptBuilder {
     return this.INDENT.repeat(this.indentLevel);
   }
 
+  // Escaping and literal formatting live in literals.ts so the builder, the
+  // sources/* modules, and the top-level helpers cannot drift apart. These stay
+  // as private methods because they are called throughout the class body.
+
   private escapeString(str: string): string {
-    // In AppleScript, backslashes and quotes need to be escaped
-    // Also handle common escape sequences
-    return str
-      .replace(/\\/g, '\\\\') // Backslash
-      .replace(/"/g, '\\"') // Quote
-      .replace(/\n/g, '\\n') // Newline
-      .replace(/\r/g, '\\r') // Carriage return
-      .replace(/\t/g, '\\t'); // Tab
+    return escapeAppleScriptString(str);
   }
 
   private formatValue(value: AppleScriptValue): string {
-    if (value === null) return 'missing value';
-    if (typeof value === 'string') return `"${this.escapeString(value)}"`;
-    if (typeof value === 'number') return value.toString();
-    if (typeof value === 'boolean') return value.toString();
-    if (Array.isArray(value)) {
-      return `{${value.map((v) => this.formatValue(v)).join(', ')}}`;
-    }
-    return this.makeRecord(value as Record<string, AppleScriptValue>);
+    return toAppleScriptLiteral(value);
   }
 
   private makeRecord(properties: Record<string, AppleScriptValue>): string {
-    const entries = Object.entries(properties)
-      .map(([k, v]) => `${k}:${this.formatValue(v)}`)
-      .join(', ');
-    return `{${entries}}`;
+    return toAppleScriptLiteral(properties);
   }
 
   private validateBlockStack(): void {
