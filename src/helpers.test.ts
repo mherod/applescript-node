@@ -40,6 +40,23 @@ describe('toAppleScriptLiteral', () => {
     expect(toAppleScriptLiteral(['a', 1])).toBe('{"a", 1}');
     expect(toAppleScriptLiteral({ name: 'Finder', open: true })).toBe('{name:"Finder", open:true}');
   });
+
+  /**
+   * `undefined` is outside AppleScriptValue, so TypeScript callers cannot reach
+   * these, but plain-JS consumers and absent optional properties can — and
+   * without a guard they fall through to Object.entries(undefined) and throw.
+   */
+  it('treats undefined as missing value rather than throwing', () => {
+    expect(toAppleScriptLiteral(undefined)).toBe('missing value');
+    expect(toAppleScriptLiteral({ name: 'Finder', note: undefined })).toBe(
+      '{name:"Finder", note:missing value}',
+    );
+    expect(toAppleScriptLiteral(['a', undefined])).toBe('{"a", missing value}');
+  });
+
+  it('interpolates undefined into osa as missing value', () => {
+    expect(osa`set x to ${undefined}`).toBe('set x to missing value');
+  });
 });
 
 describe('osa', () => {
@@ -146,6 +163,42 @@ describe('parseAppleScriptError', () => {
     expect(
       parseAppleScriptError(`Command failed: osascript -s h -e 'log "execution error: nope (-1)"'`),
     ).toBeUndefined();
+  });
+
+  /**
+   * The Node runtime throws through promisify(exec), which prefixes the message
+   * with `Command failed: <command>`. The Bun runtime throws the raw stderr, so
+   * the diagnostic is line 0 with nothing before it.
+   */
+  it('parses the Bun runtime shape, which has no command preamble', () => {
+    const parsed = parseAppleScriptError(
+      '32:40: execution error: Can’t get application "NoSuchApp". (-1728)\n',
+    );
+    expect(parsed?.errorNumber).toBe(-1728);
+    expect(parsed?.message).toBe('Can’t get application "NoSuchApp".');
+  });
+
+  it('parses the Bun shape for a script whose source spans lines', () => {
+    const parsed = parseAppleScriptError('6:26: execution error: deliberate failure (42)\n');
+    expect(parsed?.errorNumber).toBe(42);
+  });
+
+  it('finds the diagnostic when the command echo spans several lines', () => {
+    const parsed = parseAppleScriptError(
+      [
+        `Command failed: osascript -s h -e 'tell application "Finder"`,
+        '  get bogus property',
+        `end tell'`,
+        '32:40: execution error: Can’t get bogus property. (-1728)',
+        '',
+      ].join('\n'),
+    );
+    expect(parsed?.errorNumber).toBe(-1728);
+    expect(parsed?.message).toBe('Can’t get bogus property.');
+  });
+
+  it('returns undefined for the Bun runtime fallback message', () => {
+    expect(parseAppleScriptError('Command failed with exit code 1')).toBeUndefined();
   });
 });
 
